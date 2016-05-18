@@ -1,7 +1,9 @@
 ﻿TOPIC
+
     about_JobScheduler
 
 SHORT DESCRIPTION
+
     The JobScheduler Command Line Interface (CLI) can be used to control
     JobScheduler instances (start, stop, status) and job-related objects
     such as jobs, job chains, orders, tasks.
@@ -9,6 +11,7 @@ SHORT DESCRIPTION
     The JobScheduler CLI module supports Windows PowerShell 2.0 and above.
 
 LONG DESCRIPTION
+
     The JobScheduler Command Line Interface (CLI) is used for the following 
     areas of operation:
 
@@ -50,6 +53,7 @@ LONG DESCRIPTION
 	**** Consider use of the Set-MaxOutputSize cmdlet to change this value.
 	
  HOW TO GET STARTED with the JobScheduler CLI?
+ 
     The JobScheduler CLI is used for JobScheduler instances that are installed 
     locally or on remote computers and is initialized by the following commands:
 
@@ -83,6 +87,7 @@ LONG DESCRIPTION
 
 
  HOW TO RUN JobScheduler COMMANDS
+ 
     JobScheduler commands are Windows PowerShell scripts (.ps1 files), so you can run 
     them at the command line, or in any editor.
 
@@ -109,7 +114,8 @@ LONG DESCRIPTION
     For more information about JobScheduler cmdlets, type: Get-Help Use-Master, Get-Help Show-Status etc.
 
     
- EXAMPLE
+ EXAMPLES
+ 
     Find some typical use cases for the JobScheduler CLI.
 
     Perform an emergency stop:
@@ -126,7 +132,7 @@ LONG DESCRIPTION
 
     Suspend any temporary orders that are e.g. created by job scripts:
     
-        $orders = ( Get-Order /my_jobs -Nopermanent | Suspend-Order )
+        $orders = ( Get-Order /my_jobs -NoPermanent | Suspend-Order )
     
         This will retrieve temporary ad hoc orders from the "my_jobs" directory and any subfolders.
         All temporary orders are suspended and the list of order objects is stored in a variable.
@@ -139,6 +145,7 @@ LONG DESCRIPTION
 
 
  MANAGING THE JobScheduler MASTER
+ 
     Find some use cases for JobScheduler Master management.
     
     Start the JobScheduler Master:
