@@ -1,0 +1,216 @@
+﻿TOPIC
+    about_JobScheduler
+
+SHORT DESCRIPTION
+    The JobScheduler Command Line Interface (CLI) can be used to control
+    JobScheduler instances (start, stop, status) and job-related objects
+    such as jobs, job chains, orders, tasks.
+
+    The JobScheduler CLI module supports Windows PowerShell 2.0 and above.
+
+LONG DESCRIPTION
+    The JobScheduler Command Line Interface (CLI) is used for the following 
+    areas of operation:
+
+    * work as a replacement for the command script .bin\jobscheduler.cmd:
+    ** provide operations for installing and removing the JobScheduler Windows service
+    ** starting and stopping JobScheduler instances including active and passive clusters
+
+    * provide bulk operations:
+    ** select jobs, job chains, orders and tasks
+    ** manage orders with operations for start, stop and removal
+    ** terminate tasks
+
+    * schedule jobs and orders:
+    ** add orders to job chains 
+    ** run PowerShell cmdlets and functions on-the-fly as JobScheduler jobs
+
+    The JobScheduler CLI provides a number of cmdlets. 
+    
+    * The complete list of cmdlets is available with the command:
+    ** Get-Command -Module JobScheduler
+
+    * Cmdlets come with a full name and a short alias:
+    ** The full name includes the term "JobScheduler" such as in
+    *** Use-JobSchedulerMaster
+    *** Use-Master
+    ** Should conflicts occur with existing modules then the aliases can be removed
+    *** Remove-Item alias:Use-Master
+    
+	* Cmdlets consider verbosity and debug settings:
+	** $VerbosePreference = "Continue"
+	*** This will cause verbose output to be created from cmdlets.
+	*** The verbosity level is reset with: $VerbosePreference = "SilentlyContinue"
+	** $DebugPreference = "Continue"
+	*** This will cause debug output to be created from cmdlets.
+	*** The debug level is reset with: $DebugPreference = "SilentlyContinue"
+	*** The responses from a JobScheduler Master can include large XML answers.
+	**** Such answers are stored in temporary files, the debug message indicates the file name.
+	**** The threshold for creating files is 1000 bye by default.
+	**** Consider use of the Set-MaxOutputSize cmdlet to change this value.
+	
+ HOW TO GET STARTED with the JobScheduler CLI?
+    The JobScheduler CLI is used for JobScheduler instances that are installed 
+    locally or on remote computers and is initialized by the following commands:
+
+    * Import Module
+    ** Import-Module JobScheduler
+    *** makes the module available in a PowerShell session.
+    *** loads the module from a location that is available with the PowerShell module path,
+    *** see $env:PSModulePath for predefined module locations.
+    ** Import-Module c:\some_location\JobScheduler
+    *** loads the module from a specific location, absolute and relative paths can be used.
+    
+    * Use JobScheduler Master instance
+    ** Use-Master [JobScheduler ID]
+    *** as a first operation after importing the module it is required to execute the Use-Master cmdlet.
+    *** The JobScheduler ID is determined during setup and is added to the installation path
+    **** A typical base bath would be C:\Program Files\sos-berlin.com\jobscheduler 
+    **** The path is added the subdirectory with the name of the JobScheduler ID
+    ** Use-Master -InstallPath "C:\Program Files\sos-berlin.com\jobscheduler\scheduler110"
+    *** for local JobScheduler instances the installation path can be specified.
+    ** Use-Master -InstallPath $env:SCHEDULER_HOME
+    *** It is recommended to create an environment variable SCHEDULER_HOME that points to the installation path.
+    *** The JobScheduler CLI module on import checks availability of this environment variable 
+    *** The Use-Master cmdlet is executed automatically if SCHEDULER_HOME is present.
+
+    * Manage JobScheduler objects
+    ** Show-Status
+    *** shows the summary information for a JobScheduler Master
+    ** Get-Order, Get-JobChain, Get-Job, Get-Tasks
+    *** retrieves the list of avaiable objects
+    ** see complete list of cmdlets with the cmdlet: Get-Command -Module JobScheduler
+
+
+ HOW TO RUN JobScheduler COMMANDS
+    JobScheduler commands are Windows PowerShell scripts (.ps1 files), so you can run 
+    them at the command line, or in any editor.
+
+        PS C:\> Use-Master scheduler111
+    
+    Makes the JobScheduler Master with ID "scheduler111" available for use with cmdlets.
+    
+        PS C:\> Show-Status
+    
+    Shows the summary information of a JobScheduler Master.
+
+        PS C:\> (Get-Task).count
+        
+    Shows the number of tasks that are currently running.
+    
+        PS C:\> Get-Task | Stop-Task
+    
+    Stops all running tasks (emergency stop).
+    
+        PS C:\> $orders = Get-Order /sos
+    
+    Collects the list of orders from a directory and stores it in a variable.
+    
+    For more information about JobScheduler cmdlets, type: Get-Help Use-Master, Get-Help Show-Status etc.
+
+    
+ EXAMPLE
+    Find some typical use cases for the JobScheduler CLI.
+
+    Perform an emergency stop:
+
+        Get-Task | Stop-Task -Action kill
+
+        This will terminate all running and enqueued tasks immediately.
+    
+    Find enqueued tasks, i.e. tasks that are scheduled for a later start:
+    
+        Get-Task -NoRunningTasks
+        
+        Retrieves the list of scheduled tasks.
+
+    Suspend any temporary orders that are e.g. created by job scripts:
+    
+        $orders = ( Get-Order /my_jobs -Nopermanent | Suspend-Order )
+    
+        This will retrieve temporary ad hoc orders from the "my_jobs" directory and any subfolders.
+        All temporary orders are suspended and the list of order objects is stored in a variable.
+    
+    Remove orders from a list that have previously been retrieved
+    
+        $orders | Remove-Order
+    
+        This will remove the orders available from the list.
+
+
+ MANAGING THE JobScheduler MASTER
+    Find some use cases for JobScheduler Master management.
+    
+    Start the JobScheduler Master:
+    
+        Start-Master -Service
+        
+        Starts the Windows service of a JobScheduler Master
+        
+    Start the JobScheduler Master in paused mode:
+    
+        Start-Master -Service -Pause
+        
+        The Windows service is started and immediately paused to prevent any tasks from starting.
+    
+    Restart the JobScheduler Master:
+    
+        Restart-Master -Timeout 120
+        
+        Restarts the Master having left any running tasks up to 120 seconds to complete.
+        
+    Stop the JobScheduler Master immediately:
+    
+        Stop-Master -Action kill
+        
+        This will kill all running tasks immediately and terminate the JobScheduler Master.
+        
+    Stop the JobScheduler Master cluster:
+    
+        Stop-Master -Cluster -Action abort
+
+    Install the JobScheduler Master Windows service:
+    
+        Install-Service -Start -PauseAfterFailure
+        
+        Installs and starts the Windows service. Should a previous JobScheduler run
+        have been terminated with failure then JobScheduler Master will switch to pause mode.
+        This allows e.g. to check for enqueued tasks before starting operations.
+        A previously installed Windows service with the same name will be removed.
+
+    Install the JobScheduler Master Windows service for a specific account:
+    
+        Install-Service -Start -UseCredentials
+        
+        This will install the service and ask for the name of the account and password
+        that the service is operated for. The account name typically includes the
+        domain and user, e.g. .\some_user for "some_user" in the current domain.
+
+    Remove the JobScheduler Master Windows service:
+    
+        Remove-Service
+        
+        This will remove the Windows service. Should any tasks be running with the
+        JobScheduler Master then the removal will be delayed. Consider to use
+        
+            Stop-Master -Action abort
+            
+        if immediate removal of the Windows service is required.
+        
+        
+  REAL-WORLD EXAMPLES
+
+
+SEE ALSO
+    JobScheduler wiki: https://kb.sos-berlin.com/display/PKB/JobScheduler
+    Use-Master
+    Get-Job
+    Get-JobChain
+    Get-Order
+    Get-Task
+    Install-Service
+    Remove-Service
+    Start-Master
+    Stop-Master
+    Start-Order
+    Stop-Order
