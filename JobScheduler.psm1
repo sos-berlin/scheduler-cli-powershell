@@ -5,7 +5,7 @@ JobScheduler command line interface
 For further information see about_JobScheduler
 If the documentation is not avaiable for your language then consider to use
 
-	PS C:\> [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
+    PS C:\> [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
 #>
 
 # ----------------------------------------------------------------------
@@ -17,6 +17,9 @@ $js = $null
 
 # Debug messages exceeding the max. output size are stored in temporary files
 $jsDebugMaxOutputSize = 1000
+
+[int] $jsTCPReadDelay = 100
+[int] $jsTCPWriteDelay = 100
 
 # Socket, Stream, Writer for TCP connection
 $jsSocket = $null
@@ -41,7 +44,7 @@ function Approve-JobSchedulerCommand( $command )
 {
     if ( !$js.Local )
     {
-        $localCommands = @( 'Get-JobSchedulerVersion', 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster', 'Stop-JobSchedulerMaster' )
+        $localCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster', 'Stop-JobSchedulerMaster' )
         if ( $localCommands -contains $command.Name )
         {
             throw "$($command.Name): command not available for remote JobScheduler. Switch instance with the Use-JobSchedulerMaster command"
@@ -266,7 +269,6 @@ function Create-TaskObject()
 function Send-JobSchedulerXMLCommand( $remoteHost, $remotePort, $command, [bool] $checkResponse=$true ) 
 {
     [bool] $useSSL = $false
-    [int] $commandDelay = 100 
     [string] $output = ""
     
     if ( !$SCRIPT:jsSocket )
@@ -291,20 +293,25 @@ function Send-JobSchedulerXMLCommand( $remoteHost, $remotePort, $command, [bool]
         $SCRIPT:jsWriter = new-object System.IO.StreamWriter $SCRIPT:jsStream
     }
 
-    while($true) 
-    { 
-        $SCRIPT:jsWriter.WriteLine( $command )
-        $SCRIPT:jsWriter.Flush() 
-        Start-Sleep -m $commandDelay 
-        $output += Get-JobSchedulerResponse
+	try
+	{
+		while($true) 
+		{ 
+			$SCRIPT:jsWriter.WriteLine( $command )
+			$SCRIPT:jsWriter.Flush() 
+			Start-Sleep -m $jsTCPWriteDelay
+			$output += Get-JobSchedulerResponse
 
-        break 
-    }
+			break 
+		}
+	} catch {
+		$SCRIPT:jsWriter.Close()
+		$SCRIPT:jsWriter = $null
+		$SCRIPT:jsStream.Close()
+		$SCRIPT:jsStream = $null
+		throw $_.Exception
+	}
 
-#   $SCRIPT:jsWriter.Close()
-#    $SCRIPT:jsWriter = $null
-#   $SCRIPT:jsStream.Close()
-#    $SCRIPT:jsStream = $null
 
     if ( $checkResponse -and $output )
     {
@@ -345,7 +352,7 @@ function Get-JobSchedulerResponse
     do 
     { 
         ## Allow data to buffer for a bit 
-        # start-sleep -m 1000
+         Start-Sleep -m $jsTCPReadDelay
 
         ## Read what data is available 
         $foundmore = $false 
@@ -366,11 +373,13 @@ function Get-JobSchedulerResponse
         } while( $read -gt 0 )
     } while( $foundmore )
 
-    # remove trailing null byte
-    if ( $outputBuffer.Length -gt 0 ) 
+    # remove trailing null bytes
+    while ($outputBuffer[$outputBuffer.Length-1] -eq 0x00)
     {
-        $outputBuffer.Substring( 0, $outputBuffer.Length-1 )
+        $outputBuffer = $outputBuffer.Substring( 0, $outputBuffer.Length-1 )
     }
+    
+    $outputBuffer
 }
 
 # check JobScheduler response for errors and return error message

@@ -40,6 +40,12 @@ Specifies that no subfolders should be looked up. By default any subfolders will
 Specifies that no permanent orders should be looked up but instead ad hoc orders only. 
 By default only permanent orders will be looked up.
 
+.PARAMETER Suspended
+Specifies that only suspended orders should be returned.
+
+.PARAMETER Setback
+Specifies that only setback orders should be returned.
+
 .OUTPUTS
 This cmdlet returns an array of order objects.
 
@@ -80,10 +86,18 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoSubfolders,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoPermanent
+    [switch] $NoPermanent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $Suspended,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $Setback
 )
     Begin
     {
+        if ( $Suspended -and $Setback )
+        {
+            throw "$($MyInvocation.MyCommand.Name): parameters -Suspended and -Setback cannot be combined"
+        }    
     }        
         
     Process
@@ -145,41 +159,49 @@ param
         if ( $orderXml )
         {    
             $orderCount = 0
+            $xPathOrder = ''
 
+            if ( $Suspended )
+            {
+                $xPathOrder = " and @suspended = 'yes'"
+            } elseif ( $Setback ) {
+                $xPathOrder = ' and @setback'
+            }    
+            
             if ( $Order )
             {
                 if ( $NoPermanent )
                 {
                     if ( $JobChain )
                     {
-                        $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/']"
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders for order and job chain: //folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/']"
+                        $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/'$xPathOrder]"
+                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders for order and job chain: //folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/'$xPathOrder]"
                     } else {
                         $orderId = Get-JobSchedulerObjectBasename $Order
-                        $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[@order = '$($orderId)' and @path = '/']"
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders for order without job chain: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@order = '$($orderId)' and @path = '/']"
+                        $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[@order = '$($orderId)' and @path = '/'$xPathOrder]"
+                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders for order without job chain: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@order = '$($orderId)' and @path = '/'$xPathOrder]"
                     }
                 } else {
-                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '$($Order)']"
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of permanent orders for order: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '$($Order)']"
+                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '$($Order)'$xPathOrder]"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of permanent orders for order: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '$($Order)'$xPathOrder]"
                 }
             } elseif ( $JobChain ) {
                 if ( $NoPermanent )
                 {
-                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/']"
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders by job chain: //folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/']"
+                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/'$xPathOrder]"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders by job chain: //folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@path = '/'$xPathOrder]"
                 } else {
-                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order"
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of permanent orders by job chain: //folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order"
+                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@id$xPathOrder]"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of permanent orders by job chain: //folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node/order_queue/order[@id$xPathOrder]"
                 }
             } else {
                 if ( $NoPermanent )
                 {
-                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '/']"
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '/']"
+                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '/'$xPathOrder]"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '/'$xPathOrder]"
                 } else {
-                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[not(@path = '/')]"
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of permanent orders: //folder/job_chains/job_chain/job_chain_node/order_queue/order[not(@path = '/')]"
+                    $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[not(@path = '/')$xPathOrder]"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of permanent orders: //folder/job_chains/job_chain/job_chain_node/order_queue/order[not(@path = '/')$xPathOrder]"
                 }
             }
 

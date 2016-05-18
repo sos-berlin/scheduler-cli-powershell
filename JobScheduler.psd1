@@ -45,11 +45,14 @@ FunctionsToExport = @(
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
     'Start-JobSchedulerMaster',
+    'Start-JobSchedulerJob',
     'Start-JobSchedulerOrder',
+    'Stop-JobSchedulerJob',
     'Stop-JobSchedulerMaster',
     'Stop-JobSchedulerTask',
     'Suspend-JobSchedulerMaster',
     'Suspend-JobSchedulerOrder',
+    'Update-JobSchedulerJob',
     'Update-JobSchedulerOrder',
     'Use-JobSchedulerMaster'
 )

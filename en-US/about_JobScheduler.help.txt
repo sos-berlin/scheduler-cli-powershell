@@ -15,75 +15,116 @@ LONG DESCRIPTION
     The JobScheduler Command Line Interface (CLI) is used for the following 
     areas of operation:
 
-    * work as a replacement for the command script .bin\jobscheduler.cmd:
-    ** provide operations for installing and removing the JobScheduler Windows service
-    ** starting and stopping JobScheduler instances including active and passive clusters
-
-    * provide bulk operations:
-    ** select jobs, job chains, orders and tasks
-    ** manage orders with operations for start, stop and removal
-    ** terminate tasks
-
-    * schedule jobs and orders:
-    ** add orders to job chains 
-    ** run PowerShell cmdlets and functions on-the-fly as JobScheduler jobs
+        work as a replacement for the command script .bin\jobscheduler.cmd:
+        
+            provide operations for installing and removing the JobScheduler Windows service
+    
+            starting and stopping JobScheduler instances including active and passive clusters
+    
+        provide bulk operations:
+        
+            select jobs, job chains, orders and tasks
+    
+            manage orders with operations for start, stop and removal
+    
+            terminate tasks
+    
+        schedule jobs and orders:
+            
+            add orders to job chains 
+            
+            run PowerShell cmdlets and functions on-the-fly as JobScheduler jobs
 
     The JobScheduler CLI provides a number of cmdlets. 
     
-    * The complete list of cmdlets is available with the command:
-    ** Get-Command -Module JobScheduler
+    The complete list of cmdlets is available with the command:
 
-    * Cmdlets come with a full name and a short alias:
-    ** The full name includes the term "JobScheduler" such as in
-    *** Use-JobSchedulerMaster
-    *** Use-Master
-    ** Should conflicts occur with existing modules then the aliases can be removed
-    *** Remove-Item alias:Use-Master
+        Get-Command -Module JobScheduler
+
+    Cmdlets come with a full name and a short alias:
     
-	* Cmdlets consider verbosity and debug settings:
-	** $VerbosePreference = "Continue"
-	*** This will cause verbose output to be created from cmdlets.
-	*** The verbosity level is reset with: $VerbosePreference = "SilentlyContinue"
-	** $DebugPreference = "Continue"
-	*** This will cause debug output to be created from cmdlets.
-	*** The debug level is reset with: $DebugPreference = "SilentlyContinue"
-	*** The responses from a JobScheduler Master can include large XML answers.
-	**** Such answers are stored in temporary files, the debug message indicates the file name.
-	**** The threshold for creating files is 1000 bye by default.
-	**** Consider use of the Set-MaxOutputSize cmdlet to change this value.
-	
- HOW TO GET STARTED with the JobScheduler CLI?
+        The full name includes the term "JobScheduler" such as in
+    
+            Use-JobSchedulerMaster
+            Use-Master
+
+        Should conflicts occur with existing modules then the aliases can be removed
+    
+            Remove-Item alias:Use-Master
+    
+    Cmdlets consider verbosity and debug settings.
+    
+        This will cause verbose output to be created from cmdlets:
+
+            $VerbosePreference = "Continue"
+
+        The verbosity level is reset with: 
+    
+            $VerbosePreference = "SilentlyContinue"
+
+        This will cause debug output to be created from cmdlets:
+        
+            $DebugPreference = "Continue"
+        
+        The debug level is reset with: 
+    
+        $DebugPreference = "SilentlyContinue"
+
+        The responses from a JobScheduler Master can include large XML answers.
+        Such answers are stored in temporary files, the debug message indicates the file name.
+        The threshold for creating files is 1000 bye by default.
+        Consider use of the Set-MaxOutputSize cmdlet to change this value.
+    
+ HOW TO GET STARTED WITH THE JobScheduler CLI?
  
     The JobScheduler CLI is used for JobScheduler instances that are installed 
     locally or on remote computers and is initialized by the following commands:
 
-    * Import Module
-    ** Import-Module JobScheduler
-    *** makes the module available in a PowerShell session.
-    *** loads the module from a location that is available with the PowerShell module path,
-    *** see $env:PSModulePath for predefined module locations.
-    ** Import-Module c:\some_location\JobScheduler
-    *** loads the module from a specific location, absolute and relative paths can be used.
+    Import Module
     
-    * Use JobScheduler Master instance
-    ** Use-Master [JobScheduler ID]
-    *** as a first operation after importing the module it is required to execute the Use-Master cmdlet.
-    *** The JobScheduler ID is determined during setup and is added to the installation path
-    **** A typical base bath would be C:\Program Files\sos-berlin.com\jobscheduler 
-    **** The path is added the subdirectory with the name of the JobScheduler ID
-    ** Use-Master -InstallPath "C:\Program Files\sos-berlin.com\jobscheduler\scheduler110"
-    *** for local JobScheduler instances the installation path can be specified.
-    ** Use-Master -InstallPath $env:SCHEDULER_HOME
-    *** It is recommended to create an environment variable SCHEDULER_HOME that points to the installation path.
-    *** The JobScheduler CLI module on import checks availability of this environment variable 
-    *** The Use-Master cmdlet is executed automatically if SCHEDULER_HOME is present.
+        Import-Module JobScheduler
+        
+            makes the module available in a PowerShell session.
+            
+            loads the module from a location that is available with the PowerShell module path,
+            
+            see $env:PSModulePath for predefined module locations.
 
-    * Manage JobScheduler objects
-    ** Show-Status
-    *** shows the summary information for a JobScheduler Master
-    ** Get-Order, Get-JobChain, Get-Job, Get-Tasks
-    *** retrieves the list of avaiable objects
-    ** see complete list of cmdlets with the cmdlet: Get-Command -Module JobScheduler
+        Import-Module c:\some_location\JobScheduler
+
+            loads the module from a specific location, absolute and relative paths can be used.
+    
+    Use JobScheduler Master instance
+    
+        Use-Master [JobScheduler ID]
+
+            as a first operation after importing the module it is required to execute the Use-Master cmdlet.
+            
+            The JobScheduler ID is determined during setup and is added to the installation path:
+            A typical base bath would be C:\Program Files\sos-berlin.com\jobscheduler 
+            The path is added the subdirectory with the name of the JobScheduler ID
+
+        Use-Master -InstallPath "C:\Program Files\sos-berlin.com\jobscheduler\scheduler110"
+        
+            for local JobScheduler instances the installation path can be specified.
+            
+        Use-Master -InstallPath $env:SCHEDULER_HOME
+        
+            It is recommended to create an environment variable SCHEDULER_HOME that points to the installation path.
+            The JobScheduler CLI module on import checks availability of this environment variable 
+            The Use-Master cmdlet is executed automatically if SCHEDULER_HOME is present.
+
+    Manage JobScheduler objects
+    
+        Show-Status
+    
+            shows the summary information for a JobScheduler Master
+    
+        Get-Order, Get-JobChain, Get-Job, Get-Tasks
+    
+            retrieves the list of avaiable objects
+    
+        see complete list of cmdlets with the cmdlet: Get-Command -Module JobScheduler
 
 
  HOW TO RUN JobScheduler COMMANDS
@@ -205,19 +246,34 @@ LONG DESCRIPTION
         if immediate removal of the Windows service is required.
         
         
-  REAL-WORLD EXAMPLES
-
-
 SEE ALSO
     JobScheduler wiki: https://kb.sos-berlin.com/display/PKB/JobScheduler
-    Use-Master
+    Get-Calendar
     Get-Job
     Get-JobChain
     Get-Order
+    Get-Status
     Get-Task
+    Get-Version
     Install-Service
+    Remove-Order
     Remove-Service
+    Reset-Order
+    Restart-Master
+    Resume-Master
+    Resume-Order
+    Send-Command
+    Set-MaxOutputSize
+    Show-Calendar
+    Show-Status
     Start-Master
-    Stop-Master
+    Start-Job
     Start-Order
-    Stop-Order
+    Stop-Job
+    Stop-Master
+    Stop-Task
+    Suspend-Master
+    Suspend-Order
+    Update-Job
+    Update-Order
+    Use-Master

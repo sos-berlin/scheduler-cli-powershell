@@ -180,5 +180,4 @@ param
     }
 }
 
-# Set-Alias -Name Get-JSTask -Value Get-JobSchedulerTask
 Set-Alias -Name Get-Task -Value Get-JobSchedulerTask
