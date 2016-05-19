@@ -10,17 +10,17 @@ Stopping tasks includes operations to terminate tasks, e.g. by a SIGTERM signal,
 Tasks to be stopped are selected
 
 * by a pipelined object, e.g. the output of the Get-Task cmdlet
-* by specifying an individual task with the -Id and -Job parameters.
+* by specifying an individual task with the -Task and -Job parameters.
 
-.PARAMETER Id
+.PARAMETER Task
 Optionally specifies the identifier of a task.
 
-Both parameters -Id and -Job have to be specified if no pipelined task objects are used.
+Both parameters -Task and -Job have to be specified if no pipelined task objects are used.
 
 .PARAMETER Job
 Optionally specifies the path and name of a job for which tasks should be terminated.
 
-Both parameters -Id and -Job have to be specified if no pipelined task objects are used.
+Both parameters -Task and -Job have to be specified if no pipelined task objects are used.
 
 .PARAMETER Action
 Specifies the action to be applied to stop a task:
@@ -54,7 +54,7 @@ This cmdlet accepts pipelined task objects that are e.g. returned from a Get-Tas
 This cmdlet returns an array of task objects.
 
 .EXAMPLE
-Stop-Task -Id 81073 -Job /sos/dailyschedule/CheckDaysSchedule
+Stop-Task -Task 81073 -Job /sos/dailyschedule/CheckDaysSchedule
 
 Terminates an individual task.
 
@@ -84,7 +84,7 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Id,
+    [string] $Task,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -111,16 +111,16 @@ param
 
     Process
     {
-        if ( !$Job -or !$Id )
+        if ( !$Job -or !$Task )
         {
-            throw "$($MyInvocation.MyCommand.Name): no task id and no job specified, use -Id and -Job"
+            throw "$($MyInvocation.MyCommand.Name): no task and no job specified, use -Task and -Job"
         }
 
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): stopping task with id='$($Id)', job='$($Job)' $killTimeout"
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): stopping task with task='$($task)', job='$($Job)' $killTimeout"
 
-        $command += "<kill_task immediately='yes' job='$($Job)' id='$($Id)' $killTimeout/>"
+        $command += "<kill_task immediately='yes' job='$($Job)' id='$($Task)' $killTimeout/>"
         $stopTask = Create-TaskObject
-        $stopTask.Id = $Id
+        $stopTask.Task = $Task
         $stopTask.Job = $Job
         $stopTask
         $stopTaskCount++

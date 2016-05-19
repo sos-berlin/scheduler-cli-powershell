@@ -247,7 +247,7 @@ function Create-TaskObject()
 {
     $task = New-Object PSObject
 
-    $task | Add-Member -Membertype NoteProperty -Name Id -Value 0
+    $task | Add-Member -Membertype NoteProperty -Name Task -Value 0
     $task | Add-Member -Membertype NoteProperty -Name Job -Value ""
     $task | Add-Member -Membertype NoteProperty -Name State -Value ""
     $task | Add-Member -Membertype NoteProperty -Name LogFile -Value ""
@@ -257,7 +257,7 @@ function Create-TaskObject()
     $task | Add-Member -Membertype NoteProperty -Name RunningSince -Value ""
     $task | Add-Member -Membertype NoteProperty -Name Cause -Value ""
 
-    # $taskDefaultProperties = @("Id", "Job")
+    # $taskDefaultProperties = @("Task", "Job")
     # $taskDefaultDisplayPropertySet = New-Object System.Management.Automation.PSPropertySet( "DefaultDisplayPropertySet", [string[]] $taskDefaultProperties )
     # $taskPSStandardMembers = [System.Management.Automation.PSMemberInfo[]] @( $taskDefaultDisplayPropertySet )
     # $task | Add-Member MemberSet PSStandardMembers $taskPSStandardMembers

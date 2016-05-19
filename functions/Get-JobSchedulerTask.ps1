@@ -62,8 +62,11 @@ param
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoRunningTasks,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoEnqueuedTasks,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoSubfolders
 )
     Begin
@@ -136,7 +139,7 @@ param
                     }
         
                     $task = Create-TaskObject
-                    $task.Id = $taskNode.Node.id
+                    $task.Task = $taskNode.Node.id
                     $task.Job = $taskNode.Node.job
                     $task.State = $taskNode.Node.state
                     $task.LogFile = $taskNode.Node.log_file
@@ -162,7 +165,7 @@ param
                     }
             
                     $task = Create-TaskObject
-                    $task.Id = $taskNode.Node.id
+                    $task.Task = $taskNode.Node.id
                     $task.Job = ( Select-XML -XML $taskNode.Node -Xpath "../.." ).Node.path
                     $task.EnqueuedAt = $taskNode.Node.enqueued
                     $task.StartAt = $taskNode.Node.start_at
