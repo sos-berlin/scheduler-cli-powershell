@@ -42,7 +42,6 @@ FunctionsToExport = @(
     'Resume-JobSchedulerOrder',
     'Send-JobSchedulerCommand',
     'Set-JobSchedulerMaxOutputSize',
-    'Set-JobSchedulerTCPDelay',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
     'Start-JobSchedulerMaster',

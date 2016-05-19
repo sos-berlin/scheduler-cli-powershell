@@ -19,15 +19,15 @@ settings from the installation path.
 * For a remote Master the parameter -Remote has to be used with the -Id and -Url
 parameters to specify the instance.
 
-.PARAMETER Id
-Specifies the ID of a JobScheduler Master.
-The installation path is determined from the -BasePath parameter and the JobScheduler ID,
-therefore no -InstallPath parameter has to be specified.
-
 .PARAMETER Url
 Specifies the Url for which a JobScheduler Master is available.
 
 The Url includes one of the protocols http or https and optionally the port that JobScheduler listens to, e.g. http://gollum.sos:4110
+
+.PARAMETER Id
+Specifies the ID of a JobScheduler Master.
+The installation path is determined from the -BasePath parameter and the JobScheduler ID,
+therefore no -InstallPath parameter has to be specified.
 
 .PARAMETER Remote
 Specifies if the JobScheduler Master to be used is a remote instance. 
@@ -82,9 +82,9 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-	[string] $Id,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
 	[string] $Url,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+	[string] $Id,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Remote,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -96,26 +96,9 @@ param
 )
 	Process
 	{
-		if ( !$InstallPath -and !$Id )
+		if ( !$InstallPath -and !$Url )
 		{
-			throw "one of the parameters -Id or -InstallPath has to be specified"
-		}
-
-		if ( $SCRIPT:jsWriter )
-		{
-			$SCRIPT:jsWriter.Close()
-			$SCRIPT:jsWriter = $null
-		}
-		
-		if ( $SCRIPT:jsStream )
-		{
-			$SCRIPT:jsStream.Close()
-			$SCRIPT:jsStream = $null
-		}
-		
-		if ( $SCRIPT:jsSocket )
-		{
-			$SCRIPT:jsSocket = $null
+			throw "one of the parameters -Url or -InstallPath has to be specified"
 		}
 
 		$SCRIPT:js = Create-JSObject
@@ -170,7 +153,7 @@ param
 			
 			if ( $env:SCHEDULER_ID )
 			{
-				$SCRIPT:js.ID = $env:SCHEDULER_ID
+				$SCRIPT:js.Id = $env:SCHEDULER_ID
 			}
 		
 			if ( $env:SCHEDULER_HOME )

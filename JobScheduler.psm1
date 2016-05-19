@@ -18,8 +18,8 @@ $js = $null
 # Debug messages exceeding the max. output size are stored in temporary files
 $jsDebugMaxOutputSize = 1000
 
-[int] $jsTCPReadDelay = 100
-[int] $jsTCPWriteDelay = 100
+#[int] $jsTCPReadDelay = 100
+#[int] $jsTCPWriteDelay = 100
 
 # Socket, Stream, Writer for TCP connection
 $jsSocket = $null
@@ -269,134 +269,138 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, $command, [bool
 {
     [string] $output = ""
 
-	$request = $null
-	$requestStream = $null
+    $request = $null
+    $requestStream = $null
 
-	$response = $null
-	$responseStream = $null
-	$streamReader = $null
+    $response = $null
+    $responseStream = $null
+    $streamReader = $null
 
-	try
-	{     
-		$request = [System.Net.WebRequest]::Create( $jobSchedulerURL )
+    try
+    {     
+        $request = [System.Net.WebRequest]::Create( $jobSchedulerURL )
  
-		$request.Method = "POST"
-		$request.ContentType = "text/xml"
-		$request.UseDefaultCredentials = $true
-		$bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
-		$request.ContentLength = $bytes.Length
-		$requestStream = $request.GetRequestStream()
-		$requestStream.Write( $bytes, 0, $bytes.Length )
+        $request.Method = "POST"
+        $request.ContentType = "text/xml"
+        $request.UseDefaultCredentials = $true
+        $bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
+        $request.ContentLength = $bytes.Length
+        $requestStream = $request.GetRequestStream()
+        $requestStream.Write( $bytes, 0, $bytes.Length )
  
-		$requestStream.Close()
-		$response = $request.GetResponse()
+        $requestStream.Close()
+        $response = $request.GetResponse()
 
-		Write-Debug "status code: $($response.StatusCode)"
+        if ( $response.StatusCode -ne "OK" )
+        {
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): status code: $($response.StatusCode)"
+            throw "$($MyInvocation.MyCommand.Name): JobScheduler returns status code: $($response.StatusCode)"
+        }
 
-		$responseStream = $response.getResponseStream() 
-		$streamReader = new-object System.IO.StreamReader $responseStream
-		$output = $streamReader.ReadToEnd()		
+        $responseStream = $response.getResponseStream() 
+        $streamReader = new-object System.IO.StreamReader $responseStream
+        $output = $streamReader.ReadToEnd()        
 
-		if ( $checkResponse -and $output )
-		{
-			if ( $DebugPreference -eq 'Continue' )
-			{
-				if ( $output.Length -gt $jsDebugMaxOutputSize )
-				{
-					$tempFile = [IO.Path]::GetTempFileName()
-					$output | Out-File $tempFile -encoding ascii
-					Write-Debug ".. $($MyInvocation.MyCommand.Name): XML response available with temporary file: $($tempFile)"
-				} else {
-					Write-Debug ".. $($MyInvocation.MyCommand.Name): response: $($output)"
-				}
-			}
+        if ( $checkResponse -and $output )
+        {
+            if ( $DebugPreference -eq 'Continue' )
+            {
+                if ( $output.Length -gt $jsDebugMaxOutputSize )
+                {
+                    $tempFile = [IO.Path]::GetTempFileName()
+                    $output | Out-File $tempFile -encoding ascii
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): XML response available with temporary file: $($tempFile)"
+                } else {
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): response: $($output)"
+                }
+            }
 
-			$errorText = Select-XML -Content $output -Xpath "/spooler/answer/ERROR/@text"
-			if ( $errorText.Node."#text" )
-			{
-				throw $errorText.Node."#text"
-			}
+            $errorText = Select-XML -Content $output -Xpath "/spooler/answer/ERROR/@text"
+            if ( $errorText.Node."#text" )
+            {
+                throw $errorText.Node."#text"
+            }
 
-			[xml] $output
-		}
-	} catch {
-		throw $_.Exception
-	} finally {
-		if ( $streamReader )
-		{
-			$streamReader.Close()
-			$streamReader = $null
-		}
-		
-		if ( $responseStream )
-		{
-			$responseStream.Close()
-			$responseStream = $null
-		}
-		
-		if ( $response )
-		{
-			$response.Close()
-			$response = $null
-		}
-	}
+            [xml] $output
+        }
+    } catch {
+        throw $_.Exception
+    } finally {
+        if ( $streamReader )
+        {
+            $streamReader.Close()
+            $streamReader = $null
+        }
+        
+        if ( $responseStream )
+        {
+            $responseStream.Close()
+            $responseStream = $null
+        }
+        
+        if ( $response )
+        {
+            $response.Close()
+            $response = $null
+        }
+    }
 }
-		
+        
 # send XML command to JobScheduler
 function _Send-JobSchedulerXMLCommand( $remoteHost, $remotePort, $command, [bool] $checkResponse=$true ) 
 {
     [bool] $useSSL = $false
     [string] $output = ""
 
-	try
-	{    
-		if ( !$SCRIPT:jsSocket )
-		{
-			$SCRIPT:jsSocket = new-object System.Net.Sockets.TcpClient( $remoteHost, $remotePort )
-		}
-		
-		if ( !$SCRIPT:jsStream )
-		{
-			$SCRIPT:jsStream = $SCRIPT:jsSocket.GetStream() 
-		}
-		
-		if($useSSL) 
-		{ 
-			$sslStream = New-Object System.Net.Security.SslStream $SCRIPT:jsStream,$false 
-			$sslStream.AuthenticateAsClient( $remoteHost )
-			$SCRIPT:jsStream = $sslStream 
-		}
-	
-		if ( !$SCRIPT:jsWriter )
-		{
-			$SCRIPT:jsWriter = new-object System.IO.StreamWriter $SCRIPT:jsStream
-		}
+    try
+    {    
+        if ( !$SCRIPT:jsSocket )
+        {
+            $SCRIPT:jsSocket = new-object System.Net.Sockets.TcpClient( $remoteHost, $remotePort )
+        }
+        
+        if ( !$SCRIPT:jsStream )
+        {
+            $SCRIPT:jsStream = $SCRIPT:jsSocket.GetStream() 
+        }
+        
+        if($useSSL) 
+        { 
+            $sslStream = New-Object System.Net.Security.SslStream $SCRIPT:jsStream,$false 
+            $sslStream.AuthenticateAsClient( $remoteHost )
+            $SCRIPT:jsStream = $sslStream 
+        }
+    
+        if ( !$SCRIPT:jsWriter )
+        {
+            $SCRIPT:jsWriter = new-object System.IO.StreamWriter $SCRIPT:jsStream
+        }
 
-		while($true) 
-		{ 
-			$SCRIPT:jsWriter.WriteLine( $command )
-			$SCRIPT:jsWriter.Flush() 
-			Start-Sleep -m $jsTCPWriteDelay
-			$output += Get-JobSchedulerResponse
+        while($true) 
+        { 
+            $SCRIPT:jsWriter.WriteLine( $command )
+            $SCRIPT:jsWriter.Flush() 
+            Start-Sleep -m $jsTCPWriteDelay
+            $output += Get-JobSchedulerResponse
 
-			break 
-		}
-	} catch {
-		if ( $SCRIPT:jsWriter )
-		{
-			$SCRIPT:jsWriter.Close()
-			$SCRIPT:jsWriter = $null
-		}
-		
-		if ( $SCRIPT:jsStream )
-		{
-			$SCRIPT:jsStream.Close()
-			$SCRIPT:jsStream = $null
-		}
-		
-		$SCRIPT:jsSocket = $null
-		throw $_.Exception
-	}
+            break 
+        }
+    } catch {
+        if ( $SCRIPT:jsWriter )
+        {
+            $SCRIPT:jsWriter.Close()
+            $SCRIPT:jsWriter = $null
+        }
+        
+        if ( $SCRIPT:jsStream )
+        {
+            $SCRIPT:jsStream.Close()
+            $SCRIPT:jsStream = $null
+        }
+        
+        $SCRIPT:jsSocket = $null
+        throw $_.Exception
+    }
 
     if ( $checkResponse -and $output )
     {
@@ -561,6 +565,6 @@ $js = Create-JSObject
 if ( $env:SCHEDULER_HOME )
 {
    Use-JobSchedulerMaster -InstallPath $env:SCHEDULER_HOME
-} elseif ( $env:SCHEDULER_ID -and $env:SCHEDULER_URL ) {
-   Use-JobSchedulerMaster -Id $env:SCHEDULER_ID -Url $env:SCHEDULER_URL -Remote
+} elseif ( $env:SCHEDULER_URL ) {
+   Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Remote
 }
