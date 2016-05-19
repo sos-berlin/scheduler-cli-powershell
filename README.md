@@ -28,9 +28,10 @@ Find more information and documentation of cmdlets at [PowerShell Command Line I
 
 * `PS C:\> Import-Module JobScheduler`
   * makes the module available in a PowerShell session
-* `PS C:\> Use-Master <JobSchedulerID>`   or   `PS C:\> Use-Master <InstallationPath>`
+* `PS C:\> Use-Master <Url>` or `PS C:\> Use-Master <JobSchedulerID>`   or   `PS C:\> Use-Master <InstallationPath>`
   * as a first operation after importing the module it is required to execute the Use-Master cmdlet.
-  * Either specify a JobScheduler ID or the installation path.
+  * Either specify the Url that JobScheduler is available for or a JobScheduler ID or the installation path.
+    * The Url is the same that you would use when working with JOC in your browser.
     * The JobScheduler ID is determined during setup and is added to the installation base path.: A typical installation bath would be `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10` with `scheduler1.10` being the JobScheduler ID.
     * Otherwise specify the full installation path, e.g. `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10`
 * `PS C:\> Show-Status`
