@@ -5,7 +5,7 @@ function Use-JobSchedulerMaster
 This cmdlet is required to be used as the first operation with JobScheduler cmdlets.
 
 Applies settings from a JobScheduler Master location. A Master is identified
-by its JobScheduler ID, the host and port for which it is operated.
+by its JobScheduler ID and Url for which it is operated.
 
 For a local Master settings are imported from its installation directory.
 For a remote Master settings are specified by parameters.
@@ -16,7 +16,7 @@ Such settings are imported for use with subsequent cmdlets.
 
 * For a local Master that is installed on the local computer the cmdlet reads
 settings from the installation path.
-* For a remote Master the parameter -Remote has to be used with the -Id, -Hostname and -Port 
+* For a remote Master the parameter -Remote has to be used with the -Id and -Url
 parameters to specify the instance.
 
 .PARAMETER Id
@@ -24,17 +24,16 @@ Specifies the ID of a JobScheduler Master.
 The installation path is determined from the -BasePath parameter and the JobScheduler ID,
 therefore no -InstallPath parameter has to be specified.
 
-.PARAMETER Hostname
-Specifies the hostname of a JobScheduler Master.
+.PARAMETER Url
+Specifies the Url for which a JobScheduler Master is available.
 
-.PARAMETER Port
-Specifies the port of a JobScheduler Master.
+The Url includes one of the protocols http or https and optionally the port that JobScheduler listens to, e.g. http://gollum.sos:4110
 
 .PARAMETER Remote
 Specifies if the JobScheduler Master to be used is a remote instance. 
 By default a local instance is assumed with the Master being installed on the local computer.
 
-Use this switch in addition to the parameters -Id, -Hostname and -Port to use a remote Master.
+Use this switch in addition to the parameters -Id and -Url to use a remote Master.
 
 .PARAMETER InstallPath
 Specifies the installation path of a JobScheduler Master.
@@ -70,7 +69,7 @@ Use-Master -InstallPath $env:SCHEDULER_HOME
 Imports settings from the installation path that is specified from the SCHEDULER_HOME environment variable.
 
 .EXAMPLE
-Use-Master -Remote -Id scheduler110 -Hostname gollum.sos -Port 4454
+Use-Master -Remote -Id scheduler110 -Url http://gollum.sos:4454
 
 Uses the specified JobScheduler Master as the base for cmdlets of this module.
 Cmdlets that require a local Master cannot be used, e.g. Install-Service, Remove-Service, Start-Master.
@@ -85,9 +84,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
 	[string] $Id,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-	[string] $Hostname,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-	[string] $Port,
+	[string] $Url,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Remote,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -128,16 +125,11 @@ param
 			$SCRIPT:js.Id = $Id
 		}
 	
-		if ( $Hostname )
+		if ( $Url )
 		{
-			$SCRIPT:js.Hostname = $Hostname
+			$SCRIPT:js.Url = $Url
 		}
 	
-		if ( $Port )
-		{
-			$SCRIPT:js.Port = $Port
-		}
-
 		# Subsequent settings are used for local instances only
 		if ( $Remote )
 		{
@@ -232,8 +224,7 @@ param
 				$configResponse = (Select-XML -Path $schedulerXmlPath -xPath '/spooler/config' ).Node
 		
 				$SCRIPT:js.Config.SchedulerXml = $schedulerXmlPath
-				$SCRIPT:js.Hostname = "localhost"
-				$SCRIPT:js.Port = $configResponse.port
+				$SCRIPT:js.Url = "http://localhost:$($configResponse.port)"
 			} else {
 				throw "JobScheduler configuration file not found: $($schedulerXmlPath)"
 			}

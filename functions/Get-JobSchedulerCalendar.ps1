@@ -86,10 +86,10 @@ param
         }
         
         $command = "<show_calendar what='orders' $($from) $($before)/>"
-        Write-Debug ". $($MyInvocation.MyCommand.Name):  sending command to JobScheduler $($js.Hostname):$($js.Port)"
+        Write-Debug ". $($MyInvocation.MyCommand.Name):  sending command to JobScheduler $($js.Url)"
         Write-Debug ". $($MyInvocation.MyCommand.Name):  sending command: $command"
         
-        $calXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+        $calXml = Send-JobSchedulerXMLCommand $js.Url $command
         if ( $calXml )
         {            
             $cal = Create-CalendarObject

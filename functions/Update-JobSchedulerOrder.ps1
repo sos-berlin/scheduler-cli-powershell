@@ -117,9 +117,9 @@ param
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders are requested for update"
             $command = "<commands>$($command)</commands>"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Hostname):$($js.Port): $command"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
         
-            $orderXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+            $orderXml = Send-JobSchedulerXMLCommand $js.Url $command
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no order found"
         }

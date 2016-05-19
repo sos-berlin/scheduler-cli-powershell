@@ -25,10 +25,10 @@ param
     {
         $command = "<modify_spooler cmd='continue'/>"
 
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
         
-        $result = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+        $result = Send-JobSchedulerXMLCommand $js.Url $command
     }
 }
 

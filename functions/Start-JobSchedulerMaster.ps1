@@ -66,7 +66,7 @@ param
 				throw ".. $($MyInvocation.MyCommand.Name): parameters -Service and -PauseAfterFailure not compatible, use Install-JobSchedulerService cmdlet to run the service with -PauseAfterFailure"
 			}
 			
-			Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler service with ID '$($js.Id)' at '$($js.Hostname):$($js.Port)'"
+			Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler service with ID '$($js.Id)' at '$($js.Url)'"
             $serviceInstance = Start-Service -Name $js.Service.serviceName -PassThru
 
 			if ( $Pause )
@@ -84,7 +84,7 @@ param
 
 			$command = """$($js.Install.ExecutableFile)"" $($js.Install.StartParams)$($startOptions)"
 			Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
-			Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler instance with ID '$($js.Id)' at '$($js.Hostname):$($js.Port)'"
+			Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler instance with ID '$($js.Id)' at '$($js.Url)'"
 			$process = Start-Process -FilePath "$($js.Install.ExecutableFile)" "$($js.Install.StartParams)" -PassThru
 			
 			if ( $Pause )
@@ -92,10 +92,10 @@ param
 				Start-Sleep -Seconds 3
 				$command = "<modify_spooler cmd='pause'/>"
 
-				Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+				Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
 				Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
         
-				$result = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+				$result = Send-JobSchedulerXMLCommand $js.Url $command
 			}
 		}
 	}

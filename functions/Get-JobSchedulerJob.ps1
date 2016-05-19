@@ -96,7 +96,7 @@ param
 )
     Begin
     {
-        if ( $JobChain -and !$Stopped )
+        if ( $JobChain -and $Stopped )
         {
             throw "$($MyInvocation.MyCommand.Name): parameters -JobChain and -Stopped cannot be combined, use -Directory or -Job with -Stopped"
         }
@@ -170,10 +170,10 @@ param
             $command = "<show_state subsystems='folder job' what='folders jobs$($whatNoSubfolders)' path='$($Directory)'/>"
         }
     
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request: $command"
         
-        $jobXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+        $jobXml = Send-JobSchedulerXMLCommand $js.Url $command
         if ( $jobXml )
         {    
             $jobCount = 0

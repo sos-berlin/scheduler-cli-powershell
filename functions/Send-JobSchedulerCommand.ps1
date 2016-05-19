@@ -36,12 +36,11 @@ param
             throw "$($MyInvocation.MyCommand.Name): no XML command specified, use -Command"
         }
         
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $Command"
         
-        Send-JobSchedulerXMLCommand $js.Hostname $js.Port $Command
+        Send-JobSchedulerXMLCommand $js.Url $Command
     }
 }
 
-# Set-Alias -Name Send-JSCommand -Value Send-JobSchedulerCommand
 Set-Alias -Name Send-Command -Value Send-JobSchedulerCommand

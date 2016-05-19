@@ -112,10 +112,10 @@ param
         $whatTaskQueue = if ( $NoEnqueuedTasks ) { "" } else { " task_queue" }
         $command = "<show_state subsystems='folder job' what='folders$($whatNoSubfolders)$($whatTaskQueue)' path='$($Directory)'/>"
     
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request: $command"
         
-		$taskXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+		$taskXml = Send-JobSchedulerXMLCommand $js.Url $command
         if ( $taskXml )
         {    
             $runningTaskCount = 0

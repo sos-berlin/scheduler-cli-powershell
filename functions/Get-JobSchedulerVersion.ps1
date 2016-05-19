@@ -33,10 +33,10 @@ param
         # $process = Start-Process -FilePath """$($js.Install.ExecutableFile)""" "$($arguments)" -PassThru 
 
         $command = "<show_state what='job_chain_orders' max_task_history='0'/>"
-        Write-Debug ". $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+        Write-Debug ". $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Debug ". $($MyInvocation.MyCommand.Name): sending command: $command"
             
-        $stateXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command    
+        $stateXml = Send-JobSchedulerXMLCommand $js.Url $command    
         if ( $stateXml )
         {
           $stateXml.spooler.answer.state.version

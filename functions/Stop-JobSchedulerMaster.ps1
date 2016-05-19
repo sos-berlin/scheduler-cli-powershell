@@ -198,10 +198,10 @@ param
                         }
                     }
     
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
                     Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
 
-                    $result = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+                    $result = Send-JobSchedulerXMLCommand $js.Url $command
                 }
                 'terminate-fail-safe' 
                 {
@@ -215,10 +215,10 @@ param
                     }
                     $command = "<terminate continue_exclusive_operation='yes'$($terminateTimeout)/>"
     
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
                     Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
             
-                    $result = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+                    $result = Send-JobSchedulerXMLCommand $js.Url $command
                 }
                 'abort' 
                 {
@@ -230,10 +230,10 @@ param
                         $command = "<modify_spooler cmd='abort_immediately'/>"
                     }
     
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
                     Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
             
-                    $result = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+                    $result = Send-JobSchedulerXMLCommand $js.Url $command
                 }
                 'kill' 
                 {

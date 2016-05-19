@@ -53,10 +53,10 @@ param
         if ( !$Statistics )
         {
             $command = "<show_state what='job_chain_orders' max_task_history='0'/>"
-            Write-Debug ". $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+            Write-Debug ". $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
             Write-Debug ". $($MyInvocation.MyCommand.Name): sending command: $command"
             
-            $stateXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command    
+            $stateXml = Send-JobSchedulerXMLCommand $js.Url $command    
             if ( $stateXml )
             {
                 $state = Create-StatusObject
@@ -106,10 +106,10 @@ ________________________________________________________________________
         if ( $Statistics )
         {
             $command = "<subsystem.show what='statistics'/>"
-            Write-Debug ".. sending command to JobScheduler $($js.Hostname):$($js.Port)"
+            Write-Debug ".. sending command to JobScheduler $($js.Url)"
             Write-Debug ".. sending command: $command"
             
-            $statXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command    
+            $statXml = Send-JobSchedulerXMLCommand $js.Url $command    
             if ( $statXml )
             {
                 $stat = Create-StatisticsObject

@@ -100,10 +100,10 @@ param
         $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
         $command = "<show_state subsystems='folder order' what='folders job_chain_orders$($whatNoSubfolders)' path='$($Directory)'/>"
     
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Hostname):$($js.Port)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request: $command"
         
-        $jobChainXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+        $jobChainXml = Send-JobSchedulerXMLCommand $js.Url $command
         if ( $jobChainXml )
         {    
             $jobChainCount = 0

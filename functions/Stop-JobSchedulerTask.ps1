@@ -132,9 +132,9 @@ param
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($stopTaskCount) tasks are requested to stop"
             $command = "<commands>$($command)</commands>"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Hostname):$($js.Port): $command"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
         
-            $killXml = Send-JobSchedulerXMLCommand $js.Hostname $js.Port $command
+            $killXml = Send-JobSchedulerXMLCommand $js.Url $command
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no task found to stop"
         }

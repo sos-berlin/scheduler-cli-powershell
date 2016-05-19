@@ -60,8 +60,7 @@ function Create-JSObject()
     $jsService = New-Object PSObject
     
     $js | Add-Member -Membertype NoteProperty -Name Id -Value ""
-    $js | Add-Member -Membertype NoteProperty -Name Hostname -Value ""
-    $js | Add-Member -Membertype NoteProperty -Name Port -Value 0
+    $js | Add-Member -Membertype NoteProperty -Name Url -Value ""
     $js | Add-Member -Membertype NoteProperty -Name Local -Value $false
 
     $jsInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ""
@@ -84,7 +83,7 @@ function Create-JSObject()
     $js | Add-Member -Membertype NoteProperty -Name Config -Value $jsConfig
     $js | Add-Member -Membertype NoteProperty -Name Service -Value $jsService
 
-    # $jsDefaultProperties = @("Id", "Hostname", "Port")
+    # $jsDefaultProperties = @("Id", "Url")
     # $jsDefaultDisplayPropertySet = New-Object System.Management.Automation.PSPropertySet( "DefaultDisplayPropertySet", [string[]] $jsDefaultProperties )
     # $jsPSStandardMembers = [System.Management.Automation.PSMemberInfo[]] @( $jsDefaultDisplayPropertySet )
     # $js | Add-Member MemberSet PSStandardMembers $jsPSStandardMembers
@@ -266,35 +265,113 @@ function Create-TaskObject()
 }
 
 # send XML command to JobScheduler
-function Send-JobSchedulerXMLCommand( $remoteHost, $remotePort, $command, [bool] $checkResponse=$true ) 
+function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, $command, [bool] $checkResponse=$true ) 
+{
+    [string] $output = ""
+
+	$request = $null
+	$requestStream = $null
+
+	$response = $null
+	$responseStream = $null
+	$streamReader = $null
+
+	try
+	{     
+		$request = [System.Net.WebRequest]::Create( $jobSchedulerURL )
+ 
+		$request.Method = "POST"
+		$request.ContentType = "text/xml"
+		$request.UseDefaultCredentials = $true
+		$bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
+		$request.ContentLength = $bytes.Length
+		$requestStream = $request.GetRequestStream()
+		$requestStream.Write( $bytes, 0, $bytes.Length )
+ 
+		$requestStream.Close()
+		$response = $request.GetResponse()
+
+		Write-Debug "status code: $($response.StatusCode)"
+
+		$responseStream = $response.getResponseStream() 
+		$streamReader = new-object System.IO.StreamReader $responseStream
+		$output = $streamReader.ReadToEnd()		
+
+		if ( $checkResponse -and $output )
+		{
+			if ( $DebugPreference -eq 'Continue' )
+			{
+				if ( $output.Length -gt $jsDebugMaxOutputSize )
+				{
+					$tempFile = [IO.Path]::GetTempFileName()
+					$output | Out-File $tempFile -encoding ascii
+					Write-Debug ".. $($MyInvocation.MyCommand.Name): XML response available with temporary file: $($tempFile)"
+				} else {
+					Write-Debug ".. $($MyInvocation.MyCommand.Name): response: $($output)"
+				}
+			}
+
+			$errorText = Select-XML -Content $output -Xpath "/spooler/answer/ERROR/@text"
+			if ( $errorText.Node."#text" )
+			{
+				throw $errorText.Node."#text"
+			}
+
+			[xml] $output
+		}
+	} catch {
+		throw $_.Exception
+	} finally {
+		if ( $streamReader )
+		{
+			$streamReader.Close()
+			$streamReader = $null
+		}
+		
+		if ( $responseStream )
+		{
+			$responseStream.Close()
+			$responseStream = $null
+		}
+		
+		if ( $response )
+		{
+			$response.Close()
+			$response = $null
+		}
+	}
+}
+		
+# send XML command to JobScheduler
+function _Send-JobSchedulerXMLCommand( $remoteHost, $remotePort, $command, [bool] $checkResponse=$true ) 
 {
     [bool] $useSSL = $false
     [string] $output = ""
-    
-    if ( !$SCRIPT:jsSocket )
-    {
-        $SCRIPT:jsSocket = new-object System.Net.Sockets.TcpClient( $remoteHost, $remotePort )
-    }
-    
-    if ( !$SCRIPT:jsStream )
-    {
-        $SCRIPT:jsStream = $SCRIPT:jsSocket.GetStream() 
-    }
-    
-    if($useSSL) 
-    { 
-        $sslStream = New-Object System.Net.Security.SslStream $SCRIPT:jsStream,$false 
-        $sslStream.AuthenticateAsClient( $remoteHost )
-        $SCRIPT:jsStream = $sslStream 
-    }
-
-    if ( !$SCRIPT:jsWriter )
-    {
-        $SCRIPT:jsWriter = new-object System.IO.StreamWriter $SCRIPT:jsStream
-    }
 
 	try
-	{
+	{    
+		if ( !$SCRIPT:jsSocket )
+		{
+			$SCRIPT:jsSocket = new-object System.Net.Sockets.TcpClient( $remoteHost, $remotePort )
+		}
+		
+		if ( !$SCRIPT:jsStream )
+		{
+			$SCRIPT:jsStream = $SCRIPT:jsSocket.GetStream() 
+		}
+		
+		if($useSSL) 
+		{ 
+			$sslStream = New-Object System.Net.Security.SslStream $SCRIPT:jsStream,$false 
+			$sslStream.AuthenticateAsClient( $remoteHost )
+			$SCRIPT:jsStream = $sslStream 
+		}
+	
+		if ( !$SCRIPT:jsWriter )
+		{
+			$SCRIPT:jsWriter = new-object System.IO.StreamWriter $SCRIPT:jsStream
+		}
+
 		while($true) 
 		{ 
 			$SCRIPT:jsWriter.WriteLine( $command )
@@ -305,13 +382,21 @@ function Send-JobSchedulerXMLCommand( $remoteHost, $remotePort, $command, [bool]
 			break 
 		}
 	} catch {
-		$SCRIPT:jsWriter.Close()
-		$SCRIPT:jsWriter = $null
-		$SCRIPT:jsStream.Close()
-		$SCRIPT:jsStream = $null
+		if ( $SCRIPT:jsWriter )
+		{
+			$SCRIPT:jsWriter.Close()
+			$SCRIPT:jsWriter = $null
+		}
+		
+		if ( $SCRIPT:jsStream )
+		{
+			$SCRIPT:jsStream.Close()
+			$SCRIPT:jsStream = $null
+		}
+		
+		$SCRIPT:jsSocket = $null
 		throw $_.Exception
 	}
-
 
     if ( $checkResponse -and $output )
     {
@@ -476,6 +561,6 @@ $js = Create-JSObject
 if ( $env:SCHEDULER_HOME )
 {
    Use-JobSchedulerMaster -InstallPath $env:SCHEDULER_HOME
-} elseif ( $env:SCHEDULER_ID -and $env:SCHEDULER_HOST -and $env:SCHEDULER_PORT ) {
-   Use-JobSchedulerMaster -Id $env:SCHEDULER_ID -Hostname $env:SCHEDULER_HOST -Port $env:SCHEDULER_PORT /Remote
+} elseif ( $env:SCHEDULER_ID -and $env:SCHEDULER_URL ) {
+   Use-JobSchedulerMaster -Id $env:SCHEDULER_ID -Url $env:SCHEDULER_URL -Remote
 }
