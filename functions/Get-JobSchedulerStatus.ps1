@@ -58,8 +58,8 @@ param
         if ( !$Statistics )
         {
             $command = "<show_state what='job_chain_orders' max_task_history='0'/>"
-            Write-Debug ". $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ". $($MyInvocation.MyCommand.Name): sending command: $command"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
             
             $stateXml = Send-JobSchedulerXMLCommand $js.Url $command    
             if ( $stateXml )

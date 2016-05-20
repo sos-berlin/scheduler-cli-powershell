@@ -18,23 +18,19 @@ If the documentation is not available for your language then consider to use
 # JobScheduler Master Object
 $js = $null
 
-# Commands that require a local instance
+# JobScheduler Web Request Credentials
+$jsCredentials = $null;
+
+# Commands that require a local instance (Management of Windows Service)
 $jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
 
 # Options
 #     Debug messages exceeding the max. output size are stored in temporary files
 $jsOptionDebugMaxOutputSize = 1000
-#    Web Requests use default credentials of the current user
-$jsOptionWebRequestUseDefaultCredentials = $true
-
-# Unused TCP objects and options
-#     Socket, Stream, Writer for TCP connection
-# $jsSocket = $null
-# $jsStream = $null
-# $jsWriter = $null
-#    Delays
-#[int] $jsTCPReadDelay = 100
-#[int] $jsTCPWriteDelay = 100
+#     Web Request: credentials reqired?
+$jsOptionWebRequestUseCredentials = $false
+#    Web Requests: use default credentials of the current user?
+$jsOptionWebRequestUseDefaultCredentials = $false
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -304,27 +300,41 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $comma
  
         $request.Method = "POST"
         $request.ContentType = "text/xml"
-        $request.UseDefaultCredentials = $SCRIPT:jsOptionWebRequestUseDefaultCredentials
+        
+        if ( $SCRIPT:jsOptionWebRequestUseDefaultCredentials )
+        {
+            $request.UseDefaultCredentials = $SCRIPT:jsOptionWebRequestUseDefaultCredentials
+        } elseif ( $SCRIPT:jsCredentials ) {
+            $request.Credentials = $SCRIPT:jsCredentials
+        }
+        
         $bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
         $request.ContentLength = $bytes.Length
         $requestStream = $request.GetRequestStream()
         $requestStream.Write( $bytes, 0, $bytes.Length )
  
         $requestStream.Close()
-		
-		if ( $checkResponse )
-		{
-			$response = $request.GetResponse()
+        
+        if ( $checkResponse )
+        {
+            try
+            {
+                $response = $request.GetResponse()
+            } catch {
+                # reset credentials in case of response errors, eg. HTTP 401 not authenticated
+                $SCRIPT:jsCredentials = $null
+                throw "$($MyInvocation.MyCommand.Name): JobScheduler returns error, if credentials are missing consider to use the Set-Credentials cmdlet: " + $_.Exception                
+            }
 
-			if ( $response.StatusCode -ne 'OK' )
-			{
-				throw "$($MyInvocation.MyCommand.Name): JobScheduler returns status code: $($response.StatusCode)"
-			}
+            if ( $response.StatusCode -ne 'OK' )
+            {
+                throw "$($MyInvocation.MyCommand.Name): JobScheduler returns status code: $($response.StatusCode)"
+            }
 
-			$responseStream = $response.getResponseStream() 
-			$streamReader = new-object System.IO.StreamReader $responseStream
-			$output = $streamReader.ReadToEnd()
-		}
+            $responseStream = $response.getResponseStream() 
+            $streamReader = new-object System.IO.StreamReader $responseStream
+            $output = $streamReader.ReadToEnd()
+        }
 
         if ( $checkResponse -and $output )
         {

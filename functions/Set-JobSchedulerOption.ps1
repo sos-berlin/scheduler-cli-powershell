@@ -1,7 +1,8 @@
-function Set-JobSchedulerOption( [int] $DebugMaxOutputSize=1000, [bool] $WebRequestUseDefaultCredentials=$true )
+function Set-JobSchedulerOption
 {
 <#
 .SYNOPSIS
+Set options for the JobScheduler CLI.
 
 .PARAMETER DebugMaxOutputSize
 When using $DebugPreference settings then the JobScheduler CLI provides the
@@ -14,20 +15,19 @@ files and a console debug message indicates the location of the respective file.
 This cmdlet allows to set the max. output size to an individual value.
 
 Default: 1000 Byte
-
-.PARAMETER WebRequestUseDefaultCredentials
-When sending request to a JobScheduler Master then authentication might be required.
-This parameter specifies that the credentials of the current user are applied for authentication challenges.
 #>
-
-	if ( $DebugMaxOutputSize )
-	{
-		$SCRIPT:jsOptionDebugMaxOutputSize = $DebugMaxOutputSize
-	}
-
-	if ( $WebRequestUseDefaultCredentials )
-	{
-		$SCRIPT:jsOptionWebRequestUseDefaultCredentials = $WebRequestUseDefaultCredentials
+[cmdletbinding()]
+param
+(
+    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $DebugMaxOutputSize=1000
+)
+    Process 
+    {
+		if ( $DebugMaxOutputSize )
+		{
+			$SCRIPT:jsOptionDebugMaxOutputSize = $DebugMaxOutputSize
+		}
 	}
 }
 
