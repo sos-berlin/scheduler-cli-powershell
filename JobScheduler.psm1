@@ -311,16 +311,20 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $comma
         $requestStream.Write( $bytes, 0, $bytes.Length )
  
         $requestStream.Close()
-        $response = $request.GetResponse()
+		
+		if ( $checkResponse )
+		{
+			$response = $request.GetResponse()
 
-        if ( $response.StatusCode -ne 'OK' )
-        {
-            throw "$($MyInvocation.MyCommand.Name): JobScheduler returns status code: $($response.StatusCode)"
-        }
+			if ( $response.StatusCode -ne 'OK' )
+			{
+				throw "$($MyInvocation.MyCommand.Name): JobScheduler returns status code: $($response.StatusCode)"
+			}
 
-        $responseStream = $response.getResponseStream() 
-        $streamReader = new-object System.IO.StreamReader $responseStream
-        $output = $streamReader.ReadToEnd()        
+			$responseStream = $response.getResponseStream() 
+			$streamReader = new-object System.IO.StreamReader $responseStream
+			$output = $streamReader.ReadToEnd()
+		}
 
         if ( $checkResponse -and $output )
         {

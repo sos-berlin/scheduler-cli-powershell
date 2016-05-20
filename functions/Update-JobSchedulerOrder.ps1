@@ -88,6 +88,12 @@ Get-Order -JobChain /test/globals/chain1 | Update-Order -Action end_setback
 
 Ends any delays for repeated execution for all orders for job chain "chain1" from the folder "/test/globals".
 
+.EXAMPLE
+Update-Order -JobChain /sos/reporting/Reporting -Order 548 -Action start -Parameters @{'param1'='value1'; 'param2'='value2'}
+
+Adds an order to the specified job chain. The order will start one hour later and will use the
+parameters from the specified hashmap.
+
 .LINK
 about_jobscheduler
 

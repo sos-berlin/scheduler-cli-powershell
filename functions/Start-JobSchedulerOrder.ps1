@@ -2,20 +2,16 @@ function Start-JobSchedulerOrder
 {
 <#
 .SYNOPSIS
-Resets a number of orders in the JobScheduler Master.
+Starts an order for a job chain in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-Order -Action reset
-
-.PARAMETER Order
-Specifies the identifier of an order.
-
-Both parameters -Order and -JobChain have to be specified if no pipelined order objects are used.
+Start an existing order for a job chain.
 
 .PARAMETER JobChain
-Specifies the path and name of a job chain for which orders should be reset.
+Specifies the path and name of a job chain for which orders should be started.
 
-Both parameters -Order and -JobChain have to be specified if no pipelined order objects are used.
+.PARAMETER Order
+Optionally specifies the identifier of an order.
 
 .PARAMETER Parameters
 Specifies the parameters for the order. Parameters are created from a hashmap,
@@ -49,25 +45,25 @@ This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Or
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-Reset-Order -Order Reporting -JobChain /sos/reporting/Reporting
+Start-Order -JobChain /sos/reporting/Reporting
 
-Resets the order "Reporting" from the specified job chain.
-
-.EXAMPLE
-Get-Order | Reset-Order
-
-Resets all orders for all job chains.
+Starts an order of the specified job chain.
 
 .EXAMPLE
-Get-Order -Directory / -NoSubfolders | Reset-Order
+Start-Order -Order 123 -JobChain /sos/reporting/Reporting
 
-Resets orders that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+Starts the order "123" of the specified job chain.
 
 .EXAMPLE
-Get-Order -JobChain /test/globals/chain1 | Reset-Order
+Start-Order -Order 123 -JobChain /sos/reporting/Reporting -At "now+1800"
 
-Resets all orders for the specified job chain.
+Starts the specified order.
+
+.EXAMPLE
+Start-Order -JobChain /sos/reporting/Reporting -Order 548 -At "now+3600" -Parameters @{'param1'='value1'; 'param2'='value2'}
+
+Starts an order of the specified job chain. The order will start one hour later and will use the
+parameters from the specified hashmap.
 
 .LINK
 about_jobscheduler
