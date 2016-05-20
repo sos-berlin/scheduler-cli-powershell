@@ -44,7 +44,7 @@ Find more information and documentation of cmdlets at [PowerShell Command Line I
  * or to a location that is available for all users, e.g. `C:\Windows\system32\WindowsPowerShell\v1.0\Modules\`
  * or to an arbitrary location that later on is specified when importing the module.
 * Directory names might differ according to PowerShell versions.
-* The required JobScheduler CLI module folder name is *JobScheduler*. If you download the module then it might be wrapped in a folder that specifies the current branch, e.g. *scheduler-cli-powershell-master*. In this case ignore the envelope folder and extract the *JobScheduler* folder to the module location.
+* The required JobScheduler CLI module folder name is *JobScheduler*. If you download the module it is wrapped in a folder that specifies the current branch, e.g. *scheduler-cli-powershell-1.0.0*. Manually create the *JobScheduler* folder in the module location and add the contents of the *scheduler-cli-powershell-1.0.0* folder from the archive.
 
 ## Import Module
 
