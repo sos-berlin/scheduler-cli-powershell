@@ -36,6 +36,31 @@ Specifies the action to be applied to an order:
 * Action "end_setback"
 ** Ends any delays that are applied to an order for repeated execution by a setback operation.
 
+.PARAMETER Parameters
+Specifies the parameters for the order. Parameters are created from a hashmap,
+i.e. a list of names and values.
+
+.PARAMETER Title
+Specifies the title of the order.
+
+.PARAMETER At
+Specifies the point in time when the order should start:
+
+* now
+** specifies that the order should start immediately
+* now+1800
+** specifies that the order should start with a delay of 1800 seconds, i.e. 30 minutes later.
+* yyyy-mm-dd HH:MM[:SS]
+** specifies that the order should start at the specified point in time.
+
+.PARAMETER State
+Specifies that the order should enter the job chain at the job chain node that
+is assigend the specified state.
+
+.PARAMETER EndState
+Specifies that the order should leave the job chain at the job chain node that
+is assigend the specified state.
+
 .INPUTS
 This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
 
@@ -76,18 +101,49 @@ param
     [string] $JobChain,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [ValidateSet('start','suspend','resume','reset','end_setback')] [string] $Action,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [string] $At = 'now'
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [hashtable] $Parameters,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Title,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $At = 'now',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $State,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $EndState
 )
     Begin
     {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         switch ( $Action )
         {
-            'start'           { $updateAction = "at='$($At)'" }
-            'suspend'         { $updateAction = "suspended='yes'" }
-            'resume'          { $updateAction = "suspended='no'" }
-            'reset'           { $updateAction = "action='reset'" }
-            'end_setback'     { $updateAction = "setback='no'" }
+            'start'           { $orderAttributes = "" }
+            'suspend'         { $orderAttributes = "suspended='yes'" }
+            'resume'          { $orderAttributes = "suspended='no'" }
+            'reset'           { $orderAttributes = "action='reset'" }
+            'end_setback'     { $orderAttributes = "setback='no'" }
+            default           { $orderAttributes = "" }
+        }
+
+        if ( $Title )
+        {
+            $orderAttributes += " title='$($Title)'"
+        }
+        
+        if ( $At )
+        {
+            $orderAttributes += " at='$($At)'"
+        }
+        
+        if ( $State )
+        {
+            $orderAttributes += " state='$($State)'"
+        }
+        
+        if ( $EndState )
+        {
+            $orderAttributes += " end_state='$($EndState)'"
         }
 
         $command = ""
@@ -103,10 +159,24 @@ param
 
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): updating order with Order='$($Order)', JobChain='$($JobChain)'"
 
-        $command += "<modify_order job_chain='$($JobChain)' order='$($Order)' $updateAction/>"
+        $command += "<modify_order job_chain='$($JobChain)' order='$($Order)' $orderAttributes>"
+
+        if ( $Parameters )
+        {
+            $command += '<params>'
+            foreach ($p in $Parameters.GetEnumerator()) {
+                $command += "<param name='$($p.Name)' value='$($p.Value)'/>"
+            }            
+            $command += '</params>'
+        }
+        
+        $command += "</modify_order>"
+        
         $updateOrder = Create-OrderObject
         $updateOrder.Order = $Order
         $updateOrder.JobChain = $JobChain
+        $updateOrder.Title = $Title
+        $updateOrder.State = $State
         $updateOrder
         $orderCount++
      }

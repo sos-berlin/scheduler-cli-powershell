@@ -92,8 +92,10 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [int] $Timeout = 10
 )
-    Begin
-    {
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         $killTimeout = ""
         if ( $Action -ne "kill" )
         {

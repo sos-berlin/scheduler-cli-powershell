@@ -29,6 +29,12 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Command
 )
+
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
+
     Process
     {
         if ( !$Command )

@@ -56,8 +56,10 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Path = '/'
 )
-    Begin
-    {
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         $command = ""
         $orderCount = 0
     }

@@ -94,8 +94,10 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $EnqueuedTasks
 )
-    Begin
-    {
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         if ( $JobChain -and $Stopped )
         {
             throw "$($MyInvocation.MyCommand.Name): parameters -JobChain and -Stopped cannot be combined, use -Directory or -Job with -Stopped"

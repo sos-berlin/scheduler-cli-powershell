@@ -67,6 +67,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $NoOutputs
 )
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
+
     Process
     {
         if ( $FromDate )

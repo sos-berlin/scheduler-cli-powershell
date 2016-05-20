@@ -94,6 +94,8 @@ param
 )
     Begin
     {
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         if ( $Suspended -and $Setback )
         {
             throw "$($MyInvocation.MyCommand.Name): parameters -Suspended and -Setback cannot be combined"

@@ -22,7 +22,7 @@ param
 )
     Begin
     {
-        # Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
     }
     
     Process

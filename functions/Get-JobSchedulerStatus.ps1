@@ -48,6 +48,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $NoOutputs
 )
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
+
     Process
     {        
         if ( !$Statistics )
@@ -60,9 +65,13 @@ param
             if ( $stateXml )
             {
                 $state = Create-StatusObject
-                $state.Id = $js.Id
-                $state.Hostname = $js.Hostname
-                $state.Port = $js.Port
+                $state.Id = $stateXml.spooler.answer.state.id
+                $state.Url = $js.Url
+				
+				if ( !$js.Id ) 
+				{
+					$SCRIPT:js.Id = $state.Id
+				}
 
                 $state.Version = $stateXml.spooler.answer.state.version
                 $state.State = $stateXml.spooler.answer.state.state
@@ -82,7 +91,7 @@ param
 ________________________________________________________________________
 Job Scheduler instance: $($state.Id)
 .............. version: $($state.Version)
-......... operated for: $($state.Hostname):$($state.Port)
+......... operated for: $($state.Url)
 ........ running since: $($state.RunningSince)
 ................ state: $($state.State)
 .................. pid: $($state.Pid)

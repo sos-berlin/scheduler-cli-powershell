@@ -69,9 +69,10 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoSubfolders
 )
-    Begin
-    {
-	}		
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
 		
     Process
     {

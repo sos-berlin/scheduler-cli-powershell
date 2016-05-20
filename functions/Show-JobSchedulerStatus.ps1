@@ -27,6 +27,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
 	[switch] $Statistics
 )
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
+
     Process
     {
 		$parameters = @{ "Statistics"=$Statistics }

@@ -56,8 +56,10 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain
 )
-    Begin
-    {
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         $parameters = @()
     }
     

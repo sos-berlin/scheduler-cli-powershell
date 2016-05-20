@@ -25,6 +25,11 @@ about_jobscheduler
 param
 (
 )
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
+
     Process
     {
         $command = "<modify_spooler cmd='pause'/>"

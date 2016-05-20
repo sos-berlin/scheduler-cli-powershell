@@ -26,6 +26,7 @@ PowerShellVersion = '2.0'
 
 # Functions to export from this module
 FunctionsToExport = @( 
+    'Add-JobSchedulerOrder',
     'Get-JobSchedulerCalendar',
     'Get-JobSchedulerJob',
     'Get-JobSchedulerJobChain',
@@ -41,7 +42,7 @@ FunctionsToExport = @(
     'Resume-JobSchedulerMaster',
     'Resume-JobSchedulerOrder',
     'Send-JobSchedulerCommand',
-    'Set-JobSchedulerMaxOutputSize',
+    'Set-JobSchedulerOption',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
     'Start-JobSchedulerMaster',
@@ -100,12 +101,12 @@ PrivateData = @{
         # RequireLicenseAcceptance = ""
 
         # Indicates this is a pre-release/testing version of the module.
-        IsPrerelease = 'False'
+        IsPrerelease = 'True'
     }
 }
 
 # HelpInfo URI of this module
-# HelpInfoURI = ''
+# HelpInfoURI = 'https://kb.sos-berlin.com/x/cID4'
 
 # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
 # DefaultCommandPrefix = ''

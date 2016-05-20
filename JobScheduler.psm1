@@ -2,8 +2,11 @@
 .SYNOPSIS
 JobScheduler command line interface
 
-For further information see about_JobScheduler
-If the documentation is not avaiable for your language then consider to use
+For further information see
+
+    PS C:\> about_JobScheduler
+
+If the documentation is not available for your language then consider to use
 
     PS C:\> [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
 #>
@@ -12,19 +15,26 @@ If the documentation is not avaiable for your language then consider to use
 # Globals
 # ----------------------------------------------------------------------
 
-# JobScheduler Master object
+# JobScheduler Master Object
 $js = $null
 
-# Debug messages exceeding the max. output size are stored in temporary files
-$jsDebugMaxOutputSize = 1000
+# Commands that require a local instance
+$jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
 
+# Options
+#     Debug messages exceeding the max. output size are stored in temporary files
+$jsOptionDebugMaxOutputSize = 1000
+#    Web Requests use default credentials of the current user
+$jsOptionWebRequestUseDefaultCredentials = $true
+
+# Unused TCP objects and options
+#     Socket, Stream, Writer for TCP connection
+# $jsSocket = $null
+# $jsStream = $null
+# $jsWriter = $null
+#    Delays
 #[int] $jsTCPReadDelay = 100
 #[int] $jsTCPWriteDelay = 100
-
-# Socket, Stream, Writer for TCP connection
-$jsSocket = $null
-$jsStream = $null
-$jsWriter = $null
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -42,14 +52,22 @@ Export-ModuleMember -Function "*"
 
 function Approve-JobSchedulerCommand( $command )
 {
-    if ( !$js.Local )
+    if ( !$SCRIPT:js.Local )
     {
-        $localCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster', 'Stop-JobSchedulerMaster' )
-        if ( $localCommands -contains $command.Name )
+        if ( $SCRIPT:jsLocalCommands -contains $command.Name )
         {
-            throw "$($command.Name): command not available for remote JobScheduler. Switch instance with the Use-JobSchedulerMaster command"
+            throw "$($command.Name): cmdlet is available exclusively for local JobScheduler Master. Switch instance with the Use-JobSchedulerMaster cmdlet and specify the -Id or -InstallPath parameter for a local JobScheduler Master"
         }
     }
+
+    if ( !$SCRIPT:js.Url )
+    {
+        if ( $SCRIPT:jsLocalCommands -notcontains $command.Name )
+        {
+            throw "$($command.Name): cmdlet requires a JobScheduler URL. Switch instance with the Use-JobSchedulerMaster cmdlet and specify the -Url parameter"
+        }
+    }
+
 }
 
 function Create-JSObject()
@@ -96,8 +114,7 @@ function Create-StatusObject()
     $state = New-Object PSObject
 
     $state | Add-Member -Membertype NoteProperty -Name Id -Value ""
-    $state | Add-Member -Membertype NoteProperty -Name Hostname -Value ""
-    $state | Add-Member -Membertype NoteProperty -Name Port -Value 0
+    $state | Add-Member -Membertype NoteProperty -Name Url -Value ""
 
     $state | Add-Member -Membertype NoteProperty -Name Version -Value ""
     $state | Add-Member -Membertype NoteProperty -Name State -Value ""
@@ -214,11 +231,14 @@ function Create-OrderObject()
     $order | Add-Member -Membertype NoteProperty -Name Directory -Value ""
     $order | Add-Member -Membertype NoteProperty -Name JobChain -Value ""
     $order | Add-Member -Membertype NoteProperty -Name State -Value ""
+    $order | Add-Member -Membertype NoteProperty -Name EndState -Value ""
     $order | Add-Member -Membertype NoteProperty -Name Title -Value ""
     $order | Add-Member -Membertype NoteProperty -Name LogFile -Value ""
     $order | Add-Member -Membertype NoteProperty -Name Job -Value ""
+    $order | Add-Member -Membertype NoteProperty -Name At -Value ""
     $order | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ""
     $order | Add-Member -Membertype NoteProperty -Name StateText -Value ""
+    $order | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
 
     $order
 }
@@ -236,8 +256,10 @@ function Create-JobObject()
     $job | Add-Member -Membertype NoteProperty -Name Tasks -Value ""
     $job | Add-Member -Membertype NoteProperty -Name IsOrder -Value ""
     $job | Add-Member -Membertype NoteProperty -Name ProcessClass -Value ""
+    $job | Add-Member -Membertype NoteProperty -Name At -Value ""
     $job | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ""
     $job | Add-Member -Membertype NoteProperty -Name StateText -Value ""
+    $job | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
 
     $job
 }
@@ -265,7 +287,7 @@ function Create-TaskObject()
 }
 
 # send XML command to JobScheduler
-function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, $command, [bool] $checkResponse=$true ) 
+function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $command, [bool] $checkResponse=$true ) 
 {
     [string] $output = ""
 
@@ -282,7 +304,7 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, $command, [bool
  
         $request.Method = "POST"
         $request.ContentType = "text/xml"
-        $request.UseDefaultCredentials = $true
+        $request.UseDefaultCredentials = $SCRIPT:jsOptionWebRequestUseDefaultCredentials
         $bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
         $request.ContentLength = $bytes.Length
         $requestStream = $request.GetRequestStream()
@@ -291,9 +313,8 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, $command, [bool
         $requestStream.Close()
         $response = $request.GetResponse()
 
-        if ( $response.StatusCode -ne "OK" )
+        if ( $response.StatusCode -ne 'OK' )
         {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): status code: $($response.StatusCode)"
             throw "$($MyInvocation.MyCommand.Name): JobScheduler returns status code: $($response.StatusCode)"
         }
 
@@ -305,7 +326,7 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, $command, [bool
         {
             if ( $DebugPreference -eq 'Continue' )
             {
-                if ( $output.Length -gt $jsDebugMaxOutputSize )
+                if ( $output.Length -gt $SCRIPT:jsOptionDebugMaxOutputSize )
                 {
                     $tempFile = [IO.Path]::GetTempFileName()
                     $output | Out-File $tempFile -encoding ascii
@@ -345,131 +366,6 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, $command, [bool
         }
     }
 }
-        
-# send XML command to JobScheduler
-function _Send-JobSchedulerXMLCommand( $remoteHost, $remotePort, $command, [bool] $checkResponse=$true ) 
-{
-    [bool] $useSSL = $false
-    [string] $output = ""
-
-    try
-    {    
-        if ( !$SCRIPT:jsSocket )
-        {
-            $SCRIPT:jsSocket = new-object System.Net.Sockets.TcpClient( $remoteHost, $remotePort )
-        }
-        
-        if ( !$SCRIPT:jsStream )
-        {
-            $SCRIPT:jsStream = $SCRIPT:jsSocket.GetStream() 
-        }
-        
-        if($useSSL) 
-        { 
-            $sslStream = New-Object System.Net.Security.SslStream $SCRIPT:jsStream,$false 
-            $sslStream.AuthenticateAsClient( $remoteHost )
-            $SCRIPT:jsStream = $sslStream 
-        }
-    
-        if ( !$SCRIPT:jsWriter )
-        {
-            $SCRIPT:jsWriter = new-object System.IO.StreamWriter $SCRIPT:jsStream
-        }
-
-        while($true) 
-        { 
-            $SCRIPT:jsWriter.WriteLine( $command )
-            $SCRIPT:jsWriter.Flush() 
-            Start-Sleep -m $jsTCPWriteDelay
-            $output += Get-JobSchedulerResponse
-
-            break 
-        }
-    } catch {
-        if ( $SCRIPT:jsWriter )
-        {
-            $SCRIPT:jsWriter.Close()
-            $SCRIPT:jsWriter = $null
-        }
-        
-        if ( $SCRIPT:jsStream )
-        {
-            $SCRIPT:jsStream.Close()
-            $SCRIPT:jsStream = $null
-        }
-        
-        $SCRIPT:jsSocket = $null
-        throw $_.Exception
-    }
-
-    if ( $checkResponse -and $output )
-    {
-        if ( $DebugPreference -eq 'Continue' )
-        {
-            if ( $output.Length -gt $jsDebugMaxOutputSize )
-            {
-                $tempFile = [IO.Path]::GetTempFileName()
-                $output | Out-File $tempFile -encoding ascii
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): XML response available with temporary file: $($tempFile)"
-            } else {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): response: $($output)"
-            }
-        }
-
-        $errorText = Select-XML -Content $output -Xpath "/spooler/answer/ERROR/@text"
-        if ( $errorText.Node."#text" )
-        {
-            throw $errorText.Node."#text"
-        }
-
-        [xml] $output
-    }
-}
-
-# Receive response from JobScheduler
-function Get-JobSchedulerResponse
-{
-    ## Create a buffer to receive the response 
-    $buffer = new-object System.Byte[] 1024 
-    $encoding = new-object System.Text.AsciiEncoding
-
-    $outputBuffer = "" 
-    $foundMore = $false
-
-    ## Read all the data available from the stream, writing it to the 
-    ## output buffer when done. 
-    do 
-    { 
-        ## Allow data to buffer for a bit 
-         Start-Sleep -m $jsTCPReadDelay
-
-        ## Read what data is available 
-        $foundmore = $false 
-        $SCRIPT:jsStream.ReadTimeout = 1000
-
-        do 
-        { 
-            try 
-            { 
-                $read = $SCRIPT:jsStream.Read($buffer, 0, 1024)
-
-                if($read -gt 0) 
-                { 
-                    $foundmore = $true 
-                    $outputBuffer += ($encoding.GetString($buffer, 0, $read)) 
-                } 
-            } catch { $foundMore = $false; $read = 0 } 
-        } while( $read -gt 0 )
-    } while( $foundmore )
-
-    # remove trailing null bytes
-    while ($outputBuffer[$outputBuffer.Length-1] -eq 0x00)
-    {
-        $outputBuffer = $outputBuffer.Substring( 0, $outputBuffer.Length-1 )
-    }
-    
-    $outputBuffer
-}
 
 # check JobScheduler response for errors and return error message
 function Get-JobSchedulerResponseError( $response )
@@ -484,6 +380,19 @@ function Get-JobSchedulerResponseError( $response )
     }
 }
 
+# return the directory name of a path
+function Get-DirectoryName( [string] $path )
+{
+    if ( $path.LastIndexOf('\') -ge 0 )
+    {
+        $path = $path.Substring( $path.LastIndexOf('\')+1 )
+    } elseif ( $path.LastIndexOf('/') -ge 0 ) {
+        $path = $path.Substring( $path.LastIndexOf('/')+1 )
+    }
+    
+    $path
+}
+
 # return the basename of an object
 function Get-JobSchedulerObject-Basename( [string] $objectPath )
 {
@@ -491,6 +400,7 @@ function Get-JobSchedulerObject-Basename( [string] $objectPath )
     {
         $objectPath = $objectPath.Substring( $objectPath.LastIndexOf('/')+1 )
     }
+
     $objectPath
 }
 
@@ -516,6 +426,7 @@ function Get-JobSchedulerObject-CanonicalPath( [string] $objectPath )
     $objectPath
 }
 
+# execute Windows command script and return environment variables
 function Invoke-CommandScript
 {
 <#
@@ -566,5 +477,5 @@ if ( $env:SCHEDULER_HOME )
 {
    Use-JobSchedulerMaster -InstallPath $env:SCHEDULER_HOME
 } elseif ( $env:SCHEDULER_URL ) {
-   Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Remote
+   Use-JobSchedulerMaster -Url $env:SCHEDULER_URL
 }

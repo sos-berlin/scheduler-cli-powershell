@@ -48,9 +48,14 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $ToDate
 )
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
+
     Process
     {
-        $parameters = @{ "Days"=$Days; "FromDate"=$FromDate; "ToDate"=$ToDate }
+        $parameters = @{ 'Days'=$Days; 'FromDate'=$FromDate; 'ToDate'=$ToDate }
         $arguments = New-Object System.Management.Automation.PSObject -Property $parameters
         $arguments | Get-JobSchedulerCalendar -Display -NoOutputs
     }

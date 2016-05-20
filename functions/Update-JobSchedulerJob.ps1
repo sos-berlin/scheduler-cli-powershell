@@ -25,6 +25,13 @@ Specifies the action to be applied to stop a task:
 * Action "unstop"
 ** unstops a previously stopped job.
 
+.PARAMETER Parameters
+Specifies the parameters for the job. Parameters are created from a hashmap,
+i.e. a list of names and values.
+
+.PARAMETER At
+Specifies the point in time when the job should start:
+
 .INPUTS
 This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
 
@@ -57,13 +64,19 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [ValidateSet('start','wake','stop','unstop','end','suspend','continue')] [string] $Action
+    [ValidateSet('start','wake','stop','unstop','end','suspend','continue')] [string] $Action,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [hashtable] $Parameters,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $At = 'now'
 )
     Begin
     {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         $command = ""
         $updatedJobCount = 0
-	}
+    }
 
     Process
     {
@@ -74,9 +87,34 @@ param
 
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): updating job='$($Job)' action='$($Action)'"
 
-        $command += "<modify_job job='$($Job)' cmd='$($Action)'/>"
+        if ( $Action -eq 'start' )
+        {
+            $jobAttributes = ''
+            if ( $At )
+            {
+                $jobAttributes += " at='$($At)'"
+            }
+        
+            $command += "<start_job job='$($Job)' $jobAttributes>"
+
+            if ( $Parameters )
+            {
+                $command += '<params>'
+                foreach ($p in $Parameters.GetEnumerator()) {
+                    $command += "<param name='$($p.Name)' value='$($p.Value)'/>"
+                }            
+                $command += '</params>'
+            }
+        
+            $command += "</start_job>"
+        } else {
+            $command += "<modify_job job='$($Job)' cmd='$($Action)'/>"
+        }
+        
         $updateJob = Create-JobObject
         $updateJob.Job = $Job
+        $updateJob.At = $At
+        $updateJob.Parameters = $Parameters
         $updateJob
         $updateJobCount++
      }

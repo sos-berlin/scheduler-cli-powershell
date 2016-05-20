@@ -14,6 +14,20 @@ Specifies the full path and name of a job.
 Optionally specifies the directory of a job should the -Job parameter
 not be provided with the full path and name of the job.
 
+.PARAMETER Parameters
+Specifies the parameters for the job. Parameters are created from a hashmap,
+i.e. a list of names and values.
+
+.PARAMETER At
+Specifies the point in time when the job should start:
+
+* now
+** specifies that the job should start immediately
+* now+1800
+** specifies that the job should start with a delay of 1800 seconds, i.e. 30 minutes later.
+* yyyy-mm-dd HH:MM[:SS]
+** specifies that the job should start at the specified point in time.
+
 .INPUTS
 This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
 
@@ -41,11 +55,17 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory = '/'
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [hashtable] $Parameters,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $At = 'now'
 )
-    Begin
-    {
-        $parameters = @()
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
+        $startJobs = @()
     }
     
     Process
@@ -76,12 +96,14 @@ param
         $j.Job = $Job
         $j.Path = $Job
         $j.Directory = Get-JobSchedulerObject-Parent $Job
-        $parameters += $j
+		$j.At = $At
+		$j.Parameters = $Parameters
+        $startJobs += $j
     }
 
     End
     {
-        $parameters | Update-JobSchedulerJob -Action start
+        $startJobs | Update-JobSchedulerJob -Action start
     }
 }
 

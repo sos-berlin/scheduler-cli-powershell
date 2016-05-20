@@ -80,6 +80,11 @@ param
 	[switch] $Service
 )
 
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
+
     Process
     {
 		$parameters = @{ "Action"=$Action; "Cluster"=$Cluster; "Timeout"=$Timeout; "Service"=$Service }

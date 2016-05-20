@@ -58,9 +58,10 @@ param
     [string] $JobChain,
     [switch] $NoSubfolders
 )
-    Begin
-    {
-	}		
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	}
 		
     Process
     {

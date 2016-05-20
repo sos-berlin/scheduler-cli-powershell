@@ -43,8 +43,10 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/'
 )
-    Begin
-    {
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
         $parameters = @()
     }
     
