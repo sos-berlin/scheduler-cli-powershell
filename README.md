@@ -63,7 +63,7 @@ As a first operation after importing the module it is required to execute the Us
  * specifies the URL for which the JobScheduler Master is available. This is the same URL that you would use when opening the JOC GUI in your browser, e.g. `http://localhost:4444`. Do not omit the protocol (http/https) for the URL.
  * allows to execute cmdlets for the specified Master independently from the server and operating system that the JobScheduler Master is operated for, i.e. you can use PowerShell cmdlets to manage a JobScheduler Master running on a Linux box.
  * specifying the URL is not sufficient to manage the Windows Service of the respective Master, see below.
-* `PS C:\> Use-Master <JobSchedulerID>`  or `PS C:\> Use-Master -Id <JobSchedulerID>`
+* `PS C:\> Use-Master -Id <JobSchedulerID>`
  * references the JobScheduler ID that has been assigned during installation of a Master. 
  * adds the JobScheduler ID to the assumed installation base path. A typical installation path would be `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10` with `scheduler1.10` being the JobScheduler ID.
 * `PS C:\> Use-Master -InstallPath <InstallationPath>`
