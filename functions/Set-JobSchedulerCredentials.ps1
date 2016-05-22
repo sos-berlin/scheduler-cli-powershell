@@ -25,9 +25,16 @@ Specifies that the user is prompted for account and password. The password is co
 and a credentials object is created for authentication.
 
 .EXAMPLE
-$account = 'john'
+$account = 'John'
+$password = ('Doe' | ConvertTo-SecureString -AsPlainText -Force)
+$credentials = New-Object -typename System.Management.Automation.PSCredential -ArgumentList $account, $password
+Set-JobSchedulerCredentials -Credentials $credentials
+
+An individual credentials object is created that is assigned the -Credentials parameter.
+.EXAMPLE
+$account = 'John'
 $password = Read-Host 'Enter password for John: ' -AsSecureString
-$credentials = New-Object -typename System.Management.Automation.PSCredential -argumentlist $account, $password
+$credentials = New-Object -typename System.Management.Automation.PSCredential -ArgumentList $account, $password
 Set-JobSchedulerCredentials -Credentials $credentials
 
 An individual credentials object is created that is assigned the -Credentials parameter.
@@ -60,7 +67,7 @@ param
             Write-Host "* ************************************************** *"
             $account = Read-Host "Enter user account for JobScheduler access: "
             $password = Read-Host "Enter password for JobScheduler access: " -AsSecureString
-            $SCRIPT:jsCredentials = New-Object -typename System.Management.Automation.PSCredential -argumentlist $account, $password
+            $SCRIPT:jsCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $account, $password
         }
     }
 }

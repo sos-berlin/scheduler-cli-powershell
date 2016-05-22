@@ -9,6 +9,10 @@ For further information see
 If the documentation is not available for your language then consider to use
 
     PS C:\> [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
+	
+TODOs
+
+	Add proxy support
 #>
 
 # ----------------------------------------------------------------------
@@ -19,18 +23,18 @@ If the documentation is not available for your language then consider to use
 $js = $null
 
 # JobScheduler Web Request Credentials
-$jsCredentials = $null;
+$jsCredentials = $null
 
 # Commands that require a local instance (Management of Windows Service)
 $jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
 
 # Options
-#     Debug messages exceeding the max. output size are stored in temporary files
+#     Debug Message: responses exceeding the max. output size are stored in temporary files
 $jsOptionDebugMaxOutputSize = 1000
-#     Web Request: credentials reqired?
-$jsOptionWebRequestUseCredentials = $false
-#    Web Requests: use default credentials of the current user?
-$jsOptionWebRequestUseDefaultCredentials = $false
+#    Web Request: timeout for establishing the connection in ms
+$jsOptionWebRequestTimeout = 15000
+#    Web Request: use default credentials of the current user?
+$jsOptionWebRequestUseDefaultCredentials = $true
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -46,7 +50,7 @@ Export-ModuleMember -Function "*"
 # Private Functions
 # ----------------------------------------------------------------------
 
-function Approve-JobSchedulerCommand( $command )
+function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo] $command )
 {
     if ( !$SCRIPT:js.Local )
     {
@@ -73,25 +77,25 @@ function Create-JSObject()
     $jsConfig = New-Object PSObject
     $jsService = New-Object PSObject
     
-    $js | Add-Member -Membertype NoteProperty -Name Id -Value ""
-    $js | Add-Member -Membertype NoteProperty -Name Url -Value ""
+    $js | Add-Member -Membertype NoteProperty -Name Id -Value ''
+    $js | Add-Member -Membertype NoteProperty -Name Url -Value ''
     $js | Add-Member -Membertype NoteProperty -Name Local -Value $false
 
-    $jsInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ""
-    $jsInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ""
-    $jsInstall | Add-Member -Membertype NoteProperty -Name Params -Value ""
-    $jsInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ""
-    $jsInstall | Add-Member -Membertype NoteProperty -Name ClusterOptions -Value ""
+    $jsInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+    $jsInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ''
+    $jsInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
+    $jsInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
+    $jsInstall | Add-Member -Membertype NoteProperty -Name ClusterOptions -Value ''
     $jsInstall | Add-Member -Membertype NoteProperty -Name PidFile -Value 0
 
-    $jsConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ""
-    $jsConfig | Add-Member -Membertype NoteProperty -Name FactoryIni -Value ""
-    $jsConfig | Add-Member -Membertype NoteProperty -Name SosIni -Value ""
+    $jsConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+    $jsConfig | Add-Member -Membertype NoteProperty -Name FactoryIni -Value ''
+    $jsConfig | Add-Member -Membertype NoteProperty -Name SosIni -Value ''
     $jsConfig | Add-Member -Membertype NoteProperty -Name SchedulerXml -Value 0
 
-    $jsService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ""
-    $jsService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ""
-    $jsService | Add-Member -Membertype NoteProperty -Name ServiceDescription -Value ""
+    $jsService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ''
+    $jsService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ''
+    $jsService | Add-Member -Membertype NoteProperty -Name ServiceDescription -Value ''
 
     $js | Add-Member -Membertype NoteProperty -Name Install -Value $jsInstall
     $js | Add-Member -Membertype NoteProperty -Name Config -Value $jsConfig
@@ -109,13 +113,13 @@ function Create-StatusObject()
 {
     $state = New-Object PSObject
 
-    $state | Add-Member -Membertype NoteProperty -Name Id -Value ""
-    $state | Add-Member -Membertype NoteProperty -Name Url -Value ""
+    $state | Add-Member -Membertype NoteProperty -Name Id -Value ''
+    $state | Add-Member -Membertype NoteProperty -Name Url -Value ''
 
-    $state | Add-Member -Membertype NoteProperty -Name Version -Value ""
-    $state | Add-Member -Membertype NoteProperty -Name State -Value ""
+    $state | Add-Member -Membertype NoteProperty -Name Version -Value ''
+    $state | Add-Member -Membertype NoteProperty -Name State -Value ''
     $state | Add-Member -Membertype NoteProperty -Name Pid -Value 0
-    $state | Add-Member -Membertype NoteProperty -Name RunningSince -Value ""
+    $state | Add-Member -Membertype NoteProperty -Name RunningSince -Value ''
 
     $state | Add-Member -Membertype NoteProperty -Name JobChainsExist -Value 0
     $state | Add-Member -Membertype NoteProperty -Name OrdersExist -Value 0
@@ -168,9 +172,9 @@ function Create-CalendarAtOrderObject()
 {
     $calAtOrder = New-Object PSObject
 
-    $calAtOrder | Add-Member -Membertype NoteProperty -Name JobChain -Value ""
-    $calAtOrder | Add-Member -Membertype NoteProperty -Name OrderId -Value ""
-    $calAtOrder | Add-Member -Membertype NoteProperty -Name StartAt -Value ""
+    $calAtOrder | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
+    $calAtOrder | Add-Member -Membertype NoteProperty -Name OrderId -Value ''
+    $calAtOrder | Add-Member -Membertype NoteProperty -Name StartAt -Value ''
     
     $calAtOrder
 }
@@ -179,12 +183,12 @@ function Create-CalendarPeriodOrderObject()
 {
     $calPeriodOrder = New-Object PSObject
 
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name JobChain -Value ""
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name OrderId -Value ""
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name BeginAt -Value ""
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name EndAt -Value ""
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name Repeat -Value ""
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name AbsoluteRepeat -Value ""
+    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
+    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name OrderId -Value ''
+    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name BeginAt -Value ''
+    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name EndAt -Value ''
+    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name Repeat -Value ''
+    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name AbsoluteRepeat -Value ''
     
     $calPeriodOrder
 }
@@ -193,11 +197,11 @@ function Create-CalendarPeriodJobObject()
 {
     $calPeriodJob = New-Object PSObject
 
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name Job -Value ""
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name BeginAt -Value ""
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name EndAt -Value ""
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name Repeat -Value ""
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name AbsoluteRepeat -Value ""
+    $calPeriodJob | Add-Member -Membertype NoteProperty -Name Job -Value ''
+    $calPeriodJob | Add-Member -Membertype NoteProperty -Name BeginAt -Value ''
+    $calPeriodJob | Add-Member -Membertype NoteProperty -Name EndAt -Value ''
+    $calPeriodJob | Add-Member -Membertype NoteProperty -Name Repeat -Value ''
+    $calPeriodJob | Add-Member -Membertype NoteProperty -Name AbsoluteRepeat -Value ''
     
     $calPeriodJob
 }
@@ -206,11 +210,11 @@ function Create-JobChainObject()
 {
     $jobChain = New-Object PSObject
 
-    $jobChain | Add-Member -Membertype NoteProperty -Name JobChain -Value ""
-    $jobChain | Add-Member -Membertype NoteProperty -Name Path -Value ""
-    $jobChain | Add-Member -Membertype NoteProperty -Name Directory -Value ""
-    $jobChain | Add-Member -Membertype NoteProperty -Name State -Value ""
-    $jobChain | Add-Member -Membertype NoteProperty -Name Title -Value ""
+    $jobChain | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
+    $jobChain | Add-Member -Membertype NoteProperty -Name Path -Value ''
+    $jobChain | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+    $jobChain | Add-Member -Membertype NoteProperty -Name State -Value ''
+    $jobChain | Add-Member -Membertype NoteProperty -Name Title -Value ''
     $jobChain | Add-Member -Membertype NoteProperty -Name Orders -Value 0
     $jobChain | Add-Member -Membertype NoteProperty -Name RunningOrders -Value 0
 
@@ -221,19 +225,19 @@ function Create-OrderObject()
 {
     $order = New-Object PSObject
 
-    $order | Add-Member -Membertype NoteProperty -Name Order -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name Name -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name Path -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name Directory -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name JobChain -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name State -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name EndState -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name Title -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name LogFile -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name Job -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name At -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ""
-    $order | Add-Member -Membertype NoteProperty -Name StateText -Value ""
+    $order | Add-Member -Membertype NoteProperty -Name Order -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name Name -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name Path -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name State -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name EndState -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name Title -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name LogFile -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name Job -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name At -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name StateText -Value ''
     $order | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
 
     $order
@@ -243,18 +247,18 @@ function Create-JobObject()
 {
     $job = New-Object PSObject
 
-    $job | Add-Member -Membertype NoteProperty -Name Job -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name Path -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name Directory -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name State -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name Title -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name LogFile -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name Tasks -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name IsOrder -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name ProcessClass -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name At -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ""
-    $job | Add-Member -Membertype NoteProperty -Name StateText -Value ""
+    $job | Add-Member -Membertype NoteProperty -Name Job -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name Path -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name State -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name Title -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name LogFile -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name Tasks -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name IsOrder -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name ProcessClass -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name At -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ''
+    $job | Add-Member -Membertype NoteProperty -Name StateText -Value ''
     $job | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
 
     $job
@@ -265,14 +269,14 @@ function Create-TaskObject()
     $task = New-Object PSObject
 
     $task | Add-Member -Membertype NoteProperty -Name Task -Value 0
-    $task | Add-Member -Membertype NoteProperty -Name Job -Value ""
-    $task | Add-Member -Membertype NoteProperty -Name State -Value ""
-    $task | Add-Member -Membertype NoteProperty -Name LogFile -Value ""
-    $task | Add-Member -Membertype NoteProperty -Name Steps -Value ""
-    $task | Add-Member -Membertype NoteProperty -Name EnqueuedAt -Value ""
-    $task | Add-Member -Membertype NoteProperty -Name StartAt -Value ""
-    $task | Add-Member -Membertype NoteProperty -Name RunningSince -Value ""
-    $task | Add-Member -Membertype NoteProperty -Name Cause -Value ""
+    $task | Add-Member -Membertype NoteProperty -Name Job -Value ''
+    $task | Add-Member -Membertype NoteProperty -Name State -Value ''
+    $task | Add-Member -Membertype NoteProperty -Name LogFile -Value ''
+    $task | Add-Member -Membertype NoteProperty -Name Steps -Value ''
+    $task | Add-Member -Membertype NoteProperty -Name EnqueuedAt -Value ''
+    $task | Add-Member -Membertype NoteProperty -Name StartAt -Value ''
+    $task | Add-Member -Membertype NoteProperty -Name RunningSince -Value ''
+    $task | Add-Member -Membertype NoteProperty -Name Cause -Value ''
 
     # $taskDefaultProperties = @("Task", "Job")
     # $taskDefaultDisplayPropertySet = New-Object System.Management.Automation.PSPropertySet( "DefaultDisplayPropertySet", [string[]] $taskDefaultProperties )
@@ -283,9 +287,9 @@ function Create-TaskObject()
 }
 
 # send XML command to JobScheduler
-function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $command, [bool] $checkResponse=$true ) 
+function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command, [bool] $checkResponse=$true ) 
 {
-    [string] $output = ""
+    [string] $output = ''
 
     $request = $null
     $requestStream = $null
@@ -298,13 +302,16 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $comma
     {     
         $request = [System.Net.WebRequest]::Create( $jobSchedulerURL )
  
-        $request.Method = "POST"
-        $request.ContentType = "text/xml"
+        $request.Method = 'POST'
+        $request.ContentType = 'text/xml'
+        $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
         
         if ( $SCRIPT:jsOptionWebRequestUseDefaultCredentials )
         {
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): using default credentials"
             $request.UseDefaultCredentials = $SCRIPT:jsOptionWebRequestUseDefaultCredentials
         } elseif ( $SCRIPT:jsCredentials ) {
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): using explicit credentials"
             $request.Credentials = $SCRIPT:jsCredentials
         }
         
@@ -328,7 +335,7 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $comma
 
             if ( $response.StatusCode -ne 'OK' )
             {
-                throw "$($MyInvocation.MyCommand.Name): JobScheduler returns status code: $($response.StatusCode)"
+                throw "JobScheduler returns status code: $($response.StatusCode)"
             }
 
             $responseStream = $response.getResponseStream() 
@@ -350,16 +357,27 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $comma
                 }
             }
 
-            $errorText = Select-XML -Content $output -Xpath "/spooler/answer/ERROR/@text"
+            try
+            {
+                $errorText = Select-XML -Content $output -Xpath '/spooler/answer/ERROR/@text'
+            } catch {
+                throw "not a valid JobScheduler XML response: " + $_.Exception.Message
+            }
+            
             if ( $errorText.Node."#text" )
             {
                 throw $errorText.Node."#text"
             }
 
-            [xml] $output
+            try
+            {
+                [xml] $output
+            } catch {
+                throw "not a valid JobScheduler XML response: " + $_.Exception.Message
+            }
         }
     } catch {
-        throw $_.Exception
+        throw "$($MyInvocation.MyCommand.Name): " + $_.Exception.Message
     } finally {
         if ( $streamReader )
         {
@@ -382,11 +400,11 @@ function Send-JobSchedulerXMLCommand( [string] $jobSchedulerURL, [string] $comma
 }
 
 # check JobScheduler response for errors and return error message
-function Get-JobSchedulerResponseError( $response )
+function _not_used_Get-JobSchedulerResponseError( $response )
 {
     if ( $response )
     {
-        $errorText = Select-XML -Content $response -Xpath "//ERROR/@text"
+        $errorText = Select-XML -Content $response -Xpath '//ERROR/@text'
         if ( $errorText.Node."#text" )
         {
             $errorText.Node."#text"
@@ -453,11 +471,8 @@ called it.
 #>
 param
 (
-    ## The path to the script to run
     [Parameter(Mandatory = $true)]
     [string] $Path,
-
-    ## The arguments to the script
     [string] $ArgumentList
 )
 
@@ -467,7 +482,13 @@ param
 
     ## Store the output of cmd.exe.  We also ask cmd.exe to output
     ## the environment table after the batch file completes
-    cmd /c " `"$Path`" $argumentList && set > `"$tempFile`" "
+    ## cmd /c " `"$Path`" $ArgumentList && set > `"$tempFile`" "
+
+    $process = Start-Process -FilePath "cmd.exe" "/c ""`"$Path`" $ArgumentList && set > `"$tempFile`""" " -WindowStyle Hidden -PassThru -Wait
+    if ( !$process.ExitCode -eq 0 )
+    {
+        throw "$($MyInvocation.MyCommand.Name): command script execution failed with exit code: $($process.ExitCode)"
+    }
 
     ## Go through the environment variables in the temp file.
     ## For each of them, set the variable in our local environment.
@@ -487,9 +508,11 @@ param
 
 $js = Create-JSObject
 
-if ( $env:SCHEDULER_HOME )
+if ( $env:SCHEDULER_URL )
 {
+   Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Id $env:SCHEDULER_ID -InstallPath $env:SCHEDULER_HOME
+} elseif ( $env:SCHEDULER_HOME ) {
    Use-JobSchedulerMaster -InstallPath $env:SCHEDULER_HOME
-} elseif ( $env:SCHEDULER_URL ) {
-   Use-JobSchedulerMaster -Url $env:SCHEDULER_URL
+} elseif ( $env:SCHEDULER_ID ) {
+   Use-JobSchedulerMaster -Id $env:SCHEDULER_ID
 }

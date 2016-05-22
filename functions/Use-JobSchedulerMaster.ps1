@@ -2,9 +2,10 @@ function Use-JobSchedulerMaster
 {
 <#
 .SYNOPSIS
-This cmdlet has to be used as the first operation with JobScheduler cmdlets.
+This cmdlet has to be used as the first operation with JobScheduler cmdlets
+and identifies the JobScheduler Master that should be used.
 
-Applies settings from a JobScheduler Master location. A Master is identified
+Optionally applies settings from a JobScheduler Master location. A Master is identified
 by its JobScheduler ID and Url for which it is operated.
 
 .DESCRIPTION
@@ -13,10 +14,8 @@ Such settings are imported for use with subsequent cmdlets.
 
 * For a local Master that is installed on the local computer the cmdlet reads
 settings from the installation path.
-* For a remote Master the parameter -Remote has to be used with the -Id and -Url
-parameters to specify the instance.
-
-For a 
+* For a remote Master operations for management of the
+Windows serivce are not available.
 
 .PARAMETER Url
 Specifies the Url for which a JobScheduler Master is available.
@@ -80,17 +79,15 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Url,
+    [Uri] $Url,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Id,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $InstallPath,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $BasePath                       = 'C:\Program Files\sos-berlin.com\jobscheduler',
+    [string] $BasePath = 'C:\Program Files\sos-berlin.com\jobscheduler',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $EnvironmentVariablesScript     = 'jobscheduler_environment_variables.cmd',
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Remote
+    [string] $EnvironmentVariablesScript = 'jobscheduler_environment_variables.cmd'
 )
     Process
     {
@@ -98,19 +95,19 @@ param
         {
             throw "$($MyInvocation.MyCommand.Name): one of the parameters -Url, -Id or -InstallPath has to be specified"
         }
-        
+
         if ( $Url )
         {
-            # If no protocol is specified then we assume a JobScheduler ID for this parameter
-            if ( !$Url.startsWith( 'http://' ) -and !$Url.startsWith( 'https://' ) )
+            # is protocol provided? e.g. http://localhost:4444
+            if ( !$Url.OriginalString.startsWith('http://') -and !$Url.OriginalString.startsWith('https://') )
             {
-                if ( !$Id )
-                {
-                    $Id = $Url
-                    $Url = $null
-                } else {
-                    throw "$($MyInvocation.MyCommand.Name): -Url parameter does not specify a supported protocol (http/https): $($Url)"
-                }
+                $Url = 'http://' + $Url.OriginalString
+            }
+
+            # is valid hostname specified?
+            if ( [System.Uri]::CheckHostName( $Url.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
+            {
+                throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4444: $($Url.OriginalString)"
             }
         }
         
@@ -118,7 +115,7 @@ param
         $SCRIPT:js.Url = $Url
         $SCRIPT:js.Id = $Id
         $SCRIPT:js.Local = $false
-    
+
         if ( $InstallPath )
         {
             if ( $InstallPath.Substring( $InstallPath.Length-1 ) -eq '/' -or $InstallPath.Substring( $InstallPath.Length-1 ) -eq '\' )
@@ -126,7 +123,7 @@ param
                 $InstallPath = $InstallPath.Substring( 0, $InstallPath.Length-1 )
             }
 
-            if ( !( Test-Path $InstallPath -PathType Container) )
+            if ( !(Test-Path $InstallPath -PathType Container) )
             {
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler installation path not found: $($InstallPath)"
             }
@@ -138,13 +135,13 @@ param
         
             $SCRIPT:js.Local = $true
         } elseif ( $Id ) {
-			try 
-			{
-				Write-Verbose ".. $($MyInvocation.MyCommand.Name): checking implicit installation path: $($BasePath)\$($Id)"
-				$SCRIPT:js.Local = Test-Path "$($BasePath)\$($Id)" -PathType Container
-			} catch {
-				throw "$($MyInvocation.MyCommand.Name): error occurred checking installation path '$($BasePath)\$($Id)' from JobScheduler ID. Maybe parameter -Id '$($Id)' was mismatched: $($_.Exception.Message)"
-			}
+            try 
+            {
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): checking implicit installation path: $($BasePath)\$($Id)"
+                $SCRIPT:js.Local = Test-Path "$($BasePath)\$($Id)" -PathType Container
+            } catch {
+                throw "$($MyInvocation.MyCommand.Name): error occurred checking installation path '$($BasePath)\$($Id)' from JobScheduler ID. Maybe parameter -Id '$($Id)' was mismatched: $($_.Exception.Message)"
+            }
 
             if ( $SCRIPT:js.Local )
             {
@@ -173,7 +170,7 @@ param
             $SCRIPT:InstallPath = $InstallPath
             
             if ( $env:SCHEDULER_ID )
-            {
+            {            
                 $SCRIPT:js.Id = $env:SCHEDULER_ID
             }
         
@@ -236,9 +233,9 @@ param
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler configuration file not found: $($schedulerXmlPath)"
             }
             
-            $SCRIPT:js.Service.ServiceName = "sos_scheduler_$($SCRIPT:js.ID)"
-            $SCRIPT:js.Service.ServiceDisplayName = "SOS JobScheduler -id=$($SCRIPT:js.ID)"
-            $SCRIPT:js.Service.ServiceDescription = "JobScheduler"
+            $SCRIPT:js.Service.ServiceName = "sos_scheduler_$($SCRIPT:js.Id)"
+            $SCRIPT:js.Service.ServiceDisplayName = "SOS JobScheduler -id=$($SCRIPT:js.Id)"
+            $SCRIPT:js.Service.ServiceDescription = 'JobScheduler'
         }
         
         $SCRIPT:js

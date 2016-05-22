@@ -32,6 +32,13 @@ i.e. a list of names and values.
 .PARAMETER At
 Specifies the point in time when the job should start:
 
+* now
+** specifies that the job should start immediately
+* now+1800
+** specifies that the job should start with a delay of 1800 seconds, i.e. 30 minutes later.
+* yyyy-mm-dd HH:MM[:SS]
+** specifies that the job should start at the specified point in time.
+
 .INPUTS
 This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
 

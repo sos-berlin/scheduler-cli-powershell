@@ -15,18 +15,31 @@ files and a console debug message indicates the location of the respective file.
 This cmdlet allows to set the max. output size to an individual value.
 
 Default: 1000 Byte
+
+.PARAMETER WebRequestTimeout
+Specifies the number of milliseconds for establishing a connection to the JobScheduler Master.
+With the timeout being exceed an exception is raised.
+
+Default: 15000 ms
 #>
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $DebugMaxOutputSize=1000
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $DebugMaxOutputSize=1000,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $WebRequestTimeout=15000
 )
     Process 
     {
 		if ( $DebugMaxOutputSize )
 		{
 			$SCRIPT:jsOptionDebugMaxOutputSize = $DebugMaxOutputSize
+		}
+
+		if ( $WebRequestTimeout )
+		{
+			$SCRIPT:jsOptionWebRequestTimeout = $WebRequestTimeout
 		}
 	}
 }
