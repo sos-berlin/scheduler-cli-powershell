@@ -28,6 +28,8 @@ Specifies the point in time when the job should start:
 * yyyy-mm-dd HH:MM[:SS]
 ** specifies that the job should start at the specified point in time.
 
+Default: now
+
 .INPUTS
 This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
 

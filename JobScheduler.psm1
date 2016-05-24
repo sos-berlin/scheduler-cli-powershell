@@ -239,6 +239,7 @@ function Create-OrderObject()
     $order | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ''
     $order | Add-Member -Membertype NoteProperty -Name StateText -Value ''
     $order | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
+    $order | Add-Member -Membertype NoteProperty -Name Log -Value ''
 
     $order
 }

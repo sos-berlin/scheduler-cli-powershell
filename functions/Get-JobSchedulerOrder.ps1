@@ -2,9 +2,13 @@ function Get-JobSchedulerOrder
 {
 <#
 .SYNOPSIS
-Returns a number of orders from the JobScheduler Master.
+Returns a number of active orders from the JobScheduler Master.
 
 .DESCRIPTION
+Orders are returned if they are present in the JobScheduler Master.
+No ad hoc orders are returned that are completed and not active
+with a Master.
+
 Orders are selected from a JobScheduler Master
 
 * by the folder of the order location including subfolders
@@ -32,6 +36,11 @@ If the name of an order is specified then the -Directory parameter is used to de
 Otherwise the -Order parameter is assumed to include the full path and name of the order.
 
 One of the parameters -Directory, -JobChain or -Order has to be specified if no pipelined order objects are provided.
+
+.PARAMETER WithLog
+Specifies the order log to be returned. 
+
+This operation is time-consuming and should be restricted to selecting individual orders.
 
 .PARAMETER NoSubfolders
 Specifies that no subfolders should be looked up. By default any subfolders will be searched for orders.
@@ -84,6 +93,8 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Order,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $WithLog,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoSubfolders,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoPermanent,
@@ -94,7 +105,7 @@ param
 )
     Begin
     {
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
 
         if ( $Suspended -and $Setback )
         {
@@ -185,7 +196,7 @@ param
                     }
                 } else {
                     $orderNodes = Select-XML -XML $orderXml -Xpath "//folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '$($Order)'$xPathOrder]"
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of permanent orders for order: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '$($Order)'$xPathOrder]"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of orders for order: //folder/job_chains/job_chain/job_chain_node/order_queue/order[@path = '$($Order)'$xPathOrder]"
                 }
             } elseif ( $JobChain ) {
                 if ( $NoPermanent )
@@ -226,6 +237,20 @@ param
                 $o.Job = $orderNode.Node.job
                 $o.NextStartTime = $orderNode.Node.next_start_time
                 $o.StateText = $orderNode.Node.state_text
+                
+                if ( $WithLog )
+                {
+                    $command = "<show_order order='$($o.Order)' job_chain='$($o.JobChain)' what='log'/>"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request: $command"
+                    
+                    $orderLogXml = Send-JobSchedulerXMLCommand $js.Url $command
+                    if ( $orderLogXml )
+                    {
+                        $o.Log = (Select-XML -XML $orderLogXml -Xpath '//spooler/answer/order/log').Node."#text"
+                    }
+                }
+                
                 $o
                 $orderCount++
             }

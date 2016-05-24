@@ -53,6 +53,10 @@ Specifies the point in time when the order should start:
 * yyyy-mm-dd HH:MM[:SS]
 ** specifies that the order should start at the specified point in time.
 
+This parameter is considered if -Action "start" is used.
+
+Default: now
+
 .PARAMETER State
 Specifies that the order should enter the job chain at the job chain node that
 is assigend the specified state.
@@ -137,7 +141,7 @@ param
             $orderAttributes += " title='$($Title)'"
         }
         
-        if ( $At )
+        if ( $At -and $Action -eq 'start' )
         {
             $orderAttributes += " at='$($At)'"
         }
@@ -165,7 +169,7 @@ param
 
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): updating order with Order='$($Order)', JobChain='$($JobChain)'"
 
-        $command += "<modify_order job_chain='$($JobChain)' order='$($Order)' $orderAttributes>"
+        $command += "<modify_order job_chain='$($JobChain)' order='$($Order)' $($orderAttributes)>"
 
         if ( $Parameters )
         {
