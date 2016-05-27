@@ -22,6 +22,15 @@ Specifies the Url for which a JobScheduler Master is available.
 
 The Url includes one of the protocols http or https and optionally the port that JobScheduler listens to, e.g. http://localhost:4444
 
+If JobScheduler is operated for the Jetty web server then the URLs for the JOC GUI and the command interface differ:
+
+* JOC GUI: https://localhost:40444/jobscheduler/operations_gui/
+* XML Command Interface: http://localhost:40444/jobscheduler/engine/command/
+
+For use with the JCLI you have to specify the URL for the XML Command Interface
+
+For use with https
+
 .PARAMETER Id
 Specifies the ID of a JobScheduler Master.
 
@@ -109,6 +118,12 @@ param
             {
                 throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4444: $($Url.OriginalString)"
             }
+			
+			# replace GUI Url with Command URl for operations with Jetty
+			if ( $Url.AbsolutePath -eq '/jobscheduler/operations_gui/' )
+			{
+				$Url = "$($Url.scheme)://$($Url.Authority)/jobscheduler/engine/command/"
+			}
         }
         
         $SCRIPT:js = Create-JSObject

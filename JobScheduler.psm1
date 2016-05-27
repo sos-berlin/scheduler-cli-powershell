@@ -12,7 +12,9 @@ If the documentation is not available for your language then consider to use
 	
 TODOs
 
-	Add proxy support
+	* Check access via Jetty web server (separate URL, independently from JOC URL)
+	* Add proxy support
+	* Add Agent availability checks via process classes
 #>
 
 # ----------------------------------------------------------------------
@@ -86,12 +88,12 @@ function Create-JSObject()
     $jsInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
     $jsInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
     $jsInstall | Add-Member -Membertype NoteProperty -Name ClusterOptions -Value ''
-    $jsInstall | Add-Member -Membertype NoteProperty -Name PidFile -Value 0
+    $jsInstall | Add-Member -Membertype NoteProperty -Name PidFile -Value ''
 
     $jsConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
     $jsConfig | Add-Member -Membertype NoteProperty -Name FactoryIni -Value ''
     $jsConfig | Add-Member -Membertype NoteProperty -Name SosIni -Value ''
-    $jsConfig | Add-Member -Membertype NoteProperty -Name SchedulerXml -Value 0
+    $jsConfig | Add-Member -Membertype NoteProperty -Name SchedulerXml -Value ''
 
     $jsService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ''
     $jsService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ''
@@ -360,11 +362,16 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
 
             try
             {
-                $errorText = Select-XML -Content $output -Xpath '/spooler/answer/ERROR/@text'
+                $answer = Select-XML -Content $output -Xpath '/spooler/answer'
+				if ( !$answer ) 
+				{
+					throw 'missing answer element /spooler/answer in response'
+				}
             } catch {
                 throw "not a valid JobScheduler XML response: " + $_.Exception.Message
             }
             
+            $errorText = Select-XML -Content $output -Xpath '/spooler/answer/ERROR/@text'
             if ( $errorText.Node."#text" )
             {
                 throw $errorText.Node."#text"

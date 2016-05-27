@@ -33,6 +33,7 @@ FunctionsToExport = @(
     'Get-JobSchedulerOrder',
     'Get-JobSchedulerSingleOrder',
     'Get-JobSchedulerStatus',
+    'Get-JobSchedulerSystemCredentials',
     'Get-JobSchedulerTask',
     'Get-JobSchedulerVersion',
     'Install-JobSchedulerService',
