@@ -9,12 +9,11 @@ For further information see
 If the documentation is not available for your language then consider to use
 
     PS C:\> [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
-	
+    
 TODOs
 
-	* Check access via Jetty web server (separate URL, independently from JOC URL)
-	* Add proxy support
-	* Add Agent availability checks via process classes
+    * Add proxy support: in progress
+    * Add Agent availability checks via process classes
 #>
 
 # ----------------------------------------------------------------------
@@ -22,21 +21,34 @@ TODOs
 # ----------------------------------------------------------------------
 
 # JobScheduler Master Object
-$js = $null
+[PSObject] $js = $null
 
-# JobScheduler Web Request Credentials
-$jsCredentials = $null
+# JobScheduler XML Cache
+#    State
+[xml] $jsStateCache = $null
+#    Has Cache
+[bool] $jsHasCache = $false
+#    Use Cache
+[bool] $jsNoCache = $false
+
+# JobScheduler Web Request 
+#     Credentials
+[System.Management.Automation.PSCredential] $jsCredentials = $null
+#    Use default credentials of the current user?
+[bool] $jsOptionWebRequestUseDefaultCredentials = $true
+#     Proxy Credentials
+[System.Management.Automation.PSCredential] $jsProxyCredentials = $null
+#    Use default credentials of the current user?
+[bool] $jsOptionWebRequestProxyUseDefaultCredentials = $true
 
 # Commands that require a local instance (Management of Windows Service)
-$jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
+[string[]] $jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
 
 # Options
 #     Debug Message: responses exceeding the max. output size are stored in temporary files
-$jsOptionDebugMaxOutputSize = 1000
+[int] $jsOptionDebugMaxOutputSize = 1000
 #    Web Request: timeout for establishing the connection in ms
-$jsOptionWebRequestTimeout = 15000
-#    Web Request: use default credentials of the current user?
-$jsOptionWebRequestUseDefaultCredentials = $true
+[int] $jsOptionWebRequestTimeout = 15000
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -69,7 +81,19 @@ function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo]
             throw "$($command.Name): cmdlet requires a JobScheduler URL. Switch instance with the Use-JobSchedulerMaster cmdlet and specify the -Url parameter"
         }
     }
+}
 
+function Start-StopWatch()
+{
+    [System.Diagnostics.Stopwatch]::StartNew()
+}
+
+function Log-StopWatch( [string] $commandName, [System.Diagnostics.Stopwatch] $stopWatch )
+{
+    if ( $stopWatch )
+    {
+        Write-Verbose ".. $($commandName): time elapsed: $($stopWatch.Elapsed.TotalMilliseconds) ms"
+    }
 }
 
 function Create-JSObject()
@@ -81,6 +105,7 @@ function Create-JSObject()
     
     $js | Add-Member -Membertype NoteProperty -Name Id -Value ''
     $js | Add-Member -Membertype NoteProperty -Name Url -Value ''
+    $js | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
     $js | Add-Member -Membertype NoteProperty -Name Local -Value $false
 
     $jsInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ''
@@ -117,6 +142,7 @@ function Create-StatusObject()
 
     $state | Add-Member -Membertype NoteProperty -Name Id -Value ''
     $state | Add-Member -Membertype NoteProperty -Name Url -Value ''
+    $state | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
 
     $state | Add-Member -Membertype NoteProperty -Name Version -Value ''
     $state | Add-Member -Membertype NoteProperty -Name State -Value ''
@@ -311,13 +337,29 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
         
         if ( $SCRIPT:jsOptionWebRequestUseDefaultCredentials )
         {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): using default credentials"
-            $request.UseDefaultCredentials = $SCRIPT:jsOptionWebRequestUseDefaultCredentials
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
+            $request.UseDefaultCredentials = $true
         } elseif ( $SCRIPT:jsCredentials ) {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): using explicit credentials"
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
             $request.Credentials = $SCRIPT:jsCredentials
         }
-        
+
+        if ( $SCRIPT:js.ProxyUrl )
+        {
+            $proxy = new-object System.Net.WebProxy $SCRIPT:js.ProxyUrl
+
+			if ( $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials )
+			{
+				$proxy.UseDefaultCredentials = $true
+				Write-Debug ".... $($MyInvocation.MyCommand.Name): using default proxy credentials"
+            } elseif ( $SCRIPT:jsProxyCredentials ) {
+				Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit proxy credentials"
+                $proxy.Credentials = $SCRIPT:jsProxyCredentials
+            }
+
+            $request.Proxy = $proxy
+        }
+
         $bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
         $request.ContentLength = $bytes.Length
         $requestStream = $request.GetRequestStream()
@@ -354,19 +396,19 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
                 {
                     $tempFile = [IO.Path]::GetTempFileName()
                     $output | Out-File $tempFile -encoding ascii
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): XML response available with temporary file: $($tempFile)"
+                    Write-Debug ".... $($MyInvocation.MyCommand.Name): XML response available with temporary file: $($tempFile)"
                 } else {
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): response: $($output)"
+                    Write-Debug ".... $($MyInvocation.MyCommand.Name): response: $($output)"
                 }
             }
 
             try
             {
                 $answer = Select-XML -Content $output -Xpath '/spooler/answer'
-				if ( !$answer ) 
-				{
-					throw 'missing answer element /spooler/answer in response'
-				}
+                if ( !$answer ) 
+                {
+                    throw 'missing answer element /spooler/answer in response'
+                }
             } catch {
                 throw "not a valid JobScheduler XML response: " + $_.Exception.Message
             }
@@ -403,19 +445,6 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
         {
             $response.Close()
             $response = $null
-        }
-    }
-}
-
-# check JobScheduler response for errors and return error message
-function _not_used_Get-JobSchedulerResponseError( $response )
-{
-    if ( $response )
-    {
-        $errorText = Select-XML -Content $response -Xpath '//ERROR/@text'
-        if ( $errorText.Node."#text" )
-        {
-            $errorText.Node."#text"
         }
     }
 }

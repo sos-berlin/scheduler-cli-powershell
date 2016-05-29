@@ -17,9 +17,20 @@ Orders are selected for removal
 .PARAMETER Order
 Specifies the identifier of an order.
 
+Both parameters -Order and -JobChain have to be specified if no pipelined order objects are used.
+
 .PARAMETER JobChain
 Specifies the path and name of a job chain for which an order should be removed.
 If the name of a job chain is specified then the -Directory parameter is used to determine the folder.
+
+Both parameters -Order and -JobChain have to be specified if no pipelined order objects are used.
+
+.PARAMETER Directory
+Optionally specifies the folder where the job chain is located. The directory is determined
+from the root folder, i.e. the "live" directory.
+
+If the -JobChain parameter specifies the name of job chain then the location specified from the 
+-Directory parameter is added to the job chain location.
 
 .INPUTS
 This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
@@ -51,14 +62,16 @@ param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Order,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Path = '/'
 )
-	Begin
-	{
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+    Begin
+    {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
 
         $command = ""
         $orderCount = 0
@@ -66,12 +79,29 @@ param
 
     Process
     {
-        if ( !$Order -or !$JobChain)
+        if ( $Directory -and $Directory -ne '/' )
+        { 
+            if ( $Directory.Substring( 0, 1) -ne '/' ) {
+                $Directory = '/' + $Directory
+            }
+        
+            if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
+            {
+                $Directory = $Directory.Substring( 0, $Directory.Length-1 )
+            }
+        }
+    
+        if ( $JobChain )
         {
-            throw "$($MyInvocation.MyCommand.Name): no order or no job chain specified, use -Order and -JobChain"
+            if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
+            {
+                $Directory = Get-JobSchedulerObject-Parent $JobChain
+            } else { # job chain name includes no directory
+                $JobChain = $Directory + '/' + $JobChain
+            }
         }
 
-        if ( $Path -ne '/' )
+        if ( $Path -and $Path -ne '/' )
         {
             # only ad hoc orders use the path = '/', therefore we check if a different path property is provided by a pipelined object
             throw "$($MyInvocation.MyCommand.Name): no ad hoc order specified, no removal is carried out for permanent orders"
@@ -91,11 +121,11 @@ param
     {
         if ( $orderCount )
         {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders are requested for removal"
             $command = "<commands>$($command)</commands>"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
         
             $orderXml = Send-JobSchedulerXMLCommand $js.Url $command
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders removed"
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no order found"
         }

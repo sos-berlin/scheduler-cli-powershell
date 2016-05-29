@@ -13,9 +13,18 @@ The order is selected from a JobScheduler Master
 * by the job chain that is assigned to an order and
 * by an the order identification of an individual order.
 
+.PARAMETER Directory
+Optionally specifies the folder where the job chain is located. The directory is determined
+from the root folder, i.e. the "live" directory.
+
+If the -JobChain parameter specifies the name of job chain then the location specified from the 
+-Directory parameter is added to the job chain location.
+
 .PARAMETER JobChain
 Specifies the path and name of a job chain for which the order should be returned.
 The -JobChain parameter is assumed to include the full path and name of the job chain.
+
+With the -Directory parameter being used the job chain is assumed to be located in that directory.
 
 .PARAMETER Order
 Specifies the path and name of an order that should be returned.
@@ -54,35 +63,41 @@ param
     [string] $JobChain,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Order,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $WithLog
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
     }
     
     Process
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): parameter JobChain=$($JobChain), Order=$($Order), WithLog=$($WithLog)"
-        $directory = '/'
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter JobChain=$($JobChain), Order=$($Order), WithLog=$($WithLog)"
     
-        if ( $JobChain ) 
-        {
-            if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
+        if ( $Directory -and $Directory -ne '/' )
+        { 
+            if ( $Directory.Substring( 0, 1) -ne '/' ) {
+                $Directory = '/' + $Directory
+            }
+        
+            if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
-                $Directory = Get-JobSchedulerObject-Parent $JobChain
+                $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-        
-        if ( $Order )
+
+        if ( $JobChain )
         {
-            if ( (Get-JobSchedulerObject-Basename $Order) -ne $Order ) # order name includes a directory
+            if ( (Get-JobSchedulerObject-Basename $JobChain) -eq $JobChain ) # job chain path includes no directory
             {
-                $directory = Get-JobSchedulerObject-Parent $Order
+                $JobChain = $Directory + '/' + $JobChain
             }
         }
-        
+
         $orderAttributes = if ( $WithLog ) { " what='log'" } else { '' }
         $command = "<show_order order='$($Order)' job_chain='$($JobChain)' $($orderAttributes)/>"
     
@@ -122,6 +137,12 @@ param
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): order found"
         }
     }
+
+    End
+    {
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+    }
+    
 }
 
 Set-Alias -Name Get-SingleOrder -Value Get-JobSchedulerSingleOrder

@@ -26,6 +26,11 @@ One of the parameters -Directory or -JobChain has to be specified.
 .PARAMETER NoSubfolders
 Specifies that no subfolders should be looked up. By default any subfolders will be searched for job chains.
 
+.PARAMETER NoCache
+Specifies that the cache for JobScheduler objects is ignored.
+This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
+retrieved directly from the JobScheduler Master and is not resolved from the cache.
+
 .OUTPUTS
 This cmdlet returns an array of job chain objects.
 
@@ -56,21 +61,26 @@ param
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
-    [switch] $NoSubfolders
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $NoSubfolders,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $NoCache
 )
-	Begin
-	{
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-	}
-		
+    Begin
+    {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
+        $jobChainCount = 0
+    }
+        
     Process
     {
-		Write-Verbose ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain"
 
-		if ( !$Directory -and !$JobChain )
+        if ( !$Directory -and !$JobChain )
         {
             throw "$($MyInvocation.MyCommand.Name): no directory and no job chain specified, use -Directory or -JobChain"
-		}
+        }
 
         if ( $Directory -and $Directory -ne '/' )
         { 
@@ -98,17 +108,44 @@ param
             }
         }
         
-        $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
-        $command = "<show_state subsystems='folder order' what='folders job_chain_orders$($whatNoSubfolders)' path='$($Directory)'/>"
-    
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request: $command"
+        $xPath = '//folder'
+
+        if ( $Directory )
+        {
+            if ( $NoSubfolders )
+            {
+                $xPath += "[@path='$($Directory)']"
+            } else {
+                $xPath += "[starts-with(@path, '$($Directory)')]"
+            }
+        }
+
+        if ( $JobChain )
+        {
+            $xPath += "/job_chains/job_chain/@path = '$($JobChain)'"
+        } else {
+            $xPath += '/job_chains/job_chain'
+        }
         
-        $jobChainXml = Send-JobSchedulerXMLCommand $js.Url $command
-        if ( $jobChainXml )
-        {    
-            $jobChainCount = 0
-            $jobChainNodes = Select-XML -XML $jobChainXml -Xpath "//folder/job_chains/job_chain"
+        if ( $NoCache -or !$SCRIPT:jsHasCache )
+        {
+            $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
+            $command = "<show_state subsystems='folder order' what='folders job_chain_orders$($whatNoSubfolders)' path='$($Directory)'/>"
+    
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
+        
+            $jobChainXml = Send-JobSchedulerXMLCommand $js.Url $command
+
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): using xPath: $xPath"
+            $jobChainNodes = Select-XML -XML $jobChainXml -Xpath $xPath
+        } else {
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache: $xPath"
+            $jobChainNodes = Select-XML -XML $SCRIPT:jsStateCache -Xpath $xPath
+        }
+        
+        if ( $jobChainNodes )
+        {
             foreach( $jobChainNode in $jobChainNodes )
             {
                 if ( !$jobChainNode.Node.name )
@@ -126,10 +163,14 @@ param
                 $jc.RunningOrders = $jobChainNode.Node.running_orders
                 $jc
                 $jobChainCount++
-            }
-			
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $jobChainCount job chains found"
+            }            
         }
+    }
+    
+    End
+    {
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $jobChainCount job chains found"
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 

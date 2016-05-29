@@ -6,7 +6,7 @@ This cmdlet has to be used as the first operation with JobScheduler cmdlets
 and identifies the JobScheduler Master that should be used.
 
 Optionally applies settings from a JobScheduler Master location. A Master is identified
-by its JobScheduler ID and Url for which it is operated.
+by its JobScheduler ID and URL for which it is operated.
 
 .DESCRIPTION
 During installation of a JobScheduler Master a number of settings are specified. 
@@ -18,18 +18,17 @@ settings from the installation path.
 Windows serivce are not available.
 
 .PARAMETER Url
-Specifies the Url for which a JobScheduler Master is available.
+Specifies the URL for which a JobScheduler Master is available.
 
-The Url includes one of the protocols http or https and optionally the port that JobScheduler listens to, e.g. http://localhost:4444
+The URL includes one of the protocols HTTP or HTTPS and optionally the port that JobScheduler listens to, e.g. http://localhost:4444
 
 If JobScheduler is operated for the Jetty web server then the URLs for the JOC GUI and the command interface differ:
 
 * JOC GUI: https://localhost:40444/jobscheduler/operations_gui/
 * XML Command Interface: http://localhost:40444/jobscheduler/engine/command/
 
-For use with the JCLI you have to specify the URL for the XML Command Interface
-
-For use with https
+For use with Jetty specify the URL for the XML Command Interface. 
+The cmdlet will convert the above JOC GUI path automatically to the XML Command Interface path.
 
 .PARAMETER Id
 Specifies the ID of a JobScheduler Master.
@@ -54,6 +53,33 @@ Typically the script name is "jobscheduler_environment_variables.cmd" and the sc
 from the "bin" directory and optionally "user_bin" directory of a JobScheduler installation directory.
 
 Default Value: jobscheduler_environment_variables.cmd
+
+.PARAMETER Credentials
+Specifies a credentials object that is used for authentication with JobScheduler.
+
+A credentials object can be created e.g. with:
+
+    $account = 'John'
+    $password = ( 'Doe' | ConvertTo-SecureString -AsPlainText -Force)
+    $credentials = New-Object -typename System.Management.Automation.PSCredential -Argumentlist $account, $password
+
+An existing credentials object can be retrieved from the Windows Credential Manager e.g. with:
+
+    $systemCredentials = Get-JobSchedulerSystemCredentials -TargetName 'localhost'
+    $credentials = ( New-Object -typename System.Management.Automation.PSCredential -Argumentlist $systemCredentials.UserName, $systemCredentials.Password )
+
+.PARAMETER ProxyUrl
+Specifies the URL of a proxy that is used to access a JobScheduler Master.
+
+The URL includes one of the protocols HTTP or HTTPS and optionally the port that proxy listens to, e.g. http://localhost:3128
+
+.PARAMETER ProxyCredentials
+Specifies a credentials object that is used for authentication with a proxy. See parameter -Credentials how to create a credentials object.
+
+.PARAMETER NoCache
+Specifies that the cache for JobScheduler objects is ignored.
+This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
+retrieved directly from the JobScheduler Master and is not resolved from the cache.
 
 .EXAMPLE
 Use-Master http://somehost:4444
@@ -96,7 +122,15 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $BasePath = 'C:\Program Files\sos-berlin.com\jobscheduler',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $EnvironmentVariablesScript = 'jobscheduler_environment_variables.cmd'
+    [string] $EnvironmentVariablesScript = 'jobscheduler_environment_variables.cmd',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [System.Management.Automation.PSCredential] $Credentials,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Uri] $ProxyUrl,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [System.Management.Automation.PSCredential] $ProxyCredentials,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $NoCache
 )
     Process
     {
@@ -118,19 +152,54 @@ param
             {
                 throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4444: $($Url.OriginalString)"
             }
-			
-			# replace GUI Url with Command URl for operations with Jetty
-			if ( $Url.AbsolutePath -eq '/jobscheduler/operations_gui/' )
-			{
-				$Url = "$($Url.scheme)://$($Url.Authority)/jobscheduler/engine/command/"
-			}
+            
+            # replace GUI Url with Command URl for operations with Jetty
+            if ( $Url.AbsolutePath -eq '/jobscheduler/operations_gui/' )
+            {
+                $Url = "$($Url.scheme)://$($Url.Authority)/jobscheduler/engine/command/"
+            }
         }
+
+        if ( $ProxUrl )
+        {
+            # is protocol provided? e.g. http://localhost:3128
+            if ( !$ProxyUrl.OriginalString.startsWith('http://') -and !$ProxyUrl.OriginalString.startsWith('https://') )
+            {
+                $ProxyUrl = 'http://' + $ProxyUrl.OriginalString
+            }
+
+            # is valid hostname specified?
+            if ( [System.Uri]::CheckHostName( $ProxyUrl.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
+            {
+                throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -ProxyUrl parameter, e.g. -ProxyUrl http://localhost:3128: $($Url.OriginalString)"
+            }            
+        }
+
+        if ( $Credentials )
+        {
+            $SCRIPT:jsOptionWebRequestUseDefaultCredentials = $false
+            $SCRIPT:jsCredentials = $Credentials
+        }
+        
+        if ( $ProxyCredentials )
+        {
+            $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials = $false
+            $SCRIPT:jsProxyCredentials = $ProxyCredentials
+        }
+        
+        $SCRIPT:jsNoCache = $NoCache
+        $SCRIPT:jsHasCache = $false
         
         $SCRIPT:js = Create-JSObject
         $SCRIPT:js.Url = $Url
         $SCRIPT:js.Id = $Id
         $SCRIPT:js.Local = $false
 
+        if ( $ProxyUrl )
+        {
+            $SCRIPT:js.ProxyUrl = $ProxyUrl
+        }        
+        
         if ( $InstallPath )
         {
             if ( $InstallPath.Substring( $InstallPath.Length-1 ) -eq '/' -or $InstallPath.Substring( $InstallPath.Length-1 ) -eq '\' )
@@ -237,7 +306,7 @@ param
             $schedulerXmlPath = $env:SCHEDULER_DATA + '/config/scheduler.xml'
             if ( Test-Path $schedulerXmlPath -PathType Leaf )
             {
-                $configResponse = (Select-XML -Path $schedulerXmlPath -xPath '/spooler/config' ).Node
+                $configResponse = ( Select-XML -Path $schedulerXmlPath -Xpath '/spooler/config' ).Node
         
                 $SCRIPT:js.Config.SchedulerXml = $schedulerXmlPath
                 if ( !$SCRIPT:js.Url )

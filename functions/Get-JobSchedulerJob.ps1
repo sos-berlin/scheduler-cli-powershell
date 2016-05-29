@@ -48,6 +48,11 @@ Specifies that only jobs with enqueued tasks should be returned.
 
 This parameter cannot be combined with -Stopped and -RunningTasks.
 
+.PARAMETER NoCache
+Specifies that the cache for JobScheduler objects is ignored.
+This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
+retrieved directly from the JobScheduler Master and is not resolved from the cache.
+
 .OUTPUTS
 This cmdlet returns an array of job objects.
 
@@ -92,11 +97,14 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $RunningTasks,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $EnqueuedTasks
+    [switch] $EnqueuedTasks,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $NoCache
 )
-	Begin
-	{
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+    Begin
+    {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
         if ( $JobChain -and $Stopped )
         {
@@ -112,11 +120,13 @@ param
         {
             throw "$($MyInvocation.MyCommand.Name): parameters -RunningTasks and -EnqueuedTasks cannot be combined"
         }
+
+        $jobCount = 0        
     }        
         
     Process
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain Job=$Job"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain Job=$Job"
     
         if ( !$Directory -and !$JobChain -and !$Job )
         {
@@ -162,55 +172,75 @@ param
                 $Job = $Directory + '/' + $Job
             }
         }
-        
-        $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
-        
-        if ( $JobChain )
-        {
-            $command = "<show_state subsystems='folder order' what='folders job_chain_orders$($whatNoSubfolders)' path='$($Directory)'/>"
-        } else {
-            $command = "<show_state subsystems='folder job' what='folders jobs$($whatNoSubfolders)' path='$($Directory)'/>"
-        }
-    
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request: $command"
-        
-        $jobXml = Send-JobSchedulerXMLCommand $js.Url $command
-        if ( $jobXml )
-        {    
-            $jobCount = 0
-            $xPathTask = ''
 
-            if ( $Job -or !$JobChain )
+
+        $xPath = '//folder'
+
+        if ( $Directory )
+        {
+            if ( $NoSubfolders )
             {
-                if ( $Stopped )
-                {
-                    $xPathTask = "[@state = 'stopped']"
-                } elseif ( $RunningTasks )
-                {
-                    $xPathTask = '[tasks[@count > 0]]'
-                } elseif ( $EnqueuedTasks ) {
-                    $xPathTask = '[queued_tasks[@length > 0]]'
-                }
+                $xPath += "[@path='$($Directory)']"
             } else {
-                if ( $RunningTask )
-                {
-                    $xPathTask = '[order_queue/order[@task]]'
-                }
+                $xPath += "[starts-with(@path, '$($Directory)')]"
             }
-            
-            if ( $Job )
+        }
+
+        $xPathTask = ''
+
+        if ( $Job -or !$JobChain )
+        {
+            if ( $Stopped )
             {
-                $jobNodes = Select-XML -XML $jobXml -Xpath "//folder/jobs/job[@path = '$($Job)']$($xPathTask)"
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection by job: //folder/jobs/job[@path = '$($Job)']$($xPathTask)"
-            } elseif ( $JobChain ) {
-                $jobNodes = Select-XML -XML $jobXml -Xpath "//folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node$($xPathTask)"
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection by job chain: //folder/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node$($xPathTask)"
-            } else {
-                $jobNodes = Select-XML -XML $jobXml -Xpath "//folder/jobs/job$($xPathTask)"
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): selection of jobs: //folder/jobs/job$($xPathTask)"
+                $xPathTask = "[@state = 'stopped']"
+            } elseif ( $RunningTasks )
+            {
+                $xPathTask = '[tasks[@count > 0]]'
+            } elseif ( $EnqueuedTasks ) {
+                $xPathTask = '[queued_tasks[@length > 0]]'
             }
+        } else {
+            if ( $RunningTask )
+            {
+                $xPathTask = '[order_queue/order[@task]]'
+            }
+        }
+        
+        if ( $Job )
+        {
+            $xPath += "/jobs/job[@path = '$($Job)']$($xPathTask)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): selection by job: $xPath"
+        } elseif ( $JobChain ) {
+            $xPath += "/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node$($xPathTask)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): selection by job chain: $xPath"
+        } else {
+            $xPath += "/jobs/job$($xPathTask)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of jobs: $xPath"
+        }
+
+        if ( $NoCache -or !$SCRIPT:jsHasCache )
+        {        
+            $whatNoSubfolders = if ( $NoSubfolders ) { ' no_subfolders' } else { '' }
+    
+            if ( $JobChain )
+            {
+                $command = "<show_state subsystems='folder order' what='folders job_chain_orders jobs$($whatNoSubfolders)' path='$($Directory)'/>"
+            } else {
+                $command = "<show_state subsystems='folder job' what='folders jobs$($whatNoSubfolders)' path='$($Directory)'/>"
+            }
+        
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
             
+            $jobXml = Send-JobSchedulerXMLCommand $js.Url $command
+            $jobNodes = Select-XML -XML $jobXml -Xpath $xPath
+        } else {
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache: $xPath"
+            $jobNodes = Select-XML -XML $SCRIPT:jsStateCache -Xpath $xPath
+        }
+
+        if ( $jobNodes )
+        {    
             foreach( $jobNode in $jobNodes )
             {        
                 $j = Create-JobObject
@@ -229,9 +259,9 @@ param
                     {
                         continue
                     }
-                    $j.Job = Get-JobSchedulerObject-Basename $jobNode.Node.job
-                    $j.Path = $jobNode.Node.job
-                    $j.Directory = Get-JobSchedulerObject-Parent $jobNode.Node.job
+                    $j.Job = Get-JobSchedulerObject-Basename $jobNode.Node.GetAttribute('job')
+                    $j.Path = $jobNode.Node.GetAttribute('job')
+                    $j.Directory = Get-JobSchedulerObject-Parent $jobNode.Node.GetAttribute('job')
                 } else {
                     if ( !$jobNode.Node.name )
                     {
@@ -253,9 +283,13 @@ param
                 $j
                 $jobCount++
             }
-            
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $jobCount jobs found"
         }
+    }
+    
+    End
+    {
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $jobCount jobs found"
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 

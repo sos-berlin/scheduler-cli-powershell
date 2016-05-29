@@ -48,6 +48,7 @@ FunctionsToExport = @(
     'Set-JobSchedulerOption',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
+    'Start-JobSchedulerExecutableFile',
     'Start-JobSchedulerMaster',
     'Start-JobSchedulerJob',
     'Start-JobSchedulerOrder',

@@ -65,7 +65,7 @@ param
             $cred = $null
             Write-Output (New-Object System.Management.Automation.PSCredential $username, $securePassword)
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): No credentials where found in Windows Credential Manager for TargetName: $TargetName"
+            throw "$($MyInvocation.MyCommand.Name): No credentials found in Windows Credential Manager for TargetName: $($TargetName)"
         }
     }
 

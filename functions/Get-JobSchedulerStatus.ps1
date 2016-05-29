@@ -19,6 +19,11 @@ Optionally specifies formatted output to be displayed.
 .PARAMETER NoOutputs
 Optionally specifies that no output is returned by this cmdlet.
 
+.PARAMETER NoCache
+Specifies that the cache for JobScheduler objects is ignored.
+This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
+retrieved directly from the JobScheduler Master and is not resolved from the cache.
+
 .EXAMPLE
 Get-Status
 
@@ -46,44 +51,54 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Display,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $NoOutputs
+    [switch] $NoOutputs,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $NoCache
 )
-	Begin
-	{
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-	}
+    Begin
+    {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
+    }
 
     Process
     {        
         if ( !$Statistics )
         {
-            $command = "<show_state what='job_chain_orders' max_task_history='0'/>"
+#           $command = "<show_state subsystems='folder order job' what='folders job_chains job_chain_orders job_chain_jobs job_params job_orders remote_schedulers source'/>"
+            $command = "<show_state subsystems='folder order job' what='folders job_chains job_chain_orders job_chain_jobs job_params job_orders remote_schedulers'/>"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
             
-            $stateXml = Send-JobSchedulerXMLCommand $js.Url $command    
-            if ( $stateXml )
+            $SCRIPT:jsStateCache = Send-JobSchedulerXMLCommand $js.Url $command    
+            if ( $SCRIPT:jsStateCache )
             {
+                if ( !$NoCache -and !$SCRIPT:jsNoCache)
+                {
+                    $SCRIPT:jsHasCache = $true
+                }
+
                 $state = Create-StatusObject
-                $state.Id = $stateXml.spooler.answer.state.id
+                $state.Id = $SCRIPT:jsStateCache.spooler.answer.state.id
                 $state.Url = $js.Url
-				
-				if ( !$js.Id ) 
-				{
-					$SCRIPT:js.Id = $state.Id
-				}
+                $state.ProxyUrl = $js.ProxyUrl
+                
+                if ( !$js.Id ) 
+                {
+                    $SCRIPT:js.Id = $state.Id
+                }
 
-                $state.Version = $stateXml.spooler.answer.state.version
-                $state.State = $stateXml.spooler.answer.state.state
-                $state.Pid = $stateXml.spooler.answer.state.pid
-                $state.RunningSince = $stateXml.spooler.answer.state.spooler_running_since
-                $state.JobChainsExist = $stateXml.spooler.answer.state.job_chains.count
+                $state.Version = $SCRIPT:jsStateCache.spooler.answer.state.version
+                $state.State = $SCRIPT:jsStateCache.spooler.answer.state.state
+                $state.Pid = $SCRIPT:jsStateCache.spooler.answer.state.pid
+                $state.RunningSince = $SCRIPT:jsStateCache.spooler.answer.state.spooler_running_since
 
-                $stateXmlState = ( Select-XML -XML $stateXml -Xpath '/spooler/answer/state' ).Node
-                $state.OrdersExist = $stateXmlState.CreateNavigator().Evaluate( 'sum(job_chains/job_chain/@orders)' )
-                $state.JobsExist = $stateXmlState.CreateNavigator().Evaluate( 'count(jobs/job)' )
-                $state.TasksExist = $stateXmlState.CreateNavigator().Evaluate( 'sum(jobs/job/tasks/@count)' )
-                $state.TasksEnqueued = $stateXmlState.CreateNavigator().Evaluate( 'sum(jobs/job/queued_tasks/@length)' )
+                $stateXmlState = ( Select-XML -XML $SCRIPT:jsStateCache -Xpath '/spooler/answer/state' ).Node
+                $state.JobChainsExist = $stateXmlState.CreateNavigator().Evaluate( 'count(//job_chains/job_chain)' )
+                $state.OrdersExist = $stateXmlState.CreateNavigator().Evaluate( 'sum(//job_chains/job_chain/@orders)' )
+                $state.JobsExist = $stateXmlState.CreateNavigator().Evaluate( 'count(//jobs/job)' )
+                $state.TasksExist = $stateXmlState.CreateNavigator().Evaluate( 'sum(//jobs/job/tasks/@count)' )
+                $state.TasksEnqueued = $stateXmlState.CreateNavigator().Evaluate( 'sum(//jobs/job/queued_tasks/@length)' )
 
                 if ( $Display )
                 {
@@ -92,6 +107,7 @@ ________________________________________________________________________
 Job Scheduler instance: $($state.Id)
 .............. version: $($state.Version)
 ......... operated for: $($state.Url)
+.......... using proxy: $($state.ProxyUrl)
 ........ running since: $($state.RunningSince)
 ................ state: $($state.State)
 .................. pid: $($state.Pid)
@@ -181,6 +197,11 @@ ________________________________________________________________________
                 }
             }
         }
+    }
+
+    End
+    {
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 
