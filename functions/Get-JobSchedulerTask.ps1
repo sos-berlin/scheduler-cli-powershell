@@ -32,10 +32,9 @@ Specifies that no enqueued tasks should be stopped. By default enqueued tasks wi
 .PARAMETER NoSubfolders
 Specifies that no subfolders should be looked up for jobs. By default any subfolders will be searched for jobs with tasks.
 
-.PARAMETER NoCache
-Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
-retrieved directly from the JobScheduler Master and is not resolved from the cache.
+.PARAMETER UseCache
+Specifies that the cache for JobScheduler objects is used. By default the chache is not used
+as in most use cases the current information about running tasks is required from the JobScheduler Master.
 
 .OUTPUTS
 This cmdlet returns an array of task objects.
@@ -74,7 +73,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoSubfolders,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
+    [switch] $UseCache
 )
     Begin
     {
@@ -144,7 +143,7 @@ param
         $xPathRunningTasks = $xPath + '/tasks/task[@task]'
         $xPathEnqueuedTasks = $xPath + '/queued_tasks/queued_task[@task]'
 		
-        if ( $NoCache -or !$SCRIPT:jsHasCache )
+        if ( !$UseCache -or !$SCRIPT:jsHasCache )
         {                
             $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
             $whatTaskQueue = if ( $NoEnqueuedTasks ) { "" } else { " task_queue" }

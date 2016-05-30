@@ -134,6 +134,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
         switch ( $Action )
         {
@@ -232,6 +233,8 @@ param
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no order found"
         }
+
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 

@@ -37,6 +37,8 @@ after expiration of the timeout a SIGKILL signal is sent.
 * Action "kill"
 ** tasks are killed immediately.
 
+Default: "kill"
+
 .PARAMETER Timeout
 Specifies a timeout to be applied when stopping a task by use of the parameter -Action with the value "terminate".
 

@@ -119,6 +119,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
         $command = ''
         $orderCount = 0
@@ -249,6 +250,8 @@ param
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no order found to add"
         }
+
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 

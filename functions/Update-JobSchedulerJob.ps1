@@ -82,6 +82,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
         $command = ""
         $updatedJobCount = 0
@@ -140,6 +141,8 @@ param
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no job found to update"
         }
+
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 

@@ -72,6 +72,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
         $command = ""
         $orderCount = 0
@@ -107,7 +108,7 @@ param
             throw "$($MyInvocation.MyCommand.Name): no ad hoc order specified, no removal is carried out for permanent orders"
         }
 
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): removing order with Order='$($Order)', JobChain='$($JobChain)'"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): removing order with Order='$($Order)', JobChain='$($JobChain)'"
 
         $command += "<remove_order job_chain='$($JobChain)' order='$($Order)'/>"
         $updateOrder = Create-OrderObject
@@ -129,6 +130,8 @@ param
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no order found"
         }
+
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 
