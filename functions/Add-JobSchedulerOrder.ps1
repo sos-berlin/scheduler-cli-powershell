@@ -39,6 +39,8 @@ Specifies the point in time when the order should start:
 * yyyy-mm-dd HH:MM[:SS]
 ** specifies that the order should start at the specified point in time.
 
+Default: now
+
 .PARAMETER State
 Specifies that the order should enter the job chain at the job chain node that
 is assigend the specified state.
@@ -50,11 +52,10 @@ is assigend the specified state.
 .PARAMETER Replace
 Specifies that the order should replace an existing order with the same order identification.
 
-.PARAMETER Immediate
-Specifies that the order is immediately submitted and that the order identification is returned 
+.PARAMETER NoImmediate
+Specifies that the order is not immediately submitted and that no order identification is returned 
 with the order object. This parameter is intended for a situation when no order identification
-is provided when executing the cmdlet and when the caller wants to receive with the order object
-the order identification that has been created by JobScheduler.
+is required when executing the cmdlet.
 
 .INPUTS
 This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
@@ -114,7 +115,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Replace,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $Immediate
+    [switch] $NoImmediate
 )
     Begin
     {
@@ -161,7 +162,7 @@ param
 	
         $orderAttributes = ''
 
-        if ( $Immediate )
+        if ( !$NoImmediate )
         {
             $command = ''
         }
@@ -218,7 +219,7 @@ param
         $addOrder.Title = $Title
         $addOrder.State = $State
         
-        if ( $Immediate )
+        if ( !$NoImmediate )
         {
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
             $addOrderXml = Send-JobSchedulerXMLCommand $js.Url $command
@@ -238,7 +239,7 @@ param
     {
         if ( $orderCount )
         {
-            if ( $Immediate )
+            if ( !$NoImmediate )
             {
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders added"                
             } else {

@@ -136,36 +136,6 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        switch ( $Action )
-        {
-            'start'           { $orderAttributes = "" }
-            'suspend'         { $orderAttributes = "suspended='yes'" }
-            'resume'          { $orderAttributes = "suspended='no'" }
-            'reset'           { $orderAttributes = "action='reset'" }
-            'end_setback'     { $orderAttributes = "setback='no'" }
-            default           { $orderAttributes = "" }
-        }
-
-        if ( $Title )
-        {
-            $orderAttributes += " title='$($Title)'"
-        }
-        
-        if ( $At -and $Action -eq 'start' )
-        {
-            $orderAttributes += " at='$($At)'"
-        }
-        
-        if ( $State )
-        {
-            $orderAttributes += " state='$($State)'"
-        }
-        
-        if ( $EndState )
-        {
-            $orderAttributes += " end_state='$($EndState)'"
-        }
-
         $command = ""
         $orderCount = 0
     }
@@ -195,6 +165,36 @@ param
         }
 
         Write-Debug ".. $($MyInvocation.MyCommand.Name): updating order with Order='$($Order)', JobChain='$($JobChain)'"
+
+        switch ( $Action )
+        {
+            'start'           { $orderAttributes = "" }
+            'suspend'         { $orderAttributes = "suspended='yes'" }
+            'resume'          { $orderAttributes = "suspended='no'" }
+            'reset'           { $orderAttributes = "action='reset'" }
+            'end_setback'     { $orderAttributes = "setback='no'" }
+            default           { $orderAttributes = "" }
+        }
+
+        if ( $Title )
+        {
+            $orderAttributes += " title='$($Title)'"
+        }
+        
+        if ( $At -and $Action -eq 'start' )
+        {
+            $orderAttributes += " at='$($At)'"
+        }
+        
+        if ( $State )
+        {
+            $orderAttributes += " state='$($State)'"
+        }
+        
+        if ( $EndState )
+        {
+            $orderAttributes += " end_state='$($EndState)'"
+        }
 
         $command += "<modify_order job_chain='$($JobChain)' order='$($Order)' $($orderAttributes)>"
 

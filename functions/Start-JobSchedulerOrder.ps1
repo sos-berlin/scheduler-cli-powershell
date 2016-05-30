@@ -145,7 +145,12 @@ param
         $o.Directory = $Directory
         $o.Parameters = $Parameters
         $o.Title = $Title
-        $o.At = $At
+		if ( $At )
+		{
+			$o.At = $At
+		} else {
+			$o.At = 'now'
+		}
         $o.State = $State
         $o.EndState = $EndState
         $startOrders += $o
@@ -153,7 +158,7 @@ param
 
     End
     {
-        $startOrders | Update-JobSchedulerOrder -Action start -At $At
+        $startOrders | Update-JobSchedulerOrder -Action start
     }
 }
 

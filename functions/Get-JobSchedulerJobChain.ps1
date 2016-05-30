@@ -122,7 +122,7 @@ param
 
         if ( $JobChain )
         {
-            $xPath += "/job_chains/job_chain/@path = '$($JobChain)'"
+            $xPath += "/job_chains/job_chain[@path = '$($JobChain)']"
         } else {
             $xPath += '/job_chains/job_chain'
         }
