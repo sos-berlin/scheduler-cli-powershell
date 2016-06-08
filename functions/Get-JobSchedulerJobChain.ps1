@@ -46,7 +46,7 @@ Returns all job chains that are configured with the root folder ("live" director
 without consideration of subfolders.
 
 .EXAMPLE
-$jobChains = Get-JobChains -JobChain /test/globals/job_chain1
+$jobChains = Get-JobChain -JobChain /test/globals/job_chain1
 
 Returns the job chain job_chain1 from the folder "/test/globals".
 
