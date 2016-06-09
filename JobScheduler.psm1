@@ -547,9 +547,7 @@ $js = Create-JSObject
 
 if ( $env:SCHEDULER_URL )
 {
-   Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Id $env:SCHEDULER_ID -InstallPath $env:SCHEDULER_HOME
-} elseif ( $env:SCHEDULER_HOME ) {
-   Use-JobSchedulerMaster -InstallPath $env:SCHEDULER_HOME
+   Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Id $env:SCHEDULER_ID
 } elseif ( $env:SCHEDULER_ID ) {
    Use-JobSchedulerMaster -Id $env:SCHEDULER_ID
 }

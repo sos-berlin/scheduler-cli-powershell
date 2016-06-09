@@ -118,7 +118,7 @@ Job Scheduler instance: $($state.Id)
 ....... enqueued tasks: $($state.TasksEnqueued)
 ________________________________________________________________________
                     "
-                    Write-Host $output
+                    Write-Output $output
                 }
 
                 if ( !$NoOutputs )
@@ -188,7 +188,7 @@ Folders
              exist: $($stat.FoldersExist)
 ________________________________________________________________________
                     "
-                    Write-Host $output
+                    Write-Output $output
                 }
 
                 if ( !$NoOutputs )

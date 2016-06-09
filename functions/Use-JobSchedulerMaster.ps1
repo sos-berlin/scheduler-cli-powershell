@@ -209,7 +209,7 @@ param
 
             if ( !(Test-Path $InstallPath -PathType Container) )
             {
-                throw "$($MyInvocation.MyCommand.Name): JobScheduler installation path not found: $($InstallPath)"
+                throw "$($MyInvocation.MyCommand.Name): JobScheduler Master installation path not found: $($InstallPath)"
             }
             
             if ( !$Id )

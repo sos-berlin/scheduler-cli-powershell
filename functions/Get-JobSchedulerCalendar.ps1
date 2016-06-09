@@ -123,7 +123,7 @@ at $($atOrder.StartAt) oder $($atOrder.OrderId) job chain $($atOrder.JobChain)
 ________________________________________________________________________
 Orders by start-time
 " + $output
-                Write-Host $output
+                Write-Output $output
             }
 
 
@@ -154,7 +154,7 @@ begin at $($periodOrder.BeginAt) end at $($periodOrder.EndAt) repeat $($periodOr
 ________________________________________________________________________
 Orders by repeat interval
 " + $output
-                Write-Host $output
+                Write-Output $output
             }
             
             
@@ -185,7 +185,7 @@ begin at $($periodJob.BeginAt) end at $($periodJob.EndAt) repeat $($periodJob.Re
 ________________________________________________________________________
 Jobs by repeat interval
 " + $output
-                Write-Host $output
+                Write-Output $output
             }
 
             if ( !$NoOutputs )
