@@ -111,7 +111,7 @@ param
             {
                 $command += '<params>'
                 foreach ($p in $Parameters.GetEnumerator()) {
-                    $command += "<param name='$($p.Name)' value='$($p.Value)'/>"
+                    $command += "<param name='$($p.Name)' value='$([System.Security.SecurityElement]::Escape($p.Value))'/>"
                 }            
                 $command += '</params>'
             }

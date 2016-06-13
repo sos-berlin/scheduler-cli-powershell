@@ -178,7 +178,7 @@ param
 
         if ( $Title )
         {
-            $orderAttributes += " title='$($Title)'"
+            $orderAttributes += " title='$([System.Security.SecurityElement]::Escape($Title))'"
         }
         
         if ( $At -and $Action -eq 'start' )
@@ -202,7 +202,7 @@ param
         {
             $command += '<params>'
             foreach ($p in $Parameters.GetEnumerator()) {
-                $command += "<param name='$($p.Name)' value='$($p.Value)'/>"
+                $command += "<param name='$($p.Name)' value='$([System.Security.SecurityElement]::Escape($p.Value))'/>"
             }            
             $command += '</params>'
         }
