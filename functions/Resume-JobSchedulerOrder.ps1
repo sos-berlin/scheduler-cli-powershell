@@ -5,7 +5,7 @@ function Resume-JobSchedulerOrder
 Resumes a number of orders in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-Order -Action resume
+This cmdlet is an alias for Update-Order -Action "resume"
 
 .PARAMETER Order
 Specifies the identifier of an order.

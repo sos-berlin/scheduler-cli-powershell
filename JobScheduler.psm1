@@ -23,6 +23,9 @@ TODOs
 # JobScheduler Master Object
 [PSObject] $js = $null
 
+# CLI operated for a JobScheduler job or monitor
+[bool] $jsOperations = ( $spooler -and $spooler.id() )
+
 # JobScheduler XML Cache
 #    State
 [xml] $jsStateCache = $null
@@ -74,7 +77,7 @@ function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo]
         }
     }
 
-    if ( !$SCRIPT:js.Url )
+    if ( !$SCRIPT:js.Url -and !$SCRIPT:jsOperations )
     {
         if ( $SCRIPT:jsLocalCommands -notcontains $command.Name )
         {
@@ -328,65 +331,70 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
     $streamReader = $null
 
     try
-    {     
-        $request = [System.Net.WebRequest]::Create( $jobSchedulerURL )
- 
-        $request.Method = 'POST'
-        $request.ContentType = 'text/xml'
-        $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
-        
-        if ( $SCRIPT:jsOptionWebRequestUseDefaultCredentials )
-        {
-            Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
-            $request.UseDefaultCredentials = $true
-        } elseif ( $SCRIPT:jsCredentials ) {
-            Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
-            $request.Credentials = $SCRIPT:jsCredentials
-        }
-
-        if ( $SCRIPT:js.ProxyUrl )
-        {
-            $proxy = new-object System.Net.WebProxy $SCRIPT:js.ProxyUrl
-
-			if ( $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials )
+    {
+		if ( $SCRIPT:jsOperations )
+		{
+			$output = $spooler.execute_xml( $command )
+		} else {
+			$request = [System.Net.WebRequest]::Create( $jobSchedulerURL )
+	
+			$request.Method = 'POST'
+			$request.ContentType = 'text/xml'
+			$request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
+			
+			if ( $SCRIPT:jsOptionWebRequestUseDefaultCredentials )
 			{
-				$proxy.UseDefaultCredentials = $true
-				Write-Debug ".... $($MyInvocation.MyCommand.Name): using default proxy credentials"
-            } elseif ( $SCRIPT:jsProxyCredentials ) {
-				Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit proxy credentials"
-                $proxy.Credentials = $SCRIPT:jsProxyCredentials
-            }
-
-            $request.Proxy = $proxy
-        }
-
-        $bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
-        $request.ContentLength = $bytes.Length
-        $requestStream = $request.GetRequestStream()
-        $requestStream.Write( $bytes, 0, $bytes.Length )
- 
-        $requestStream.Close()
-        
-        if ( $checkResponse )
-        {
-            try
-            {
-                $response = $request.GetResponse()
-            } catch {
-                # reset credentials in case of response errors, eg. HTTP 401 not authenticated
-                $SCRIPT:jsCredentials = $null
-                throw "$($MyInvocation.MyCommand.Name): JobScheduler returns error, if credentials are missing consider to use the Set-Credentials cmdlet: " + $_.Exception                
-            }
-
-            if ( $response.StatusCode -ne 'OK' )
-            {
-                throw "JobScheduler returns status code: $($response.StatusCode)"
-            }
-
-            $responseStream = $response.getResponseStream() 
-            $streamReader = new-object System.IO.StreamReader $responseStream
-            $output = $streamReader.ReadToEnd()
-        }
+				Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
+				$request.UseDefaultCredentials = $true
+			} elseif ( $SCRIPT:jsCredentials ) {
+				Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
+				$request.Credentials = $SCRIPT:jsCredentials
+			}
+	
+			if ( $SCRIPT:js.ProxyUrl )
+			{
+				$proxy = new-object System.Net.WebProxy $SCRIPT:js.ProxyUrl
+	
+				if ( $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials )
+				{
+					$proxy.UseDefaultCredentials = $true
+					Write-Debug ".... $($MyInvocation.MyCommand.Name): using default proxy credentials"
+				} elseif ( $SCRIPT:jsProxyCredentials ) {
+					Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit proxy credentials"
+					$proxy.Credentials = $SCRIPT:jsProxyCredentials
+				}
+	
+				$request.Proxy = $proxy
+			}
+	
+			$bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
+			$request.ContentLength = $bytes.Length
+			$requestStream = $request.GetRequestStream()
+			$requestStream.Write( $bytes, 0, $bytes.Length )
+	
+			$requestStream.Close()
+			
+			if ( $checkResponse )
+			{
+				try
+				{
+					$response = $request.GetResponse()
+				} catch {
+					# reset credentials in case of response errors, eg. HTTP 401 not authenticated
+					$SCRIPT:jsCredentials = $null
+					throw "$($MyInvocation.MyCommand.Name): JobScheduler returns error, if credentials are missing consider to use the Set-Credentials cmdlet: " + $_.Exception                
+				}
+	
+				if ( $response.StatusCode -ne 'OK' )
+				{
+					throw "JobScheduler returns status code: $($response.StatusCode)"
+				}
+	
+				$responseStream = $response.getResponseStream() 
+				$streamReader = new-object System.IO.StreamReader $responseStream
+				$output = $streamReader.ReadToEnd()
+			}
+		}
 
         if ( $checkResponse -and $output )
         {
@@ -410,7 +418,7 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
                     throw 'missing answer element /spooler/answer in response'
                 }
             } catch {
-                throw "not a valid JobScheduler XML response: " + $_.Exception.Message
+                throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
             }
             
             $errorText = Select-XML -Content $output -Xpath '/spooler/answer/ERROR/@text'
@@ -423,7 +431,7 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
             {
                 [xml] $output
             } catch {
-                throw "not a valid JobScheduler XML response: " + $_.Exception.Message
+                throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
             }
         }
     } catch {
@@ -545,8 +553,10 @@ param
 
 $js = Create-JSObject
 
-if ( $env:SCHEDULER_URL )
+if ( $jsOperations )
 {
+
+} elseif ( $env:SCHEDULER_URL ) {
    Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Id $env:SCHEDULER_ID
 } elseif ( $env:SCHEDULER_ID ) {
    Use-JobSchedulerMaster -Id $env:SCHEDULER_ID
