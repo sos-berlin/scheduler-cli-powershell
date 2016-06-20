@@ -218,6 +218,9 @@ param
 		$addOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
         $addOrder.Title = $Title
         $addOrder.State = $State
+        $addOrder.EndState = $EndState
+        $addOrder.At = $At
+        $addOrder.Parameters = $Parameters
         
         if ( !$NoImmediate )
         {

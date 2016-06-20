@@ -39,9 +39,15 @@ combination with the -Id parameter to determine the configuration path.
 Default Value: C:\ProgramData\sos-berlin.com\jobscheduler
 
 .PARAMETER EnvironmentVariablesScript
+Specifies the name of the script that includes environment variables of a JobScheduler Master installation.
+Typically the script is available from the "bin" directory of a JobScheduler Master installation directory.
+
+Default Value: jobscheduler_environment_variables.cmd
+
+.PARAMETER EditorEnvironmentVariablesScript
 Specifies the name of the script that includes environment variables of a JobScheduler Editor installation.
-Typically the script name is "jobeditor_environment_variables.cmd" and the script is available
-from the "bin" directory and optionally "user_bin" directory of a JobScheduler Editor installation directory.
+Typically the script is available
+from the "user_bin" directory of a JobScheduler Dashboard installation directory.
 
 Default Value: jobeditor_environment_variables.cmd
 
@@ -67,7 +73,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $ConfigBasePath = 'C:\ProgramData\sos-berlin.com\jobscheduler',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $EnvironmentVariablesScript = 'jobeditor_environment_variables.cmd'
+    [string] $EnvironmentVariablesScript = 'jobscheduler_environment_variables.cmd',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $EditorEnvironmentVariablesScript = 'jobeditor_environment_variables.cmd'
 )
     Begin
     {
@@ -113,11 +121,14 @@ param
 
         if ( $InstallPath )
         {
+            # standalone instance or included with Master
             $editorInstallPath = $InstallPath
         } elseif ( $SCRIPT:js.Local ) {
+            # instance included with Master
             $editorInstallPath = $SCRIPT:js.Install.Directory
         } elseif ( $InstallBasePath ) {
-            $editorInstallPath = $InstallBasePath + '/JOE'
+            # standalone instance without Master
+            $editorInstallPath = (Split-Path -Path $InstallBasePath -Parent) + '/JOE'
         }
         
         if ( !$editorInstallPath )
@@ -132,13 +143,17 @@ param
 
         if ( $ConfigPath )
         {
+            # standalone instance or included with Master
             $editorConfigPath = $ConfigPath
         } elseif ( $SCRIPT:js.Local ) {
+            # instance included with Master
             $editorConfigPath = $SCRIPT:js.Config.Directory
         } elseif ( $ConfigBasePath -and $Id ) {
+            # instance included with Master
             $editorConfigPath = $ConfigBasePath + '/' + $Id
         } elseif ( $ConfigBasePath ) {
-            $editorConfigPath = $ConfigBasePath + '/JOE'
+            # standalone instance without Master
+            $editorConfigPath = (Split-Path -Path $ConfigBasePath -Parent) + '/JOE'
         }
 
         if ( !$editorConfigPath )
@@ -158,7 +173,7 @@ param
             Invoke-CommandScript $environmentVariablesScriptPath
         }
         
-        $environmentVariablesScriptPath = $editorInstallPath + '/user_bin/' + $EnvironmentVariablesScript
+        $environmentVariablesScriptPath = $editorInstallPath + '/user_bin/' + $EditorEnvironmentVariablesScript
         if ( Test-Path $environmentVariablesScriptPath -PathType Leaf )
         {
             Write-Debug ".. $($MyInvocation.MyCommand.Name): importing settings from $($environmentVariablesScriptPath)"

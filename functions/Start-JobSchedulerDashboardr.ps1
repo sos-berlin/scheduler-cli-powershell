@@ -39,9 +39,15 @@ combination with the -Id parameter to determine the configuration path.
 Default Value: C:\ProgramData\sos-berlin.com\jobscheduler
 
 .PARAMETER EnvironmentVariablesScript
+Specifies the name of the script that includes environment variables of a JobScheduler Master installation.
+Typically the script is available from the "bin" directory of a JobScheduler Master installation directory.
+
+Default Value: jobscheduler_environment_variables.cmd
+
+.PARAMETER DashboardEnvironmentVariablesScript
 Specifies the name of the script that includes environment variables of a JobScheduler Dashboard installation.
-Typically the script name is "dashboard_environment_variables.cmd" and the script is available
-from the "bin" directory and optionally "user_bin" directory of a JobScheduler Dashboard installation directory.
+Typically the script is available
+from the "user_bin" directory of a JobScheduler Dashboard installation directory.
 
 Default Value: dashboard_environment_variables.cmd
 
@@ -67,7 +73,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $ConfigBasePath = 'C:\ProgramData\sos-berlin.com\jobscheduler',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $EnvironmentVariablesScript = 'dashboard_environment_variables.cmd'
+    [string] $EnvironmentVariablesScript = 'jobscheduler_environment_variables.cmd',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $DashboardEnvironmentVariablesScript = 'dashboard_environment_variables.cmd'
 )
     Begin
     {
@@ -113,11 +121,14 @@ param
 
         if ( $InstallPath )
         {
+            # standalone instance or included with Master
             $dashboardInstallPath = $InstallPath
         } elseif ( $SCRIPT:js.Local ) {
+            # instance included with Master
             $dashboardInstallPath = $SCRIPT:js.Install.Directory
         } elseif ( $InstallBasePath ) {
-            $dashboiardInstallPath = $InstallBasePath + '/dashboard'
+            # standalone instance without Master
+            $dashboardInstallPath = $InstallBasePath + '/dashboard'
         }
         
         if ( !$dashboardInstallPath )
@@ -132,13 +143,17 @@ param
 
         if ( $ConfigPath )
         {
+            # standalone instance or included with Master
             $dashboardConfigPath = $ConfigPath
         } elseif ( $SCRIPT:js.Local ) {
+            # instance included with Master
             $dashboardConfigPath = $SCRIPT:js.Config.Directory
         } elseif ( $ConfigBasePath -and $Id ) {
+            # instance included with Master
             $dashboardConfigPath = $ConfigBasePath + '/' + $Id
         } elseif ( $ConfigBasePath ) {
-            $dashboardConfigPath = $ConfigBasePath + '/JOE'
+            # standalone instance without Master
+            $dashboardConfigPath = (Split-Path -Path $ConfigBasePath -Parent) + '/dashboard'
         }
 
         if ( !$dashboardConfigPath )
@@ -158,7 +173,7 @@ param
             Invoke-CommandScript $environmentVariablesScriptPath
         }
         
-        $environmentVariablesScriptPath = $dashboardInstallPath + '/user_bin/' + $EnvironmentVariablesScript
+        $environmentVariablesScriptPath = $dashboardInstallPath + '/user_bin/' + $DashboardEnvironmentVariablesScript
         if ( Test-Path $environmentVariablesScriptPath -PathType Leaf )
         {
             Write-Debug ".. $($MyInvocation.MyCommand.Name): importing settings from $($environmentVariablesScriptPath)"
