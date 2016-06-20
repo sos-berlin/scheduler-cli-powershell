@@ -25,7 +25,7 @@ The installation path is expected to be accessible from the host on which the Jo
 Specifies the base path of a JobScheduler Master or JobScheduler Dashboard installation. This parameter is used in
 combination with the -Id parameter to determine the installation path.
 
-Default Value: C:\Program Files\sos-berlin.com\jobscheduler
+Default Value: %ProgramFiles%\sos-berlin.com\jobscheduler
 
 .PARAMETER ConfigPath
 Specifies the configuration path of a JobScheduler Maser or JobScheduler Dashboard.
@@ -36,7 +36,7 @@ The configuration path is expected to be accessible from the host on which the J
 Specifies the base path of a JobScheduler Master or JobScheduler Dashboard configuration. This parameter is used in
 combination with the -Id parameter to determine the configuration path.
 
-Default Value: C:\ProgramData\sos-berlin.com\jobscheduler
+Default Value: %ProgramData%\sos-berlin.com\jobscheduler
 
 .PARAMETER EnvironmentVariablesScript
 Specifies the name of the script that includes environment variables of a JobScheduler Master installation.
@@ -67,11 +67,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $InstallPath,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $InstallBasePath = 'C:\Program Files\sos-berlin.com\jobscheduler',
+    [string] $InstallBasePath = "$($env:ProgramFiles)\sos-berlin.com\jobscheduler",
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $ConfigPath,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $ConfigBasePath = 'C:\ProgramData\sos-berlin.com\jobscheduler',
+    [string] $ConfigBasePath = "$($env:ProgramData)\sos-berlin.com\jobscheduler",
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $EnvironmentVariablesScript = 'jobscheduler_environment_variables.cmd',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -128,7 +128,7 @@ param
             $dashboardInstallPath = $SCRIPT:js.Install.Directory
         } elseif ( $InstallBasePath ) {
             # standalone instance without Master
-            $dashboardInstallPath = $InstallBasePath + '/dashboard'
+            $dashboardInstallPath = (Split-Path -Path $InstallBasePath -Parent) + '/dashboard'
         }
         
         if ( !$dashboardInstallPath )
@@ -197,7 +197,7 @@ param
 
         if ( !$env:JAVA_HOME )
         {
-            $env:JAVA_HOME = 'C:\Program Files\Java\jre8'
+            $env:JAVA_HOME = "$($env:ProgramFiles)\Java\jre8"
         }
         
         if ( !$env:JAVA_OPTIONS )
@@ -245,9 +245,9 @@ param
         
         if ( $DebugPreferences -eq "Continue" )
         {
-            $javaExecutableFile = "$env:JAVA_HOME/bin/java.exe"
+            $javaExecutableFile = "$($env:JAVA_HOME)/bin/java.exe"
         } else {
-            $javaExecutableFile = "$env:JAVA_HOME/bin/javaw.exe"
+            $javaExecutableFile = "$($env:JAVA_HOME)/bin/javaw.exe"
         }
         
         $javaClassPath = "patches/*;user_lib/*;log/%LOG_BRIDGE%/*;jdbc/*;3rd-party/*;sos/*"
