@@ -26,8 +26,10 @@ PowerShellVersion = '2.0'
 
 # Functions to export from this module
 FunctionsToExport = @( 
+    'Add-JobSchedulerEvent',
     'Add-JobSchedulerOrder',
     'Get-JobSchedulerCalendar',
+    'Get-JobSchedulerEvent',
     'Get-JobSchedulerJob',
     'Get-JobSchedulerJobChain',
     'Get-JobSchedulerOrder',
@@ -37,6 +39,7 @@ FunctionsToExport = @(
     'Get-JobSchedulerTask',
     'Get-JobSchedulerVersion',
     'Install-JobSchedulerService',
+    'Remove-JobSchedulerEvent',
     'Remove-JobSchedulerOrder',
     'Remove-JobSchedulerService',
     'Reset-JobSchedulerOrder',
