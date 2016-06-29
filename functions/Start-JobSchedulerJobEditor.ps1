@@ -233,7 +233,8 @@ param
         $javaClassPath = "patches/*;user_lib/*;3rd-party/*;sos/*"
         $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($editorInstallPath)`" -DSCHEDULER_DATA=`"$($editorConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" sos.scheduler.editor.app.Editor"
 
-        $currentLocation = Set-Location -Path "$($editorInstallPath)/lib" -PassThru
+        $currentLocation = $pwd
+		Set-Location -Path "$($editorInstallPath)/lib" -PassThru
 
         $command = """$($javaExecutableFile)"" $($javaArguments)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"

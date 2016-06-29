@@ -5,16 +5,18 @@ function Add-JobSchedulerEvent
 Adds an event to a JobScheduler instance.
 
 .DESCRIPTION
-JobScheduler Master supports a number of XML commands.
-This cmdlet accepts XML commands and forward them to the JobScheduler Master.
+Events can be added to a JobScheduler Master or Supervisor instance that implements event handling.
+
+Should the JobScheduler Master or Supervisor not be accessible then events are stored in 
+the local file %TEMP%\jobscheduler_events.xml for later dequeueing. Subsequent calls to this
+cmdlet will dequeue any previously stored events.
 
 .PARAMETER EventClass
-Specifies a common name for a set of events that enabling event handlers to process multiple events of the
+Specifies a common name for a set of events that enable event handlers to process multiple events of the
 same class. For example, "daily_closing" could be an event class for jobs that should start once day-time
 business processes have drawn to a close.
 
-Species a unique identifier when used together with the -EventId parameter. Can, for example, be used to remove
-events (remove all events of a particular class).
+Specifies a unique identifier when used together with the -EventId parameter.
 
 .PARAMETER EventId
 An identifier for an event. Allows event handlers to react to events having a particular ID.
@@ -63,21 +65,22 @@ Specifies the Job Scheduler Master instance URL.
 The URL consists of the protocol, host name and port, e.g. http://localhost:4454.
 
 Default: If used with a job then the CLI will assign by default the JobScheduler Master that the job is running for
+otherwise the JobScheduler Master as specified with the Use-Master cmdlet will be used.
 
 .PARAMETER SupervisorUrl
 Specifies a Job Scheduler Supervisor instance URL.
 
 Job Scheduler Master instances register with a JobScheduler Supervisor (if configured to do so)
- in order to synchronize job configurations. The Supervisor instance receives events, executes the
+in order to synchronize job configurations. The Supervisor instance receives events, executes the
 event handler and starts jobs and job chains for registered JobScheduler Master instances.
 
 The URL consists of the protocol, host name and port, e.g. http://localhost:4454.
 
 Default: If used with a job then the CLI will assign by default the JobScheduler Supervisor that the 
-current JobScheduler Master is registered for.
+current JobScheduler Master is registered for and otherwise assign the JobScheduler Master.
 
 .PARAMETER SupervisorJobChain
-Specifies the path of the job chain in the JobScheduler Supervisor instance that implements the event
+Specifies the path of the job chain in the JobScheduler Master or Supervisor instance that implements the event
 processor. 
 
 Default: /sos/events/scheduler_event_service

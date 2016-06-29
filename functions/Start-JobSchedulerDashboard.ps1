@@ -250,10 +250,11 @@ param
             $javaExecutableFile = "$($env:JAVA_HOME)/bin/javaw.exe"
         }
         
-        $javaClassPath = "patches/*;user_lib/*;log/%LOG_BRIDGE%/*;jdbc/*;3rd-party/*;sos/*"
+        $javaClassPath = "patches/*;user_lib/*;log/$($env:LOG_BRIDGE)/*;jdbc/*;3rd-party/*;sos/*"
         $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($dashboardInstallPath)`" -DSCHEDULER_DATA=`"$($dashboardConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" com.sos.dailyschedule.SosSchedulerDashboardMain -enable_joe=$($env:ENABLE_JOE) -enable_joc=$($env:ENABLE_JOC) -enable_events=$($env:ENABLE_EVENTS) -enable_job_start=$($env:ENABLE_JOB_START) -Hibernate_Configuration_File=`"$($env:HIBERNATE_CONFIGURATION_FILE)`""
 
-        $currentLocation = Set-Location -Path "$($dashboardInstallPath)/lib" -PassThru
+        $currentLocation = $pwd
+		Set-Location -Path "$($dashboardInstallPath)/lib" -PassThru
 
         $command = """$($javaExecutableFile)"" $($javaArguments)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
