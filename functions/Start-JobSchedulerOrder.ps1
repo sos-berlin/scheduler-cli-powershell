@@ -125,7 +125,12 @@ param
             {
                 $Directory = Get-JobSchedulerObject-Parent $JobChain
             } else { # job chain name includes no directory
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
     
@@ -135,7 +140,12 @@ param
             {
                 $Directory = Get-JobSchedulerObject-Parent $Order
                 $Order = Get-JobSchedulerObject-Basename $Order
-                $JobChain = $Directory + '/' + (Get-JobSchedulerObject-Basename $JobChain)
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + (Get-JobSchedulerObject-Basename $JobChain)
+                } else {
+                    $JobChain = $Directory + '/' + (Get-JobSchedulerObject-Basename $JobChain)
+                }
             }
         }
     
@@ -145,12 +155,12 @@ param
         $o.Directory = $Directory
         $o.Parameters = $Parameters
         $o.Title = $Title
-		if ( $At )
-		{
-			$o.At = $At
-		} else {
-			$o.At = 'now'
-		}
+        if ( $At )
+        {
+            $o.At = $At
+        } else {
+            $o.At = 'now'
+        }
         $o.State = $State
         $o.EndState = $EndState
         $startOrders += $o

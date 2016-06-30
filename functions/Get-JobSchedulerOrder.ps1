@@ -77,12 +77,12 @@ without consideration of subfolders.
 .EXAMPLE
 $orders = Get-Order -JobChain /test/globals/chain1
 
-Returns the orders for job chain chain1 from the folder "/test/globals".
+Returns the orders for job chain "chain1" from the folder "/test/globals".
 
 .EXAMPLE
 $orders = Get-Order -Order /test/globals/order1
 
-Returns the order order1 from the folder "/test/globals".
+Returns the order "order1" from the folder "/test/globals".
 
 .LINK
 about_jobscheduler
@@ -148,13 +148,14 @@ param
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
             {
-                if ( $Directory -ne '/' )
-                {
-                    # Write-Warning "$($MyInvocation.MyCommand.Name): parameter -Directory has been specified, but is replaced by by parent folder of -JobChain parameter"
-                }
                 $Directory = Get-JobSchedulerObject-Parent $JobChain
             } else { # job chain name includes no directory
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
         
@@ -162,13 +163,14 @@ param
         {
             if ( (Get-JobSchedulerObject-Basename $Order) -ne $Order ) # order name includes a directory
             {
-                if ( $Directory -ne '/' )
-                {
-                    # Write-Warning "$($MyInvocation.MyCommand.Name): parameter -Directory has been specified, but is replaced by by parent folder of -Order parameter"
-                }
                 $Directory = Get-JobSchedulerObject-Parent $Order
             } else { # order name includes no directory
-                $Order = $Directory + '/' + $Order
+                if ( $Directory -eq '/' )
+                {
+                    $Order = $Directory + $Order
+                } else {
+                    $Order = $Directory + '/' + $Order
+                }
             }
         }
 
@@ -183,6 +185,8 @@ param
             } else {
                 $xPath += "[starts-with(@path, '$($Directory)')]"
             }
+        } else {
+            $Directory = '/'
         }
 
         if ( $JobChain )

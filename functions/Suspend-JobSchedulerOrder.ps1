@@ -65,9 +65,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/'
 )
-	Begin
-	{
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+    Begin
+    {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
 
         $parameters = @()
     }
@@ -92,7 +92,12 @@ param
             {
                 $Directory = Get-JobSchedulerObject-Parent $JobChain
             } else { # job chain name includes no directory
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
 
@@ -100,10 +105,10 @@ param
         $suspendOrder.Order = $Order
         $suspendOrder.JobChain = Get-JobSchedulerObject-Basename $JobChain
         $suspendOrder.Name = $suspendOrder.JobChain + ',' + $suspendOrder.Order
-		$suspendOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
-		$suspendOrder.Path = $suspendOrder.Directory + '/' + $suspendOrder.Name
-		# output objects are created by Update-JobSchedulerOrder
-		# $suspendOrder
+        $suspendOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
+        $suspendOrder.Path = $suspendOrder.Directory + '/' + $suspendOrder.Name
+        # output objects are created by Update-JobSchedulerOrder
+        # $suspendOrder
         $parameters += $suspendOrder
     }
 

@@ -117,7 +117,7 @@ Specifies that an event will not expire. Such events have to be removed by event
 
 .PARAMETER Parameters
 Allows additional parameters for event handlers to be specified. Parameters are created using name-value
-pairs from a hashmap as e.g. @\{'name1'='value1'; 'name2'='value2'\}.
+pairs from a hashmap as e.g. @{'name1'='value1'; 'name2'='value2'}.
 
 Parameter names can be freely chosen and event handlers configured to
 take account of values handed over. Any number of parameters can be added.
@@ -153,7 +153,7 @@ Add-Event -EventClass daily_closing -EventId 12345678 -ExpirationDate (Get-Date)
 Creates an event that will expire two days later.
 
 .EXAMPLE
-Add-Event -EventClass daily_closing -EventId 12345678 -Parameters @\{'name1'='value1'; 'name2'='value2'\}
+Add-Event -EventClass daily_closing -EventId 12345678 -Parameters @{'name1'='value1'; 'name2'='value2'}
 
 Creates an event with two additional parameters from a hashtable.
 

@@ -146,20 +146,30 @@ param
             {
                 $Directory = Get-JobSchedulerObject-Parent $JobChain
             } else { # job chain name includes no directory
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
-	
+    
         if ( $Order )
         {
             if ( (Get-JobSchedulerObject-Basename $Order) -ne $Order ) # order id includes a directory
             {
                 $Directory = Get-JobSchedulerObject-Parent $Order
-				$Order = Get-JobSchedulerObject-Basename $Order
-                $JobChain = $Directory + '/' + (Get-JobSchedulerObject-Basename $JobChain)
+                $Order = Get-JobSchedulerObject-Basename $Order
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + (Get-JobSchedulerObject-Basename $JobChain)
+                } else {
+                    $JobChain = $Directory + '/' + (Get-JobSchedulerObject-Basename $JobChain)
+                }
             }
         }
-	
+    
         $orderAttributes = ''
 
         if ( !$NoImmediate )
@@ -215,7 +225,7 @@ param
         $addOrder = Create-OrderObject
         $addOrder.Order = $Order
         $addOrder.JobChain = Get-JobSchedulerObject-Basename $JobChain
-		$addOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
+        $addOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
         $addOrder.Title = $Title
         $addOrder.State = $State
         $addOrder.EndState = $EndState
@@ -227,11 +237,11 @@ param
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
             $addOrderXml = Send-JobSchedulerXMLCommand $js.Url $command
             $addOrder.Order = $addOrderXml.spooler.answer.ok.order.order
-			$addOrder.Name = $addOrder.JobChain + ',' + $addOrder.Order			
-			# for permanent orders
-			# $addOrder.Path = $addOrder.Directory + '/' + $addOrder.Name		
-			# for ad hoc orders
-			$addOrder.Path = '/'
+            $addOrder.Name = $addOrder.JobChain + ',' + $addOrder.Order            
+            # for permanent orders
+            # $addOrder.Path = $addOrder.Directory + '/' + $addOrder.Name        
+            # for ad hoc orders
+            $addOrder.Path = '/'
         }
         
         $addOrder

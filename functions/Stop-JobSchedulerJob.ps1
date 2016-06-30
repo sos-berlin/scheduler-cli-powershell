@@ -70,7 +70,12 @@ param
             {
                 $Directory = Get-JobSchedulerObject-Parent $Job
             } else { # job name includes no directory
-                $Job = $Directory + '/' + $Job
+				if ( $Directory -eq '/' )
+				{
+					$Job = $Directory + $Job
+				} else {
+					$Job = $Directory + '/' + $Job
+				}
             }
         }
     

@@ -56,6 +56,11 @@ Start-JOE -Id scheduler110
 
 Starts the JobScheduler Editor from a local JobScheduler Master installation with the specified id.
 
+.EXAMPLE
+Start-JOE -InstallPath c:\Program Files\JOE
+
+Starts JOE from the specified installation directory. This is a suitable option if
+JOE has been installed independently from a JobScheduler Master installation.
 .LINK
 about_jobscheduler
 
@@ -79,8 +84,6 @@ param
 )
     Begin
     {
-        #Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        
         $isLocal = $false
     }
 
@@ -239,7 +242,7 @@ param
         $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($editorInstallPath)`" -DSCHEDULER_DATA=`"$($editorConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" sos.scheduler.editor.app.Editor"
 
         $currentLocation = $pwd
-		Set-Location -Path "$($editorInstallPath)/lib"
+        Set-Location -Path "$($editorInstallPath)/lib"
 
         $command = """$($javaExecutableFile)"" $($javaArguments)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"

@@ -75,7 +75,7 @@ Returns the jobs that are associated with job chain job_chain1 from the folder "
 .EXAMPLE
 $jobs = Get-Job -Job /test/globals/job1
 
-Returns the job job1 from the folder "/test/globals".
+Returns the job "job1" from the folder "/test/globals".
 
 .LINK
 about_jobscheduler
@@ -149,13 +149,14 @@ param
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
             {
-                if ( $Directory -ne '/' )
-                {
-                    # Write-Warning "$($MyInvocation.MyCommand.Name): parameter -Directory has been specified, but is replaced by by parent folder of -JobChain parameter"
-                }
                 $Directory = Get-JobSchedulerObject-Parent $JobChain
             } else { # job chain name includes no directory
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
         
@@ -163,13 +164,14 @@ param
         {
             if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
             {
-                if ( $Directory -ne '/' )
-                {
-                    # Write-Warning "$($MyInvocation.MyCommand.Name): parameter -Directory has been specified, but is replaced by by parent folder of -Job parameter"
-                }
                 $Directory = Get-JobSchedulerObject-Parent $Job
             } else { # job name includes no directory
-                $Job = $Directory + '/' + $Job
+                if ( $Directory -eq '/' )
+                {
+                    $Job = $Directory + $Job
+                } else {
+                    $Job = $Directory + '/' + $Job
+                }
             }
         }
 

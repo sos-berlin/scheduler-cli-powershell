@@ -160,7 +160,12 @@ param
             {
                 $Directory = Get-JobSchedulerObject-Parent $JobChain
             } else { # job chain name includes no directory
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
 
@@ -213,8 +218,8 @@ param
         $updateOrder.Order = $Order
         $updateOrder.JobChain = Get-JobSchedulerObject-Basename $JobChain
         $updateOrder.Name = $updateOrder.JobChain + ',' + $updateOrder.Order
-		$updateOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
-		$updateOrder.Path = $updateOrder.Directory + '/' + $updateOrder.Name
+        $updateOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
+        $updateOrder.Path = $updateOrder.Directory + '/' + $updateOrder.Name
         $updateOrder.Title = $Title
         $updateOrder.State = $State
         $updateOrder.EndState = $EndState

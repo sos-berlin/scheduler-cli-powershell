@@ -94,7 +94,12 @@ param
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -eq $JobChain ) # job chain path includes no directory
             {
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
 

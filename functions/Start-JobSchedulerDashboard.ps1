@@ -56,6 +56,12 @@ Start-JID -Id scheduler110
 
 Starts the JobScheduler Dashboard from a local JobScheduler Master installation with the specified id.
 
+.EXAMPLE
+Start-JOD -InstallPath c:\Program Files\JID
+
+Starts JID from the specified installation directory. This is a suitable option if
+JID has been installed independently from a JobScheduler Master installation.
+
 .LINK
 about_jobscheduler
 
@@ -79,8 +85,6 @@ param
 )
     Begin
     {
-        #Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        
         $isLocal = $false
     }
 
@@ -259,8 +263,8 @@ param
         
         $dbmsDialect = Select-XML -Path "$($env:HIBERNATE_CONFIGURATION_FILE)" -Xpath "//property[@name='hibernate.dialect']"
         $dbms = $($dbmsDialect.Node.'#text' -replace 'org\.hibernate\.dialect\.(.*?)(?:InnoDB|\d+g)?Dialect','$1')
-        Write-Debug ".. DBMS: $($dbms)"
-        if ( $dbms -eq "PostgreSQL" )
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): DBMS: $($dbms)"
+        if ( $dbms -eq 'PostgreSQL' )
         {
             $javaClassPath = "pgsql/com.sos.hibernate_pgsql.jar;$($javaClassPath)"
         }
@@ -268,7 +272,7 @@ param
         $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($dashboardInstallPath)`" -DSCHEDULER_DATA=`"$($dashboardConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" com.sos.dailyschedule.SosSchedulerDashboardMain -enable_joe=$($env:ENABLE_JOE) -enable_joc=$($env:ENABLE_JOC) -enable_events=$($env:ENABLE_EVENTS) -enable_job_start=$($env:ENABLE_JOB_START) -Hibernate_Configuration_File=`"$($env:HIBERNATE_CONFIGURATION_FILE)`""
 
         $currentLocation = $pwd
-		Set-Location -Path "$($dashboardInstallPath)/lib" -PassThru
+        Set-Location -Path "$($dashboardInstallPath)/lib"
 
         $command = """$($javaExecutableFile)"" $($javaArguments)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"

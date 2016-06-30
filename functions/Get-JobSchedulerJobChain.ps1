@@ -48,7 +48,7 @@ without consideration of subfolders.
 .EXAMPLE
 $jobChains = Get-JobChain -JobChain /test/globals/job_chain1
 
-Returns the job chain job_chain1 from the folder "/test/globals".
+Returns the job chain "job_chain1" from the folder "/test/globals".
 
 .LINK
 about_jobscheduler
@@ -93,21 +93,22 @@ param
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
+
         if ( $JobChain ) 
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a path
             {
-                if ( $Directory -ne '/' )
-                {
-                    # Write-Warning "$($MyInvocation.MyCommand.Name): parameter -Directory has been specified, but is replaced by by parent folder of -JobChain parameter"
-                }
                 $Directory = Get-JobSchedulerObject-Parent $JobChain
             } else { # job chain name includes no directory
-                $JobChain = $Directory + '/' + $JobChain
+                if ( $Directory -eq '/' )
+                {
+                    $JobChain = $Directory + $JobChain
+                } else {
+                    $JobChain = $Directory + '/' + $JobChain
+                }
             }
         }
-        
+
         $xPath = '//folder'
 
         if ( $Directory )

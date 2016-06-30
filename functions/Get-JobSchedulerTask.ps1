@@ -111,13 +111,14 @@ param
         {
             if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
             {
-                if ( $Directory -ne '/' )
-                {
-                    # Write-Warning "$($MyInvocation.MyCommand.Name): parameter -Directory has been specified, but is replaced by parent folder of -Job parameter"
-                }
                 $Directory = Get-JobSchedulerObject-Parent $Job
             } else { # job name includes no directory
-                $Job = $Directory + '/' + $Job
+                if ( $Directory -eq '/' )
+                {
+                    $Job = $Directory + $Job
+                } else {
+                    $Job = $Directory + '/' + $Job
+                }
             }
         }
 
@@ -142,7 +143,7 @@ param
 
         $xPathRunningTasks = $xPath + '/tasks/task[@task]'
         $xPathEnqueuedTasks = $xPath + '/queued_tasks/queued_task[@task]'
-		
+        
         if ( !$UseCache -or !$SCRIPT:jsHasCache )
         {                
             $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }

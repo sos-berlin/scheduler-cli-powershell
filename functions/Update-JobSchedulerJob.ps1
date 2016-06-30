@@ -116,7 +116,7 @@ param
                 $command += '</params>'
             }
         
-            $command += "</start_job>"
+            $command += '</start_job>'
         } else {
             $command += "<modify_job job='$($Job)' cmd='$($Action)'/>"
         }
