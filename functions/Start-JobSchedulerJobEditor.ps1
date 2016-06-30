@@ -79,7 +79,7 @@ param
 )
     Begin
     {
-        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        #Approve-JobSchedulerCommand $MyInvocation.MyCommand
         
         $isLocal = $false
     }
@@ -214,7 +214,7 @@ param
         {
             if ( Test-Path -Path "$($editorInstallPath)\lib\JOE-log4j.properties" -PathType Leaf )
             {
-                $env:LOG4JPROP = "-Dlog4j.configuration=`"file:///$($editorInstallPath)/lib/JOE-log4j.properties`""
+                $env:LOG4JPROP = "-Dlog4j.configuration=`"file:///$($editorInstallPath -replace "\\","/")/lib/JOE-log4j.properties`""
             }
         }
 
@@ -225,21 +225,26 @@ param
         
         if ( $DebugPreferences -eq "Continue" )
         {
-            $javaExecutableFile = "$($env:JAVA_HOME)/bin/java.exe"
+            $javaExecutableFile = "$($env:JAVA_HOME)\bin\java.exe"
         } else {
-            $javaExecutableFile = "$($env:JAVA_HOME)/bin/javaw.exe"
+            $javaExecutableFile = "$($env:JAVA_HOME)\bin\javaw.exe"
         }
         
-        $javaClassPath = "patches/*;user_lib/*;3rd-party/*;sos/*"
+        if ( -Not (Test-Path -Path "$($javaExecutableFile)" -PathType Leaf) )
+        {
+            $javaExecutableFile = Split-Path -Path "$($javaExecutableFile)" -Leaf
+        }
+        
+        $javaClassPath = "patches/*;user_lib/*;log/$($env:LOG_BRIDGE)/*;3rd-party/*;sos/*"
         $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($editorInstallPath)`" -DSCHEDULER_DATA=`"$($editorConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" sos.scheduler.editor.app.Editor"
 
         $currentLocation = $pwd
-		Set-Location -Path "$($editorInstallPath)/lib" -PassThru
+		Set-Location -Path "$($editorInstallPath)/lib"
 
         $command = """$($javaExecutableFile)"" $($javaArguments)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler Editor: $($command)"
-        $process = Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)" -PassThru
+        Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)"
 
         Set-Location -Path $currentLocation
     }

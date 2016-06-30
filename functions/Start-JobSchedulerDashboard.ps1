@@ -79,7 +79,7 @@ param
 )
     Begin
     {
-        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        #Approve-JobSchedulerCommand $MyInvocation.MyCommand
         
         $isLocal = $false
     }
@@ -214,7 +214,7 @@ param
         {
             if ( Test-Path -Path "$($dashboardInstallPath)\lib\JOE-log4j.properties" -PathType Leaf )
             {
-                $env:LOG4JPROP = "-Dlog4j.configuration=`"file:///$($dashboardInstallPath)/lib/JID-log4j.properties`""
+                $env:LOG4JPROP = "-Dlog4j.configuration=`"file:///$($dashboardInstallPath -replace "\\","/")/lib/JID-log4j.properties`""
             }
         }
 
@@ -245,12 +245,26 @@ param
         
         if ( $DebugPreferences -eq "Continue" )
         {
-            $javaExecutableFile = "$($env:JAVA_HOME)/bin/java.exe"
+            $javaExecutableFile = "$($env:JAVA_HOME)\bin\java.exe"
         } else {
-            $javaExecutableFile = "$($env:JAVA_HOME)/bin/javaw.exe"
+            $javaExecutableFile = "$($env:JAVA_HOME)\bin\javaw.exe"
+        }
+        
+        if ( -Not (Test-Path -Path "$($javaExecutableFile)" -PathType Leaf) )
+        {
+            $javaExecutableFile = Split-Path -Path "$($javaExecutableFile)" -Leaf
         }
         
         $javaClassPath = "patches/*;user_lib/*;log/$($env:LOG_BRIDGE)/*;jdbc/*;3rd-party/*;sos/*"
+        
+        $dbmsDialect = Select-XML -Path "$($env:HIBERNATE_CONFIGURATION_FILE)" -Xpath "//property[@name='hibernate.dialect']"
+        $dbms = $($dbmsDialect.Node.'#text' -replace 'org\.hibernate\.dialect\.(.*?)(?:InnoDB|\d+g)?Dialect','$1')
+        Write-Debug ".. DBMS: $($dbms)"
+        if ( $dbms -eq "PostgreSQL" )
+        {
+            $javaClassPath = "pgsql/com.sos.hibernate_pgsql.jar;$($javaClassPath)"
+        }
+        
         $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($dashboardInstallPath)`" -DSCHEDULER_DATA=`"$($dashboardConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" com.sos.dailyschedule.SosSchedulerDashboardMain -enable_joe=$($env:ENABLE_JOE) -enable_joc=$($env:ENABLE_JOC) -enable_events=$($env:ENABLE_EVENTS) -enable_job_start=$($env:ENABLE_JOB_START) -Hibernate_Configuration_File=`"$($env:HIBERNATE_CONFIGURATION_FILE)`""
 
         $currentLocation = $pwd
@@ -259,7 +273,7 @@ param
         $command = """$($javaExecutableFile)"" $($javaArguments)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler Dashboard: $($command)"
-        $process = Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)" -PassThru
+        Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)"
 
         Set-Location -Path $currentLocation
     }
