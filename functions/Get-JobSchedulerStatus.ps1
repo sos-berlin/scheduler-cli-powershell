@@ -65,7 +65,6 @@ param
     {        
         if ( !$Statistics )
         {
-#           $command = "<show_state subsystems='folder order job' what='folders job_chains job_chain_orders job_chain_jobs job_params job_orders remote_schedulers source'/>"
             $command = "<show_state subsystems='folder order job' what='folders job_chains job_chain_orders job_chain_jobs job_params job_orders remote_schedulers'/>"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"

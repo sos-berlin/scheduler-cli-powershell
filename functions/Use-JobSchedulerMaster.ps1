@@ -2,7 +2,7 @@ function Use-JobSchedulerMaster
 {
 <#
 .SYNOPSIS
-This cmdlet has to be used as the first operation with JobScheduler cmdlets
+This cmdlet has to be used as the first operation with JobScheduler Master cmdlets
 and identifies the JobScheduler Master that should be used.
 
 Optionally applies settings from a JobScheduler Master location. A Master is identified
@@ -15,14 +15,14 @@ Such settings are imported for use with subsequent cmdlets.
 * For a local Master that is installed on the local computer the cmdlet reads
 settings from the installation path.
 * For a remote Master operations for management of the
-Windows serivce are not available.
+Windows service are not available.
 
 .PARAMETER Url
 Specifies the URL for which a JobScheduler Master is available.
 
-The URL includes one of the protocols HTTP or HTTPS and optionally the port that JobScheduler listens to, e.g. http://localhost:4444
+The URL includes one of the protocols HTTP or HTTPS, the hostname and the port that JobScheduler Master listens to, e.g. http://localhost:4444
 
-If JobScheduler is operated for the Jetty web server then the URLs for the JOC GUI and the command interface differ:
+If JobScheduler Master is operated for the Jetty web server then the URLs for the JOC GUI and the command interface differ:
 
 * JOC GUI: https://localhost:40444/jobscheduler/operations_gui/
 * XML Command Interface: http://localhost:40444/jobscheduler/engine/command/
@@ -50,7 +50,7 @@ Default Value: C:\Program Files\sos-berlin.com\jobscheduler
 .PARAMETER EnvironmentVariablesScript
 Specifies the name of the script that includes environment variables of a JobScheduler Master installation.
 Typically the script name is "jobscheduler_environment_variables.cmd" and the script is available
-from the "bin" directory and optionally "user_bin" directory of a JobScheduler installation directory.
+from the "bin" subdirectory and optionally "user_bin" subdirectory of a JobScheduler installation directory.
 
 Default Value: jobscheduler_environment_variables.cmd
 
@@ -113,14 +113,14 @@ about_jobscheduler
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $Url,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Id,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $InstallPath,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $BasePath = 'C:\Program Files\sos-berlin.com\jobscheduler',
+    [string] $BasePath = "$($env:ProgramFiles)\sos-berlin.com\jobscheduler",
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $EnvironmentVariablesScript = 'jobscheduler_environment_variables.cmd',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -189,6 +189,7 @@ param
         
         $SCRIPT:jsNoCache = $NoCache
         $SCRIPT:jsHasCache = $false
+		$SCRIPT:jsHasAgentCache = $false
         
         $SCRIPT:js = Create-JSObject
         $SCRIPT:js.Url = $Url
@@ -251,7 +252,7 @@ param
                 Invoke-CommandScript $environmentVariablesScriptPath
             }    
         
-            $SCRIPT:InstallPath = $InstallPath
+            $SCRIPT:js.Install.Directory = $InstallPath
             
             if ( $env:SCHEDULER_ID )
             {            

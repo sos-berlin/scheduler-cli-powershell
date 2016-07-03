@@ -18,7 +18,7 @@ Default: 1000 Byte
 
 .PARAMETER WebRequestTimeout
 Specifies the number of milliseconds for establishing a connection to the JobScheduler Master.
-With the timeout being exceed an exception is raised.
+With the timeout being exceeded an exception is raised.
 
 Default: 15000 ms
 #>

@@ -28,12 +28,14 @@ PowerShellVersion = '2.0'
 FunctionsToExport = @( 
     'Add-JobSchedulerEvent',
     'Add-JobSchedulerOrder',
+    'Get-JobSchedulerAgentCluster',
+    'Get-JobSchedulerAgentStatus',
     'Get-JobSchedulerCalendar',
     'Get-JobSchedulerEvent',
     'Get-JobSchedulerJob',
     'Get-JobSchedulerJobChain',
     'Get-JobSchedulerOrder',
-    'Get-JobSchedulerSingleOrder',
+    'Get-JobSchedulerOrder',
     'Get-JobSchedulerStatus',
     'Get-JobSchedulerSystemCredentials',
     'Get-JobSchedulerTask',
@@ -50,6 +52,7 @@ FunctionsToExport = @(
     'Send-JobSchedulerCommand',
     'Set-JobSchedulerCredentials',
     'Set-JobSchedulerOption',
+    'Show-JobSchedulerAgentStatus',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
     'Start-JobSchedulerDashboard',
@@ -67,7 +70,9 @@ FunctionsToExport = @(
     'Update-JobSchedulerJob',
     'Update-JobSchedulerJobChain',
     'Update-JobSchedulerOrder',
-    'Use-JobSchedulerMaster'
+    'Use-JobSchedulerAgent',
+    'Use-JobSchedulerMaster',
+	'Use-JobSchedulerWebService'
 )
 
 # # Cmdlets to export from this module

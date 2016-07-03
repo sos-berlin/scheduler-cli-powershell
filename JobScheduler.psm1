@@ -16,9 +16,9 @@ TODOs
     * Add Agent availability checks via process classes
 #>
 
-# ----------------------------------------------------------------------
-# Globals
-# ----------------------------------------------------------------------
+# --------------------------------
+# Globals with JobScheduler Master
+# --------------------------------
 
 # JobScheduler Master Object
 [PSObject] $js = $null
@@ -26,7 +26,7 @@ TODOs
 # CLI operated for a JobScheduler job or monitor
 [bool] $jsOperations = ( $spooler -and $spooler.id() )
 
-# JobScheduler XML Cache
+# JobScheduler Master State Cache
 #    State
 [xml] $jsStateCache = $null
 #    Has Cache
@@ -34,7 +34,7 @@ TODOs
 #    Use Cache
 [bool] $jsNoCache = $false
 
-# JobScheduler Web Request 
+# JobScheduler Master Web Request 
 #     Credentials
 [System.Management.Automation.PSCredential] $jsCredentials = $null
 #    Use default credentials of the current user?
@@ -44,14 +44,66 @@ TODOs
 #    Use default credentials of the current user?
 [bool] $jsOptionWebRequestProxyUseDefaultCredentials = $true
 
-# Commands that require a local instance (Management of Windows Service)
+# Commands that require a local Master instance (Management of Windows Service)
 [string[]] $jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
+
+# -------------------------------
+# Globals with JobScheduler Agent
+# -------------------------------
+
+# JobScheduler Agent Object
+[PSObject] $jsAgent = $null
+
+# JobScheduler Agent Cluster Cache
+#    State
+[xml] $jsAgentCache = $null
+#    Has Cache
+[bool] $jsHasAgentCache = $false
+#    Use Cache
+[bool] $jsNoAgentCache = $false
+
+# JobScheduler Agent Web Request 
+#     Credentials
+[System.Management.Automation.PSCredential] $jsAgentCredentials = $null
+#    Use default credentials of the current user?
+[bool] $jsAgentOptionWebRequestUseDefaultCredentials = $true
+#     Proxy Credentials
+[System.Management.Automation.PSCredential] $jsAgentProxyCredentials = $null
+#    Use default credentials of the current user?
+[bool] $jsAgentOptionWebRequestProxyUseDefaultCredentials = $true
+
+# Commands that require a local Agent instance (Management of Windows Service)
+[string[]] $jsAgentLocalCommands = @( 'Install-JobSchedulerAgentService', 'Remove-JobSchedulerAgentService', 'Start-JobSchedulerAgent' )
+
+# -------------------------------------
+# Globals with JobScheduler Web Service
+# -------------------------------------
+
+# JobScheduler Web Service Object
+[PSObject] $jsWebService = $null
+
+# JobScheduler Web Service Request 
+#     Credentials
+[System.Management.Automation.PSCredential] $jsWebServiceCredentials = $null
+#    Use default credentials of the current user?
+[bool] $jsWebServiceOptionWebRequestUseDefaultCredentials = $true
+#     Proxy Credentials
+[System.Management.Automation.PSCredential] $jsWebServiceProxyCredentials = $null
+#    Use default credentials of the current user?
+[bool] $jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $true
+
+
+# --------------------
+# Globals with Options
+# --------------------
 
 # Options
 #     Debug Message: responses exceeding the max. output size are stored in temporary files
 [int] $jsOptionDebugMaxOutputSize = 1000
-#    Web Request: timeout for establishing the connection in ms
+#    Master Web Request: timeout for establishing the connection in ms
 [int] $jsOptionWebRequestTimeout = 15000
+#    Agent Web Request: timeout for establishing the connection in ms
+[int] $jsAgentOptionWebRequestTimeout = 3000
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -131,11 +183,6 @@ function Create-JSObject()
     $js | Add-Member -Membertype NoteProperty -Name Config -Value $jsConfig
     $js | Add-Member -Membertype NoteProperty -Name Service -Value $jsService
 
-    # $jsDefaultProperties = @("Id", "Url")
-    # $jsDefaultDisplayPropertySet = New-Object System.Management.Automation.PSPropertySet( "DefaultDisplayPropertySet", [string[]] $jsDefaultProperties )
-    # $jsPSStandardMembers = [System.Management.Automation.PSMemberInfo[]] @( $jsDefaultDisplayPropertySet )
-    # $js | Add-Member MemberSet PSStandardMembers $jsPSStandardMembers
-    
     $js
 }
 
@@ -337,10 +384,83 @@ function Create-EventObject()
     $event
 }
 
-# send XML command to JobScheduler
+function Create-JSAgentObject()
+{
+    $jsAgent = New-Object PSObject
+    $jsAgentInstall = New-Object PSObject
+    $jsAgentConfig = New-Object PSObject
+    $jsAgentService = New-Object PSObject
+    
+    $jsAgent | Add-Member -Membertype NoteProperty -Name Url -Value ''
+    $jsAgent | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
+    $jsAgent | Add-Member -Membertype NoteProperty -Name Local -Value $false
+
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name PidFile -Value ''
+
+    $jsAgentConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+
+    $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ''
+    $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ''
+    $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceDescription -Value ''
+
+    $jsAgent | Add-Member -Membertype NoteProperty -Name Install -Value $jsAgentInstall
+    $jsAgent | Add-Member -Membertype NoteProperty -Name Config -Value $jsAgentConfig
+    $jsAgent | Add-Member -Membertype NoteProperty -Name Service -Value $jsAgentService
+
+    $jsAgent
+}
+
+function Create-AgentClusterObject()
+{
+    $jsAgentCluster = New-Object PSObject
+
+    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name AgentCluster -Value ''
+    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name Path -Value ''
+    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name MaxProcesses -Value 0
+    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name ClusterType -Value ''
+    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name Agents -Value @()
+
+    $jsAgentCluster
+}
+
+function Create-AgentStateObject()
+{
+    $jsAgentState = New-Object PSObject
+
+    $jsAgentstate | Add-Member -Membertype NoteProperty -Name isTerminating -Value ''
+
+    $jsAgentStateSystem = New-Object PSObject
+    $jsAgentstateSystem | Add-Member -Membertype NoteProperty -Name hostname -Value ''
+    $jsAgentState | Add-Member -Membertype NoteProperty -Name system -Value $jsAgentStateSystem
+    
+    $jsAgentState | Add-Member -Membertype NoteProperty -Name currentTaskCount -Value ''
+    $jsAgentState | Add-Member -Membertype NoteProperty -Name startedAt -Value ''
+    $jsAgentState | Add-Member -Membertype NoteProperty -Name version -Value ''
+    $jsAgentState | Add-Member -Membertype NoteProperty -Name totalTaskCount -Value ''
+    
+    $jsAgentState
+}
+
+function Create-WebServiceObject()
+{
+    $jsWebService = New-Object PSObject
+
+    $jsWebService | Add-Member -Membertype NoteProperty -Name Url -Value ''
+    $jsWebService | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
+    $jsWebService | Add-Member -Membertype NoteProperty -Name AccessToken -Value ''
+
+    $jsWebService
+}
+
+# send XML encoded command to JobScheduler Master
 function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command, [bool] $checkResponse=$true ) 
 {
-	$output = $null
+    $output = $null
 
     $request = $null
     $requestStream = $null
@@ -411,12 +531,12 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
     
                 $responseStream = $response.getResponseStream() 
                 
-				# $streamReader = new-object System.IO.StreamReader $responseStream
+                # $streamReader = new-object System.IO.StreamReader $responseStream
                 # $output = $streamReader.ReadToEnd()
-				
-				$encoding = [Text.Encoding]::GetEncoding(28591)
-				$streamReader = new-object System.IO.StreamReader -Argumentlist $responseStream, $encoding
-				$output = $streamReader.ReadToEnd()
+                
+                $encoding = [Text.Encoding]::GetEncoding(28591)
+                $streamReader = new-object System.IO.StreamReader -Argumentlist $responseStream, $encoding
+                $output = $streamReader.ReadToEnd()
             }
         }
 
@@ -456,6 +576,272 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
                 [xml] $output
             } catch {
                 throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
+            }
+        }
+    } catch {
+        throw "$($MyInvocation.MyCommand.Name): " + $_.Exception.Message
+    } finally {
+        if ( $streamReader )
+        {
+            $streamReader.Close()
+            $streamReader = $null
+        }
+        
+        if ( $responseStream )
+        {
+            $responseStream.Close()
+            $responseStream = $null
+        }
+        
+        if ( $response )
+        {
+            $response.Close()
+            $response = $null
+        }
+    }
+}
+
+# send JSON encoded request to JobScheduler Agent
+function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [string] $command, [bool] $checkResponse=$true )
+{
+    $output = $null
+
+    $request = $null
+    $requestStream = $null
+
+    $response = $null
+    $responseStream = $null
+    $streamReader = $null
+
+    try
+    {
+        $request = [System.Net.WebRequest]::Create( $url )
+        $request.Method = $method
+        $request.ContentType = 'application/json'
+        $request.Accept = 'application/json'
+        $request.Timeout = $SCRIPT:jsAgentOptionWebRequestTimeout
+        
+        if ( $SCRIPT:jsAgentOptionWebRequestUseDefaultCredentials )
+        {
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
+            $request.UseDefaultCredentials = $true
+        } elseif ( $SCRIPT:jsAgentCredentials ) {
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
+            $request.Credentials = $SCRIPT:jsAgentCredentials
+        }
+    
+        if ( $SCRIPT:jsAgent.ProxyUrl )
+        {
+            $proxy = New-Object System.Net.WebProxy $SCRIPT:jsAgent.ProxyUrl
+    
+            if ( $SCRIPT:jsAgentOptionWebRequestProxyUseDefaultCredentials )
+            {
+                $proxy.UseDefaultCredentials = $true
+                Write-Debug ".... $($MyInvocation.MyCommand.Name): using default proxy credentials"
+            } elseif ( $SCRIPT:jsAgentProxyCredentials ) {
+                Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit proxy credentials"
+                $proxy.Credentials = $SCRIPT:jsAgentProxyCredentials
+            }
+    
+            $request.Proxy = $proxy
+        }
+
+        if ( $method -eq 'POST' )
+        {
+            $bytes = [System.Text.Encoding]::ASCII.GetBytes( $command )
+            $request.ContentLength = $bytes.Length
+            $requestStream = $request.GetRequestStream()
+            $requestStream.Write( $bytes, 0, $bytes.Length )
+            $requestStream.Close()
+        }
+
+        if ( $checkResponse )
+        {
+            try
+            {
+                $response = $request.GetResponse()
+            } catch {
+                # reset credentials in case of response errors, eg. HTTP 401 not authenticated
+                $SCRIPT:jsAgentCredentials = $null
+                throw "$($MyInvocation.MyCommand.Name): JobScheduler Agent returns error, if credentials are missing consider to use the Set-AgentCredentials cmdlet: " + $_.Exception                
+            }
+    
+            if ( $response.StatusCode -ne 'OK' )
+            {
+                throw "JobScheduler Agent returns status code: $($response.StatusCode)"
+            }
+    
+            $responseStream = $response.getResponseStream()             
+            $streamReader = New-Object System.IO.StreamReader $responseStream            
+            $output = $streamReader.ReadToEnd()
+        }
+
+        if ( $checkResponse -and $output )
+        {
+            if ( $DebugPreference -eq 'Continue' )
+            {
+                if ( $output.Length -gt $SCRIPT:jsOptionDebugMaxOutputSize )
+                {
+                    $tempFile = [IO.Path]::GetTempFileName()
+                    $output | Out-File $tempFile -encoding utf8
+                    Write-Debug ".... $($MyInvocation.MyCommand.Name): JobScheduler Agent response available with temporary file: $($tempFile)"
+                } else {
+                    Write-Debug ".... $($MyInvocation.MyCommand.Name): response: $($output)"
+                }
+            }
+
+            try
+            {
+                Add-Type -AssemblyName System.Web.Extensions
+                $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
+
+               if ( !$answer ) 
+                {
+                    throw 'missing JSON content in response'
+                }
+            } catch {
+                throw 'not a valid JobScheduler Agent JSON response: ' + $_.Exception.Message
+            }
+            
+            try
+            {
+                $answer
+            } catch {
+                throw 'not a valid JobScheduler Agent JSON response: ' + $_.Exception.Message
+            }
+        }
+    } catch {
+        throw "$($MyInvocation.MyCommand.Name): " + $_.Exception.Message
+    } finally {
+        if ( $streamReader )
+        {
+            $streamReader.Close()
+            $streamReader = $null
+        }
+        
+        if ( $responseStream )
+        {
+            $responseStream.Close()
+            $responseStream = $null
+        }
+        
+        if ( $response )
+        {
+            $response.Close()
+            $response = $null
+        }
+    }
+}
+
+# send JSON encoded request to JobScheduler Web Service
+function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET', [string] $body, [bool] $checkResponse=$true )
+{
+    $output = $null
+
+    $request = $null
+    $requestStream = $null
+
+    $response = $null
+    $responseStream = $null
+    $streamReader = $null
+
+    try
+    {
+        $request = [System.Net.WebRequest]::Create( $url )
+        $request.Method = $method
+        $request.ContentType = 'application/json'
+        $request.Accept = 'application/json'
+        $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
+        
+        if ( $SCRIPT:jsWebServiceOptionWebRequestUseDefaultCredentials )
+        {
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
+            $request.UseDefaultCredentials = $true
+        } elseif ( $SCRIPT:jsWebServiceCredentials ) {
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
+            $request.Credentials = $SCRIPT:jsWebServiceCredentials
+        }
+    
+        if ( $SCRIPT:jsWebService.ProxyUrl )
+        {
+            $proxy = New-Object System.Net.WebProxy $SCRIPT:jsWebService.ProxyUrl
+    
+            if ( $SCRIPT:jsWebServiceOptionWebRequestProxyUseDefaultCredentials )
+            {
+                $proxy.UseDefaultCredentials = $true
+                Write-Debug ".... $($MyInvocation.MyCommand.Name): using default proxy credentials"
+            } elseif ( $SCRIPT:jsWebServiceProxyCredentials ) {
+                Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit proxy credentials"
+                $proxy.Credentials = $SCRIPT:jsWebServiceProxyCredentials
+            }
+    
+            $request.Proxy = $proxy
+        }
+
+        if ( $method -eq 'POST' )
+        {
+            $bytes = [System.Text.Encoding]::ASCII.GetBytes( $body )
+            $request.ContentLength = $bytes.Length
+            $requestStream = $request.GetRequestStream()
+            $requestStream.Write( $bytes, 0, $bytes.Length )
+            $requestStream.Close()
+        }
+
+        if ( $checkResponse )
+        {
+            try
+            {
+                $response = $request.GetResponse()
+            } catch {
+                # reset credentials in case of response errors, eg. HTTP 401 not authenticated
+                $SCRIPT:jsWebServiceCredentials = $null
+                throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-WebServiceCredentials cmdlet: " + $_.Exception                
+            }
+    
+            if ( $response.StatusCode -ne 'OK' )
+            {
+                throw "Web Service returns status code: $($response.StatusCode)"
+            }
+    
+            $responseStream = $response.getResponseStream() 
+            $streamReader = New-Object System.IO.StreamReader $responseStream            
+            $output = $streamReader.ReadToEnd()
+        }
+
+        if ( $checkResponse -and $output )
+        {
+            if ( $DebugPreference -eq 'Continue' )
+            {
+                if ( $output.Length -gt $SCRIPT:jsOptionDebugMaxOutputSize )
+                {
+                    $tempFile = [IO.Path]::GetTempFileName()
+                    $output | Out-File $tempFile -encoding utf8
+                    Write-Debug ".... $($MyInvocation.MyCommand.Name): Web Service response available with temporary file: $($tempFile)"
+                } else {
+                    Write-Debug ".... $($MyInvocation.MyCommand.Name): response: $($output)"
+                }
+            }
+
+            try
+            {
+                Add-Type -AssemblyName System.Web.Extensions
+                $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
+
+               if ( !$answer ) 
+                {
+                    throw 'missing JSON content in Web Service response'
+                }
+            } catch {
+                throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
+            }
+            
+            try
+            {
+                $answer
+            } catch {
+                throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
             }
         }
     } catch {

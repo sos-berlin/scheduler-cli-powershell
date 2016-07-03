@@ -40,5 +40,4 @@ param
     }
 }
 
-# Set-Alias -Name Show-JSStatus -Value Show-JobSchedulerStatus
 Set-Alias -Name Show-Status -Value Show-JobSchedulerStatus
