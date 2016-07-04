@@ -10,21 +10,12 @@ Summary information and statistics information are returned from a JobScheduler 
 * Summary information includes e.g. the start date and JobScheduler Agent release.
 * Statistics information includes e.g. the number of running tasks.
 
+This cmdlet can be used to check if an Agent is available.
+
 .PARAMETER Url
 Specifies the URL to access the Agent.
 
 This parameter cannot be specified if the -Agents parameter is used.
-
-.PARAMETER Timeout
-Specifies the number of milliseconds for establishing a connection to the JobScheduler Agent.
-With the timeout being exceeded the Agent is considered being unavailable.
-
-Default: 3000 ms
-
-.PARAMETER Path
-Specifies the URL path that is used to retrieve the Agent status.
-
-Default: /jobscheduler/agent/api/overview
 
 .PARAMETER Agents
 Specifies an array of URLs that point to Agents. This is useful if a number of Agents
@@ -32,6 +23,17 @@ should be checked at the same time, e.g. should the Agents from the result of th
 Get-AgentCluster cmdlet be checked.
 
 This parameter cannot be specified if the -Url parameter is used.
+
+.PARAMETER Path
+Specifies the URL path that is used to retrieve the Agent status.
+
+Default: /jobscheduler/agent/api/overview
+
+.PARAMETER Timeout
+Specifies the number of milliseconds for establishing a connection to the JobScheduler Agent.
+With the timeout being exceeded the Agent is considered being unavailable.
+
+Default: 1000 ms
 
 .PARAMETER Display
 Optionally specifies formatted output to be displayed.
@@ -57,7 +59,7 @@ Returns a status information object.
 .EXAMPLE
 $status = Get-AgentCluster /agent/fixed_priority_scheduling_agent | Get-AgentStatus
 
-Returns an array of status information objects each representing the state of one of Agents in the cluster.
+Returns an array of status information objects each representing the state of an Agent in the cluster.
 
 .LINK
 about_jobscheduler
@@ -70,10 +72,10 @@ param
     [Uri] $Url,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [Uri[]] $Agents,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Path = '/jobscheduler/agent/api/overview',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [int] $Timeout = 5000,
+    [int] $Timeout = 1000,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Display,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -83,6 +85,7 @@ param
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
+
         $agentsChecked = @()
     }
 
@@ -92,7 +95,7 @@ param
         {
             if ( $SCRIPT:jsAgent.Url )
             {
-                $Url = $SCRIPT:jsAgent.Url
+                [Uri] $Url = $SCRIPT:jsAgent.Url
             } else {
                 throw "$($MyInvocation.MyCommand.Name): one of the parameters -Url or -Agents has to be specified"
             }
@@ -103,52 +106,55 @@ param
 
         if ( !$Agents )
         {
-            $Agents = @( $Url )
+            [Uri[]] $Agents = @( [Uri]$Url )
         }
         
         if ( $Timeout )
         {
             $SCRIPT:jsAgentOptionWebRequestTimeout = $Timeout
         }
-        
-        foreach( $Url in $Agents )
+
+        foreach( $agentUrl in $Agents )
         {
-            if ( $agentsChecked -contains $Url )
-            {
-                continue
-            } else {
-                $agentsChecked += $Url
-            }
-            
-            if ( $Url )
+            # cast is required as for some weird reasons foreach forgets about the object type
+            [Uri] $agentUrl = $agentUrl
+
+            if ( $agentUrl )
             {
                 # is protocol provided? e.g. http://localhost:4444
-                if ( !$Url.OriginalString.startsWith('http://') -and !$Url.OriginalString.startsWith('https://') )
+                if ( !$agentUrl.OriginalString.startsWith('http://') -and !$agentUrl.OriginalString.startsWith('https://') )
                 {
-                    $Url = 'http://' + $Url.OriginalString
+                    $agentUrl = 'http://' + $agentUrl.OriginalString
                 }
     
                 # is valid hostname specified?
-                if ( [System.Uri]::CheckHostName( $Url.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
+                if ( [System.Uri]::CheckHostName( $agentUrl.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
                 {
-                    throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4445: $($Url.OriginalString)"
+                    throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4445: $($agentUrl.OriginalString)"
                 }
                 
-                if ( $Url.LocalPath -eq '/' -and $Path )
+                if ( $agentUrl.LocalPath -eq '/' -and $Path )
                 {
-                    $Url = $Url.OriginalString + $Path
+                    $agentUrl = $agentUrl.OriginalString + $Path
                 }
             }
 
+            if ( $agentsChecked -contains $agentUrl.OriginalString )
+            {
+                continue
+            } else {
+                $agentsChecked += $agentUrl.OriginalString
+            }
+            
             try
             {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Agent $($Url)"
-                $state = Send-JobSchedulerAgentRequest $Url 'GET'
-                $state | Add-Member -Membertype NoteProperty -Name Url -Value $Url
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Agent $($agentUrl)"
+                $state = Send-JobSchedulerAgentRequest $agentUrl 'GET'
+                $state | Add-Member -Membertype NoteProperty -Name Url -Value $agentUrl
             } catch {
-                Write-Warning ".. $($MyInvocation.MyCommand.Name): JobScheduler Agent not available at $($Url)"
+                Write-Warning ".. $($MyInvocation.MyCommand.Name): JobScheduler Agent not available at $($agentUrl)"
                 $state = Create-AgentStateObject
-                $state | Add-Member -Membertype NoteProperty -Name Url -Value $Url
+                $state | Add-Member -Membertype NoteProperty -Name Url -Value $agentUrl
             }
     
             if ( $state )
@@ -157,7 +163,7 @@ param
                 {
                     $output = "
 ________________________________________________________________________
-Job Scheduler Agent URL: $($Url)
+Job Scheduler Agent URL: $($state.Url)
 ............... version: $($state.version)
 .......... operated for: $($state.system.hostname)
 ......... running since: $($state.startedAt)

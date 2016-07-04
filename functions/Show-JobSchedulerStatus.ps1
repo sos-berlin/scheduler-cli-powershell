@@ -10,12 +10,12 @@ This cmdlet is an alias for Get-Status -Display -NoOutputs
 .EXAMPLE
 Show-Status
 
-Returns the summary information of JobScheduler Master.
+Returns the summary information of a JobScheduler Master.
 
 .EXAMPLE
 Show-Status -Statistics
 
-Returns the summary information and statistics information about jobs and ordes.
+Returns the summary information and statistics information about jobs and orders.
 
 .LINK
 about_jobscheduler

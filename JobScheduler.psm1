@@ -12,8 +12,8 @@ If the documentation is not available for your language then consider to use
     
 TODOs
 
-    * Add proxy support: in progress
-    * Add Agent availability checks via process classes
+    * Add proxy support: implemented, feedback require
+    * Add Agent availability checks via process classes: implemented, possible improvement: use PowerShell jobs for parallelization
 #>
 
 # --------------------------------
@@ -103,7 +103,7 @@ TODOs
 #    Master Web Request: timeout for establishing the connection in ms
 [int] $jsOptionWebRequestTimeout = 15000
 #    Agent Web Request: timeout for establishing the connection in ms
-[int] $jsAgentOptionWebRequestTimeout = 3000
+[int] $jsAgentOptionWebRequestTimeout = 1000
 
 # ----------------------------------------------------------------------
 # Public Functions

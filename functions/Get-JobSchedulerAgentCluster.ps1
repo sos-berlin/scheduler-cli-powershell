@@ -2,13 +2,17 @@ function Get-JobSchedulerAgentCluster
 {
 <#
 .SYNOPSIS
-Returns a number of Agent clusters from the JobScheduler Master.
+Returns a number of Agent clusters from the JobScheduler Master. Agent clusters correspond to process class 
+objects in JobScheduler Master.
 
 .DESCRIPTION
-Agent clusters are retrieved from a JobScheduler Master.
-Agent clusters can be selected either by the folder of the Agent cluster location including subfolders or by an individual Agent cluster.
+Agent clusters are retrieved from a JobScheduler Master, they correspond to process classes that specify 
+a remote JobScheduler instance.
 
-Resulting Agent clusters can be forwarded to other cmdlets for pipelined bulk operations.
+Agent clusters can be selected either by the folder of the Agent cluster location including subfolders 
+or by an individual Agent cluster.
+
+Resulting Agent clusters can be forwarded to cmdlets, such as Get-AgentStatus, for pipelined bulk operations.
 
 .PARAMETER Directory
 Optionally specifies the folder for which Agent clusters should be returned. The directory is determined
@@ -27,8 +31,8 @@ One of the parameters -Directory or -AgentCluster has to be specified.
 Specifies that no subfolders should be looked up. By default any subfolders will be searched for Agent clusters.
 
 .PARAMETER NoCache
-Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
+Specifies that the cache for JobScheduler Agent objects is ignored.
+This results in the fact that for each Get-Agent* cmdlet execution the response is 
 retrieved directly from the JobScheduler Master and is not resolved from the cache.
 
 .OUTPUTS

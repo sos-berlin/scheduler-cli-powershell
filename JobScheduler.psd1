@@ -4,7 +4,7 @@
 ModuleToProcess = 'JobScheduler.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.9.0'
+ModuleVersion = '1.0.0'
 
 # ID used to uniquely identify this module
 GUID = 'fcc31359-6e84-425a-9338-49ed7a807bf9'
@@ -70,9 +70,9 @@ FunctionsToExport = @(
     'Update-JobSchedulerJob',
     'Update-JobSchedulerJobChain',
     'Update-JobSchedulerOrder',
-    'Use-JobSchedulerAgent',
-    'Use-JobSchedulerMaster',
-	'Use-JobSchedulerWebService'
+#   'Use-JobSchedulerAgent',
+#   'Use-JobSchedulerWebService',
+    'Use-JobSchedulerMaster'
 )
 
 # # Cmdlets to export from this module
@@ -118,7 +118,7 @@ PrivateData = @{
         # RequireLicenseAcceptance = ""
 
         # Indicates this is a pre-release/testing version of the module.
-        IsPrerelease = 'True'
+        IsPrerelease = 'False'
     }
 }
 
