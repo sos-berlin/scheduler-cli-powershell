@@ -183,54 +183,34 @@ param
             Invoke-CommandScript $environmentVariablesScriptPath
         }
         
-        if ( !$env:SCHEDULER_HOME )
+        $envSchedulerHome = if ( $env:SCHEDULER_HOME ) { $env:SCHEDULER_HOME } else { $editorInstallPath }
+
+        $envSchedulerData = if ( $env:SCHEDULER_DATA ) { $env:SCHEDULER_DATA } else { $editorConfigPath }
+
+        $envSchedulerHotFolder = if ( $env:SCHEDULER_HOT_FOLDER ) { $env:SCHEDULER_HOT_FOLDER } else { "$($envSchedulerData)/config/live" }
+
+        $envSosJoeHome = if ( $env:SOS_JOE_HOME ) { $env:SOS_JOE_HOME } else { $editorConfigPath }
+
+        $envJavaHome = if ( $env:JAVA_HOME ) { $env:JAVA_HOME } else { "$($env:ProgramFiles)\Java\jre8" }
+
+        $envJavaOptions = if ( $env:JAVA_OPTIONS ) { $env:JAVA_OPTIONS }
+
+        $envLogBridge = if ( $env:LOG_BRIDGE ) { $env:LOG_BRIDGE }
+
+        if ( !$env:LOG4JPROP -and ( Test-Path -Path "$($editorInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
         {
-            $env:SCHEDULER_HOME = $editorInstallPath
+            $envLog4JProp = "-Dlog4j.configuration=`"file:///$($editorInstallPath -replace "\\","/")/lib/JOE-log4j.properties`""
+        } else {
+            $envLog4JProp = $env:LOG4JPROP
         }
 
-        if ( !$env:SCHEDULER_DATA )
-        {
-            $env:SCHEDULER_DATA = $editorConfigPath
-        }
-
-        if ( !$env:SCHEDULER_HOT_FOLDER )
-        {
-            $env:SCHEDULER_HOT_FOLDER = "$($env:SCHEDULER_DATA)/config/live"
-        }
-
-        if ( !$env:SOS_JOE_HOME )
-        {
-            $env:SOS_JOE_HOME = $editorConfigPath
-        }
-
-        if ( !$env:JAVA_HOME )
-        {
-            $env:JAVA_HOME = "$($env:ProgramFiles)\Java\jre8"
-        }
-
-        if ( !$env:LOG_BRIDGE )
-        {
-            $env:LOG_BRIDGE = 'log4j'
-        }
-
-        if ( !$env:LOG4JPROP )
-        {
-            if ( Test-Path -Path "$($editorInstallPath)\lib\JOE-log4j.properties" -PathType Leaf )
-            {
-                $env:LOG4JPROP = "-Dlog4j.configuration=`"file:///$($editorInstallPath -replace "\\","/")/lib/JOE-log4j.properties`""
-            }
-        }
-
-        if ( !$env:CAIRO_JAVA_OPTION )
-        {
-            $env:CAIRO_JAVA_OPTION = '-Dorg.eclipse.swt.internal.gtk.cairoGraphics=false'
-        }
+        $envJavaHome = if ( $env:CAIRO_JAVA_OPTION ) { $env:CAIRO_JAVA_OPTION } else { '-Dorg.eclipse.swt.internal.gtk.cairoGraphics=false' }
         
         if ( $DebugPreferences -eq "Continue" )
         {
-            $javaExecutableFile = "$($env:JAVA_HOME)\bin\java.exe"
+            $javaExecutableFile = "$($envJavaHome)\bin\java.exe"
         } else {
-            $javaExecutableFile = "$($env:JAVA_HOME)\bin\javaw.exe"
+            $javaExecutableFile = "$($envJavaHome)\bin\javaw.exe"
         }
         
         if ( -Not (Test-Path -Path "$($javaExecutableFile)" -PathType Leaf) )
@@ -238,8 +218,8 @@ param
             $javaExecutableFile = Split-Path -Path "$($javaExecutableFile)" -Leaf
         }
         
-        $javaClassPath = "patches/*;user_lib/*;log/$($env:LOG_BRIDGE)/*;3rd-party/*;sos/*"
-        $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($editorInstallPath)`" -DSCHEDULER_DATA=`"$($editorConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" sos.scheduler.editor.app.Editor"
+        $javaClassPath = "patches/*;user_lib/*;log/$($envLogBridge)/*;3rd-party/*;sos/*"
+        $javaArguments = "-classpath `"$($javaClassPath)`" $($envLog4JProp) $($envJavaOptions) -DSCHEDULER_HOME=`"$($envSchedulerHome)`" -DSCHEDULER_DATA=`"$($envSchedulerData)`" -DSCHEDULER_HOT_FOLDER=`"$envSchedulerHotFolder`" sos.scheduler.editor.app.Editor"
 
         $currentLocation = $pwd
         Set-Location -Path "$($editorInstallPath)/lib"

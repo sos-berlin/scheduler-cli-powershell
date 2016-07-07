@@ -103,7 +103,7 @@ TODOs
 #    Master Web Request: timeout for establishing the connection in ms
 [int] $jsOptionWebRequestTimeout = 15000
 #    Agent Web Request: timeout for establishing the connection in ms
-[int] $jsAgentOptionWebRequestTimeout = 1000
+[int] $jsAgentOptionWebRequestTimeout = 5000
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -435,7 +435,7 @@ function Create-AgentStateObject()
     $jsAgentstate | Add-Member -Membertype NoteProperty -Name isTerminating -Value ''
 
     $jsAgentStateSystem = New-Object PSObject
-    $jsAgentstateSystem | Add-Member -Membertype NoteProperty -Name hostname -Value ''
+    $jsAgentStateSystem | Add-Member -Membertype NoteProperty -Name hostname -Value ''
     $jsAgentState | Add-Member -Membertype NoteProperty -Name system -Value $jsAgentStateSystem
     
     $jsAgentState | Add-Member -Membertype NoteProperty -Name currentTaskCount -Value ''

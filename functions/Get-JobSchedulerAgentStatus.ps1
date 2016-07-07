@@ -72,18 +72,17 @@ param
     [Uri] $Url,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [Uri[]] $Agents,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [string] $Path = '/jobscheduler/agent/api/overview',
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [int] $Timeout = 1000,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Display,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoOutputs
 )
     Begin
     {
-        Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
         $agentsChecked = @()
@@ -150,11 +149,11 @@ param
             {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Agent $($agentUrl)"
                 $state = Send-JobSchedulerAgentRequest $agentUrl 'GET'
-                $state | Add-Member -Membertype NoteProperty -Name Url -Value $agentUrl
+                $state | Add-Member -Membertype NoteProperty -Name Url -Value "$($agentUrl.Scheme)://$($agentUrl.Authority)"
             } catch {
                 Write-Warning ".. $($MyInvocation.MyCommand.Name): JobScheduler Agent not available at $($agentUrl)"
                 $state = Create-AgentStateObject
-                $state | Add-Member -Membertype NoteProperty -Name Url -Value $agentUrl
+                $state | Add-Member -Membertype NoteProperty -Name Url -Value "$($agentUrl.Scheme)://$($agentUrl.Authority)"
             }
     
             if ( $state )

@@ -184,74 +184,40 @@ param
             Invoke-CommandScript $environmentVariablesScriptPath
         }
         
-        if ( !$env:SCHEDULER_HOME )
-        {
-            $env:SCHEDULER_HOME = $dashboardInstallPath
-        }
+        $envSchedulerHome = if ( $env:SCHEDULER_HOME ) { $env:SCHEDULER_HOME } else { $dashboardInstallPath }
 
-        if ( !$env:SCHEDULER_DATA )
-        {
-            $env:SCHEDULER_DATA = $dashboardConfigPath
-        }
+        $envSchedulerData = if ( $env:SCHEDULER_DATA ) { $env:SCHEDULER_DATA } else { $dashboardConfigPath }
 
-        if ( !$env:SCHEDULER_HOT_FOLDER )
-        {
-            $env:SCHEDULER_HOT_FOLDER = "$($env:SCHEDULER_DATA)/config/live"
-        }
+        $envSchedulerHome = if ( $env:SCHEDULER_HOT_FOLDER ) { $env:SCHEDULER_HOT_FOLDER } else { "$($envSchedulerData)/config/live" }
 
-        if ( !$env:JAVA_HOME )
-        {
-            $env:JAVA_HOME = "$($env:ProgramFiles)\Java\jre8"
-        }
+        $envJavaHome = if ( $env:JAVA_HOME ) { $env:JAVA_HOME } else { "$($env:ProgramFiles)\Java\jre8" }
         
-        if ( !$env:JAVA_OPTIONS )
+        $envJavaOptions = if ( $env:JAVA_OPTIONS ) { $env:JAVA_OPTIONS } else { '-Xms128m -Xmx256m' }
+
+        $envLogBridge = if ( $env:LOG_BRIDGE ) { $env:LOG_BRIDGE } else { 'log4j' }
+
+        if ( !$env:LOG4JPROP -and ( Test-Path -Path "$($dashboardInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
         {
-            $env:JAVA_OPTIONS = '-Xms128m -Xmx256m'
+            $envLog4JProp = "-Dlog4j.configuration=`"file:///$($dashboardInstallPath -replace "\\","/")/lib/JID-log4j.properties`""
+        } else {
+            $envLog4JProp = $env:LOG4JPROP
         }
 
-        if ( !$env:LOG_BRIDGE )
-        {
-            $env:LOG_BRIDGE = 'log4j'
-        }
-
-        if ( !$env:LOG4JPROP )
-        {
-            if ( Test-Path -Path "$($dashboardInstallPath)\lib\JOE-log4j.properties" -PathType Leaf )
-            {
-                $env:LOG4JPROP = "-Dlog4j.configuration=`"file:///$($dashboardInstallPath -replace "\\","/")/lib/JID-log4j.properties`""
-            }
-        }
-
-        if ( !$env:HIBERNATE_CONFIGURATION_FILE )
-        {
-            $env:HIBERNATE_CONFIGURATION_FILE = "$($env:SCHEDULER_DATA)/config/hibernate.cfg.xml"
-        }
+        $envHibernateConfigurationFile = if ( $env:HIBERNATE_CONFIGURATION_FILE ) { $env:HIBERNATE_CONFIGURATION_FILE } else { "$($envSchedulerData)/config/hibernate.cfg.xml" }
         
-        if ( !$env:ENABLE_JOE )
-        {
-            $env:ENABLE_JOE = 'false'
-        }
+        $envEnableJoe = if ( $env:ENABLE_JOE ) { $env:ENABLE_JOE } else { 'false' }
         
-        if ( !$env:ENABLE_JOC )
-        {
-            $env:ENABLE_JOC = 'true'
-        }
+        $envEnableJoc = if ( $env:ENABLE_JOC ) { $env:ENABLE_JOC } else { 'true' }
         
-        if ( !$env:ENABLE_EVENTS )
-        {
-            $env:ENABLE_EVENTS = 'false'
-        }
+        $envEnableJoc = if ( $env:ENABLE_EVENTS ) { $env:ENABLE_EVENTS } else { 'false' }
         
-        if ( !$env:ENABLE_JOB_START )
-        {
-            $env:ENABLE_JOB_START = 'true'
-        }
+        $envEnableJoc = if ( $env:ENABLE_JOB_START ) { $env:ENABLE_JOB_START } else { 'true' }
         
         if ( $DebugPreferences -eq "Continue" )
         {
-            $javaExecutableFile = "$($env:JAVA_HOME)\bin\java.exe"
+            $javaExecutableFile = "$($envJavaHome)\bin\java.exe"
         } else {
-            $javaExecutableFile = "$($env:JAVA_HOME)\bin\javaw.exe"
+            $javaExecutableFile = "$($envJavaHome)\bin\javaw.exe"
         }
         
         if ( -Not (Test-Path -Path "$($javaExecutableFile)" -PathType Leaf) )
@@ -259,17 +225,18 @@ param
             $javaExecutableFile = Split-Path -Path "$($javaExecutableFile)" -Leaf
         }
         
-        $javaClassPath = "patches/*;user_lib/*;log/$($env:LOG_BRIDGE)/*;jdbc/*;3rd-party/*;sos/*"
+        $javaClassPath = "patches/*;user_lib/*;log/$($envLogBridge)/*;jdbc/*;3rd-party/*;sos/*"
         
-        $dbmsDialect = Select-XML -Path "$($env:HIBERNATE_CONFIGURATION_FILE)" -Xpath "//property[@name='hibernate.dialect']"
+        $dbmsDialect = Select-XML -Path "$($envHibernateConfigurationFile)" -Xpath "//property[@name='hibernate.dialect']"
         $dbms = $($dbmsDialect.Node.'#text' -replace 'org\.hibernate\.dialect\.(.*?)(?:InnoDB|\d+g)?Dialect','$1')
         Write-Debug ".. $($MyInvocation.MyCommand.Name): DBMS: $($dbms)"
+
         if ( $dbms -eq 'PostgreSQL' )
         {
             $javaClassPath = "pgsql/com.sos.hibernate_pgsql.jar;$($javaClassPath)"
         }
         
-        $javaArguments = "-classpath `"$($javaClassPath)`" $($env:LOG4JPROP) $($env:JAVA_OPTIONS) -DSCHEDULER_HOME=`"$($dashboardInstallPath)`" -DSCHEDULER_DATA=`"$($dashboardConfigPath)`" -DSCHEDULER_HOT_FOLDER=`"$env:SCHEDULER_HOT_FOLDER`" com.sos.dailyschedule.SosSchedulerDashboardMain -enable_joe=$($env:ENABLE_JOE) -enable_joc=$($env:ENABLE_JOC) -enable_events=$($env:ENABLE_EVENTS) -enable_job_start=$($env:ENABLE_JOB_START) -Hibernate_Configuration_File=`"$($env:HIBERNATE_CONFIGURATION_FILE)`""
+        $javaArguments = "-classpath `"$($javaClassPath)`" $($envLog4JProp) $($envJavaOptions) -DSCHEDULER_HOME=`"$($envSchedulerHome)`" -DSCHEDULER_DATA=`"$($envSchedulerData)`" -DSCHEDULER_HOT_FOLDER=`"$envSchedulerHotFolder`" com.sos.dailyschedule.SosSchedulerDashboardMain -enable_joe=$($envEnableJoe) -enable_joc=$($envEnableJoc) -enable_events=$($envEnableEvents) -enable_job_start=$($envEnableJobStart) -Hibernate_Configuration_File=`"$($envHibernateConfigurationFile)`""
 
         $currentLocation = $pwd
         Set-Location -Path "$($dashboardInstallPath)/lib"
