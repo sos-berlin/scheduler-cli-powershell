@@ -15,6 +15,21 @@ Starts the JobScheduler Windows service.
 
 Without this parameter being specified JobScheduler will be started in dialog mode.
 
+.PARAMETER Cluster
+Specifies that the JobScheduler instance is a cluster member.
+
+* An active cluster operates a number of instances for shared job execution
+* A passive cluster operates a single instance as a primary JobScheduler and any number of additional instances as backup JobSchedulers.
+
+When using -Cluster "passive" then the -Backup parameter can be used to specify that the instance to be installed is a backup JobScheduler.
+
+.PARAMETER Backup
+Specifies that the JobScheduler instance is a backup instance in a passive cluster.
+
+Backup instances use the same JobScheduler ID and database connection as the primary instance.
+
+This parameter can only be used with -Cluster "passive".
+
 .PARAMETER Pause
 Specifies that the JobScheduler is paused after start-up.
 
@@ -44,61 +59,90 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-	[switch] $Service,
+    [switch] $Service,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-	[switch] $Cluster,
+    [ValidateSet("active","passive")] [string] $Cluster,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-	[switch] $Pause,
+    [switch] $Backup,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-	[switch] $PauseAfterFailure
+    [switch] $Pause,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $PauseAfterFailure
 )
-	Begin
-	{
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-	}
+    Begin
+    {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+    }
 
-	Process
-	{
-		if ( $Service )
-		{
-			if ( $PauseAfterFailure )
-			{
-				throw ".. $($MyInvocation.MyCommand.Name): parameters -Service and -PauseAfterFailure not compatible, use Install-JobSchedulerService cmdlet to run the service with -PauseAfterFailure"
-			}
-			
-			Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler service with ID '$($js.Id)' at '$($js.Url)'"
+    Process
+    {
+        if ( $Backup -and $Cluster -ne 'passive' )
+        {
+            throw "$($MyInvocation.MyCommand.Name): Parameter -Backup requires use of a passive cluster, use -Cluster"               
+        }
+
+        if ( $Service )
+        {
+            if ( $Cluster )
+            {
+                throw "$($MyInvocation.MyCommand.Name): parameters -Service and -Cluster not compatible, use Install-JobSchedulerService cmdlet to run the service with -Cluster"
+            }
+            
+            if ( $PauseAfterFailure )
+            {
+                throw "$($MyInvocation.MyCommand.Name): parameters -Service and -PauseAfterFailure not compatible, use Install-JobSchedulerService cmdlet to run the service with -PauseAfterFailure"
+            }
+            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler service with ID '$($js.Id)' at '$($js.Url)'"
             $serviceInstance = Start-Service -Name $js.Service.serviceName -PassThru
 
-			if ( $Pause )
-			{
-				Start-Sleep -Seconds 3
-				$result = $serviceInstance.Pause()
-			}
-		} else {
-			if ( $PauseAfterFailure )
-			{
-				$startOptions = ' -pause-after-failure'
-			} else {
-				$startOptions = ''
-			}
-
-			$command = """$($js.Install.ExecutableFile)"" $($js.Install.StartParams)$($startOptions)"
-			Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
-			Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler instance with ID '$($js.Id)' at '$($js.Url)'"
-			$process = Start-Process -FilePath "$($js.Install.ExecutableFile)" "$($js.Install.StartParams)" -PassThru
-			
-			if ( $Pause )
-			{
-				Start-Sleep -Seconds 3
-				$command = "<modify_spooler cmd='pause'/>"
-
-				Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-				Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
+            if ( $Pause )
+            {
+                Start-Sleep -Seconds 3
+                $result = $serviceInstance.Pause()
+            }
+        } else {
+            $startOptions = ''
         
-				$result = Send-JobSchedulerXMLCommand $js.Url $command
-			}
-		}
-	}
+            if ( $Cluster )
+            {
+                if ( $Cluster -eq 'active' )
+                {
+                    $startOptions += ' -distributed-orders'
+                } else {
+                    $startOptions += ' -exclusive'
+                    if ( $Backup )
+                    {
+                        $startOptions += ' -backup'
+                    }
+                }
+            } elseif ( $SCRIPT:js.Install.ClusterOptions ) {
+                $startOptions += " $($SCRIPT:js.Install.ClusterOptions)"
+            }
+
+            if ( $PauseAfterFailure )
+            {
+                $startOptions += ' -pause-after-failure'
+            } else {
+            }
+
+            $command = """$($js.Install.ExecutableFile)"" $($js.Install.StartParams)$($startOptions)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler instance with ID '$($js.Id)' at '$($js.Url)'"
+            $process = Start-Process -FilePath "$($js.Install.ExecutableFile)" "$($js.Install.StartParams)$($startOptions)" -PassThru
+            
+            if ( $Pause )
+            {
+                Start-Sleep -Seconds 3
+                $command = "<modify_spooler cmd='pause'/>"
+
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
+        
+                $result = Send-JobSchedulerXMLCommand $js.Url $command
+            }
+        }
+    }
 }
 
 Set-Alias -Name Start-Master -Value Start-JobSchedulerMaster

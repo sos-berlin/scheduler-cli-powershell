@@ -105,19 +105,19 @@ param
             $SCRIPT:jsWebServiceProxyCredentials = $ProxyCredentials
         }
 
-		try
-        {		
-            $authenticationUrl = $Url.scheme + '://' + $Url.Authority + '/rest/sosPermission/login' + '?user=' + $Credentials.GetNetworkCredential().UserName + '&pwd=' + $credentials.GetNetworkCredential().Password
+#		try
+#       {		
+#           $authenticationUrl = $Url.scheme + '://' + $Url.Authority + '/rest/security/login' + '?user=' + $Credentials.GetNetworkCredential().UserName + '&pwd=' + $credentials.GetNetworkCredential().Password
+            $authenticationUrl = $Url.scheme + '://' + $Url.Authority + '/rest/security/login'
 
+			$basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $credentials.GetNetworkCredential().Password ))
+			$headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
+			
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending authentication request to JobScheduler Web Service $($authenticationUrl)"
-            $response = Send-JobSchedulerWebServiceRequest $authenticationUrl 'GET'
+            $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'GET' -Headers $headers
             
             if ( $response )
             {
-                $SCRIPT:jsWebService = Create-WebServiceObject
-                $SCRIPT:jsWebService.Url = $Url
-                $SCRIPT:jsWebService.AccessToken = $response.accessToken
-
 				if ( $ProxyUrl )
 				{
 					$SCRIPT:jsWebService.ProxyUrl = $ProxyUrl
@@ -126,9 +126,9 @@ param
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($response.accessToken)"
                 $SCRIPT:jsWebService
             }
-        } catch {
-            throw "$($MyInvocation.MyCommand.Name): Authentication error occurred: $($_.Exception.Message)"
-        }   
+#       } catch {
+#           throw "$($MyInvocation.MyCommand.Name): Authentication error occurred: $($_.Exception.Message)"
+#       }   
     }
 
     End

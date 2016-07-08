@@ -11,10 +11,20 @@ The cmdlet installs the service and optionally assigns an account to the service
 .PARAMETER Start
 Optionally specifies that the Windows service is started after installation.
 
+.PARAMETER Cluster
+Specifies that the JobScheduler instance is a cluster member.
+
+* An active cluster operates a number of instances for shared job execution
+* A passive cluster operates a single instance as a primary JobScheduler and any number of additional instances as backup JobSchedulers.
+
+When using -Cluster "passive" then the -Backup parameter can be used to specify that the instance to be installed is a backup JobScheduler.
+
 .PARAMETER Backup
 Specifies that the JobScheduler instance is a backup instance in a passive cluster.
 
 Backup instances use the same JobScheduler ID and database connection as the primary instance.
+
+This parameter can only be used with -Cluster "passive".
 
 .PARAMETER Pause
 Specifies that the JobScheduler is paused after start-up.
@@ -70,6 +80,8 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Start,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [ValidateSet("active","passive")] [string] $Cluster,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Backup,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Pause,
@@ -78,13 +90,18 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $UseCredentials
 )
-	Begin
-	{
-		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-	}
+    Begin
+    {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+    }
 
     Process
     {
+        if ( $Backup -and $Cluster -ne 'passive' )
+        {
+            throw "$($MyInvocation.MyCommand.Name): Parameter -Backup requires use of a passive cluster, use -Cluster"               
+        }
+    
         $serviceInstance = $null
         
         $serviceName = $js.Service.ServiceName
@@ -113,7 +130,7 @@ param
             {
                 if ( $serviceInstance.Status -eq "running" -or $serviceInstance.Status -eq "paused" )
                 {
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): stop existing JobScheduler service: $($serviceName)"       
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): stop existing JobScheduler service: $($serviceName)"
                     $result = Stop-Service -Name $serviceName
                     Start-Sleep -Seconds 3
                 }
@@ -131,6 +148,22 @@ param
 
         # "C:\Program Files\sos-berlin.com\jobscheduler\scheduler111\bin\scheduler.exe" -service=sos_scheduler_scheduler111 -id=scheduler111 -sos.ini=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111/config/sos.ini -config=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111/config/scheduler.xml -ini=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111/config/factory.ini -env="SCHEDULER_HOME=C:/Program Files/sos-berlin.com/jobscheduler/scheduler111" -env=SCHEDULER_DATA=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111 -param=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111 -cd=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111 -include-path=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111 -pid-file=C:/ProgramData/sos-berlin.com/jobscheduler/scheduler111/logs/scheduler.pid
         $serviceBinaryPath = $js.Install.ExecutableFile + " -service=$($serviceName) -id=$($js.Id) -sos.ini=$($js.Config.SosIni) -config=$($js.Config.SchedulerXml) -ini=$($js.Config.FactoryIni) -env=""SCHEDULER_HOME=$($js.Install.Directory)"" -env=""SCHEDULER_DATA=$($js.Config.Directory)"" -param=$($js.Config.Directory) -cd=$($js.Config.Directory) -include-path=$($js.Config.Directory) -pid-file=$($js.Install.PidFile)"
+
+        if ( $Cluster )
+        {
+            if ( $Cluster -eq 'active' )
+            {
+                $serviceBinaryPath += ' -distributed-orders'
+            } else {
+                $serviceBinaryPath += ' -exclusive'
+                if ( $Backup )
+                {
+                    $serviceBinaryPath += ' -backup'
+                }
+            }
+        } elseif ( $SCRIPT:js.Install.ClusterOptions ) {
+            $serviceBinaryPath += " $($SCRIPT:js.Install.ClusterOptions)"
+        }
 
         if ( $PauseAfterFailure )
         {

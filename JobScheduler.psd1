@@ -71,9 +71,9 @@ FunctionsToExport = @(
     'Update-JobSchedulerJob',
     'Update-JobSchedulerJobChain',
     'Update-JobSchedulerOrder',
-#   'Use-JobSchedulerAgent',
-#   'Use-JobSchedulerWebService',
     'Use-JobSchedulerMaster'
+#   'Use-JobSchedulerAgent'
+#   'Use-JobSchedulerWebService'
 )
 
 # # Cmdlets to export from this module

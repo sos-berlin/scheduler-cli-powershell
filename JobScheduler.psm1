@@ -735,7 +735,7 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
 }
 
 # send JSON encoded request to JobScheduler Web Service
-function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET', [string] $body, [bool] $checkResponse=$true )
+function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET', [string] $body, [bool] $checkResponse=$true, [hashtable] $headers )
 {
     $output = $null
 
@@ -753,17 +753,27 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
         $request.ContentType = 'application/json'
         $request.Accept = 'application/json'
         $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
+		
+		$headers.Keys | % { 
+			$request.Headers.add( $_, $headers.Item($_) )
+			Write-Debug ".... $($MyInvocation.MyCommand.Name): using header $($_): $($headers.Item($_))"
+		}
+		
+		if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.AccessToken )
+		{
+			$request.Headers.add( 'access_token', $SCRIPT:jsWebService.AccessToken )
+		}
         
         if ( $SCRIPT:jsWebServiceOptionWebRequestUseDefaultCredentials )
         {
             Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
             $request.UseDefaultCredentials = $true
         } elseif ( $SCRIPT:jsWebServiceCredentials ) {
-            Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
-            $request.Credentials = $SCRIPT:jsWebServiceCredentials
+            # Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
+            # $request.Credentials = $SCRIPT:jsWebServiceCredentials
         }
     
-        if ( $SCRIPT:jsWebService.ProxyUrl )
+        if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.ProxyUrl )
         {
             $proxy = New-Object System.Net.WebProxy $SCRIPT:jsWebService.ProxyUrl
     
@@ -792,17 +802,37 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
         {
             try
             {
-                $response = $request.GetResponse()
+                $response = $request.GetResponse()				
             } catch {
                 # reset credentials in case of response errors, eg. HTTP 401 not authenticated
                 $SCRIPT:jsWebServiceCredentials = $null
                 throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-WebServiceCredentials cmdlet: " + $_.Exception                
-            }
+            } finally {
+			
+				if ( $response -and $response.Headers['access_token'] )
+				{
+					if ( !$SCRIPT:jsWebService )
+					{
+						$SCRIPT:jsWebService = Create-WebServiceObject
+						$SCRIPT:jsWebService.Url = $url.scheme + '://' + $url.Authority
+					}
+					$SCRIPT:jsWebService.AccessToken = $response.Headers['access_token']
+				}
+				
+				foreach( $headerKey in $response.Headers ) {				
+					$headerStr = $response.Headers[$headerKey];
+					if ( $headerStr )
+					{
+						Write-Debug ".... $($MyInvocation.MyCommand.Name): response header: $($headerKey): $($headerStr)"
+					}
+				}
+				
+			}
     
             if ( $response.StatusCode -ne 'OK' )
             {
                 throw "Web Service returns status code: $($response.StatusCode)"
-            }
+			}
     
             $responseStream = $response.getResponseStream() 
             $streamReader = New-Object System.IO.StreamReader $responseStream            
