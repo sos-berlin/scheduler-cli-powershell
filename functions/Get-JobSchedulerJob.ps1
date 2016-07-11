@@ -57,23 +57,23 @@ retrieved directly from the JobScheduler Master and is not resolved from the cac
 This cmdlet returns an array of job objects.
 
 .EXAMPLE
-$jobs = Get-Job
+$jobs = Get-JobSchedulerJob
 
 Returns all jobs.
 
 .EXAMPLE
-$jobs = Get-Job -Directory / -NoSubfolders
+$jobs = Get-JobSchedulerJob -Directory / -NoSubfolders
 
 Returns all jobs that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-$jobs = Get-Job -JobChain /test/globals/job_chain1
+$jobs = Get-JobSchedulerJob -JobChain /test/globals/job_chain1
 
 Returns the jobs that are associated with job chain job_chain1 from the folder "/test/globals".
 
 .EXAMPLE
-$jobs = Get-Job -Job /test/globals/job1
+$jobs = Get-JobSchedulerJob -Job /test/globals/job1
 
 Returns the job "job1" from the folder "/test/globals".
 
@@ -294,5 +294,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Get-Job -Value Get-JobSchedulerJob

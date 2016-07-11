@@ -132,5 +132,3 @@ param
         }
     }
 }
-
-Set-Alias -Name Set-Credentials -Value Set-JobSchedulerCredentials

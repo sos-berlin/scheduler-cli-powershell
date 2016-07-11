@@ -72,13 +72,13 @@ The Windows service is stopped as specified with -Action "terminate".
 No timeout and no cluster operations are applied.
 
 .EXAMPLE
-Stop-Master
+Stop-JobSchedulerMaster
 
 Stops the JobScheduler instance with normal termination.
 This is the same as the operation: Stop-Instance -Action "terminate"
 
 .EXAMPLE
-Stop-Master -Service
+Stop-JobSchedulerMaster -Service
 
 Stops the JobScheduler Windows service with normal termination,
 i.e. with -Action "terminate" without any timeouts and cluster options being applied.
@@ -90,19 +90,19 @@ Stops the JobScheduler instance by immediately killing any tasks and aborting th
 After shutdown the JobScheduler instance is restarted.
 
 .EXAMPLE
-Stop-Master -Action kill
+Stop-JobSchedulerMaster -Action kill
 
 Kills the JobScheduler process and any tasks without proper cleanup.
 
 .EXAMPLE
-Stop-Master -Cluster -Timeout 30
+Stop-JobSchedulerMaster -Cluster -Timeout 30
 
 Carries out the -Action "terminate" operation for all members of a JobScheduler Cluster.
 All running tasks are sent a SIGTERM signal and after expiration of the timeout
 any running tasks will be sent a SIGKILL signal.
 
 .EXAMPLE
-Stop-Master -Restart -Cluster -Timeout 30
+Stop-JobSchedulerMaster -Restart -Cluster -Timeout 30
 
 Carries out the -Action "terminate" operation for all members of a JobScheduler Cluster.
 All running tasks are sent a SIGTERM signal and after expiration of the timeout
@@ -253,5 +253,3 @@ param
         }
     }
 }
-
-Set-Alias -Name Stop-Master -Value Stop-JobSchedulerMaster

@@ -39,18 +39,18 @@ retrieved directly from the JobScheduler Master and is not resolved from the cac
 This cmdlet returns an array of Agent cluster objects.
 
 .EXAMPLE
-$agentClusters = Get-AgentCluster
+$agentClusters = Get-JobSchedulerAgentCluster
 
 Returns all Agent clusters.
 
 .EXAMPLE
-$agentClusters = Get-AgentCluster -Directory / -NoSubfolders
+$agentClusters = Get-JobSchedulerAgentCluster -Directory / -NoSubfolders
 
 Returns all Agent clusters that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-$agentClusters = Get-AgentCluster -AgentCluster /test/globals/Agent_01
+$agentClusters = Get-JobSchedulerAgentCluster -AgentCluster /test/globals/Agent_01
 
 Returns the Agent cluster "Agent_01" from the folder "/test/globals".
 
@@ -192,5 +192,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Get-AgentCluster -Value Get-JobSchedulerAgentCluster

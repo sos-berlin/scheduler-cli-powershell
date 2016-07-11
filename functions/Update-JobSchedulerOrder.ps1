@@ -79,28 +79,28 @@ This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Or
 This cmdlet returns an array of updated order objects.
 
 .EXAMPLE
-Update-Order -Order Reporting -JobChain /sos/reporting/Reporting -Action suspend
+Update-JobSchedulerOrder -Order Reporting -JobChain /sos/reporting/Reporting -Action suspend
 
 Suspends the order "Reporting" from the specified job chain.
 
 .EXAMPLE
-Get-Order | Update-Order -Action reset
+Get-JobSchedulerOrder | Update-Order -Action reset
 
 Resets all orders and moves them to their initial state.
 
 .EXAMPLE
-Get-Order -Directory / -NoSubfolders | Update-Order -Action resume
+Get-JobSchedulerOrder -Directory / -NoSubfolders | Update-JobSchedulerOrder -Action resume
 
 Updates all orders that are configured with the root folder ("live" directory)
 without consideration of subfolders to be resumed.
 
 .EXAMPLE
-Get-Order -JobChain /test/globals/chain1 | Update-Order -Action end_setback
+Get-JobSchedulerOrder -JobChain /test/globals/chain1 | Update-JobSchedulerOrder -Action end_setback
 
 Ends any delays for repeated execution for all orders for job chain "chain1" from the folder "/test/globals".
 
 .EXAMPLE
-Update-Order -JobChain /sos/reporting/Reporting -Order 548 -Action start -Parameters @{'param1'='value1'; 'param2'='value2'}
+Update-JobSchedulerOrder -JobChain /sos/reporting/Reporting -Order 548 -Action start -Parameters @{'param1'='value1'; 'param2'='value2'}
 
 Adds an order to the specified job chain. The order will start one hour later and will use the
 parameters from the specified hashmap.
@@ -242,5 +242,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Update-Order -Value Update-JobSchedulerOrder

@@ -54,12 +54,12 @@ Default: /sos/events/scheduler_event_service
 This cmdlet returns the XML object of the JobScheduler response.
 
 .EXAMPLE
-Remove-Event -EventClass daily_closing -EventId 12345678
+Remove-JobSchedulerEvent -EventClass daily_closing -EventId 12345678
 
 Removes an individual event identified by its event class and event id.
 
 .EXAMPLE
-Remove-Event -EventClass daily_closing
+Remove-JobSchedulerEvent -EventClass daily_closing
 
 Removes all events that are assigned the specified event class.
 
@@ -167,5 +167,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch                
     }
 }
-
-Set-Alias -Name Remove-Event -Value Remove-JobSchedulerEvent

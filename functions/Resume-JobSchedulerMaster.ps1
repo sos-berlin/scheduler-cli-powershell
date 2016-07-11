@@ -11,7 +11,7 @@ When JobScheduler Master is continued then
 * any task starts that would normally have occurred during the pause period are immediately executed.
 
 .EXAMPLE
-Resume-Master
+Resume-JobSchedulerMaster
 
 .LINK
 about_jobscheduler
@@ -37,4 +37,3 @@ param
     }
 }
 
-Set-Alias -Name Resume-Master -Value Resume-JobSchedulerMaster

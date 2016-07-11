@@ -36,7 +36,6 @@ FunctionsToExport = @(
     'Get-JobSchedulerJob',
     'Get-JobSchedulerJobChain',
     'Get-JobSchedulerOrder',
-    'Get-JobSchedulerOrder',
     'Get-JobSchedulerStatus',
     'Get-JobSchedulerSystemCredentials',
     'Get-JobSchedulerTask',
@@ -47,8 +46,8 @@ FunctionsToExport = @(
     'Remove-JobSchedulerService',
     'Reset-JobSchedulerOrder',
     'Restart-JobSchedulerMaster',
-    'Resume-JobSchedulerMaster',
     'Resume-JobSchedulerJobChain',
+    'Resume-JobSchedulerMaster',
     'Resume-JobSchedulerOrder',
     'Send-JobSchedulerCommand',
     'Set-JobSchedulerCredentials',
@@ -65,12 +64,13 @@ FunctionsToExport = @(
     'Stop-JobSchedulerJob',
     'Stop-JobSchedulerMaster',
     'Stop-JobSchedulerTask',
-    'Suspend-JobSchedulerMaster',
     'Suspend-JobSchedulerJobChain',
+    'Suspend-JobSchedulerMaster',
     'Suspend-JobSchedulerOrder',
     'Update-JobSchedulerJob',
     'Update-JobSchedulerJobChain',
     'Update-JobSchedulerOrder',
+    'Use-JobSchedulerAlias',
     'Use-JobSchedulerMaster'
 #   'Use-JobSchedulerAgent'
 #   'Use-JobSchedulerWebService'

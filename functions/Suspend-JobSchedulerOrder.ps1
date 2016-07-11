@@ -31,23 +31,23 @@ This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Or
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-Suspend-Order -Order Reporting -JobChain /sos/reporting/Reporting
+Suspend-JobSchedulerOrder -Order Reporting -JobChain /sos/reporting/Reporting
 
 Suspends the order "Reporting" from the specified job chain.
 
 .EXAMPLE
-Get-Order | Suspend-Order
+Get-JobSchedulerOrder | Suspend-JobSchedulerOrder
 
 Suspends all orders for all job chains.
 
 .EXAMPLE
-Get-Order -Directory / -NoSubfolders | Suspend-Order
+Get-JobSchedulerOrder -Directory / -NoSubfolders | Suspend-JobSchedulerOrder
 
 Suspends orders that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-Get-Order -JobChain /test/globals/chain1 | Suspend-Order
+Get-JobSchedulerOrder -JobChain /test/globals/chain1 | Suspend-JobSchedulerOrder
 
 Suspends all orders for the specified job chain.
 
@@ -117,7 +117,3 @@ param
         $parameters | Update-JobSchedulerOrder -Action suspend
     }
 }
-
-Set-Alias -Name Suspend-Order -Value Suspend-JobSchedulerOrder
-Set-Alias -Name Stop-Order -Value Suspend-JobSchedulerOrder
-Set-Alias -Name Stop-JobSchedulerOrder -Value Suspend-JobSchedulerOrder

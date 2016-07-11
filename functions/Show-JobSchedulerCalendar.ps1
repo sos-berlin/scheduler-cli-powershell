@@ -48,17 +48,17 @@ Optionally specifies the date starting from which start dates are calculated.
 Optionally specifies the date for which the calculation of start dates ends.
 
 .EXAMPLE
-Show-Calendar
+Show-JobSchedulerCalendar
 
 Shows start dates for the next 24 hrs.
 
 .EXAMPLE
-Show-Calendar -Days 3
+Show-JobSchedulerCalendar -Days 3
 
 Shows the start dates for the next 3 days.
 
 .EXAMPLE
-Show-Calendar -FromDate 2016-06-01 -ToDate 2016-06-30
+Show-JobSchedulerCalendar -FromDate 2016-06-01 -ToDate 2016-06-30
 
 Shows the start dates between the specified dates.
 
@@ -98,5 +98,3 @@ param
         $arguments | Get-JobSchedulerCalendar -Display -NoOutputs
     }
 }
-
-Set-Alias -Name Show-Calendar -Value Show-JobSchedulerCalendar

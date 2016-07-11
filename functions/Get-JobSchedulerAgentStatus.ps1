@@ -33,7 +33,7 @@ Default: /jobscheduler/agent/api/overview
 Specifies the number of milliseconds for establishing a connection to the JobScheduler Agent.
 With the timeout being exceeded the Agent is considered being unavailable.
 
-Default: 1000 ms
+Default: 3000 ms
 
 .PARAMETER Display
 Optionally specifies formatted output to be displayed.
@@ -42,22 +42,22 @@ Optionally specifies formatted output to be displayed.
 Optionally specifies that no output is returned by this cmdlet.
 
 .EXAMPLE
-Get-AgentStatus http://localhost:4455
+Get-JobSchedulerAgentStatus http://localhost:4455
 
 Returns summary information about the JobScheduler Agent.
 
 .EXAMPLE
-Get-AgentStatus -Url http://localhost:4455 -Display
+Get-JobSchedulerAgentStatus -Url http://localhost:4455 -Display
 
 Returns summary information about the Agent. Formatted output is displayed.
 
 .EXAMPLE
-$status = Get-AgentStatus http://localhost:4455
+$status = Get-JobSchedulerAgentStatus http://localhost:4455
 
 Returns a status information object.
 
 .EXAMPLE
-$status = Get-AgentCluster /agent/fixed_priority_scheduling_agent | Get-AgentStatus
+$status = GetJobScheduler-AgentCluster /agent/fixed_priority_scheduling_agent | Get-JobSchedulerAgentStatus
 
 Returns an array of status information objects each representing the state of an Agent in the cluster.
 
@@ -75,7 +75,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [string] $Path = '/jobscheduler/agent/api/overview',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [int] $Timeout = 1000,
+    [int] $Timeout = 3000,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Display,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -148,7 +148,14 @@ param
             try
             {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Agent $($agentUrl)"
-                $state = Send-JobSchedulerAgentRequest $agentUrl 'GET'
+                $agentState = Send-JobSchedulerAgentRequest $agentUrl 'GET'
+                $state = Create-AgentStateObject
+				$state.IsTerminating = $agentState.isTerminating
+				$state.system.hostname = $agentState.system.hostname
+				$state.currentTaskCount = $agentState.currentTaskCount
+				$state.startedAt = $agentState.startedAt
+				$state.version = $agentState.version
+				$state.totalTaskCount = $agentState.totalTaskCount
                 $state | Add-Member -Membertype NoteProperty -Name Url -Value "$($agentUrl.Scheme)://$($agentUrl.Authority)"
             } catch {
                 Write-Warning ".. $($MyInvocation.MyCommand.Name): JobScheduler Agent not available at $($agentUrl)"
@@ -176,7 +183,7 @@ ________________________________________________________________________
         
                 if ( !$NoOutputs )
                 {
-                    $state
+                    return $state
                 }
             }
         }
@@ -187,5 +194,3 @@ ________________________________________________________________________
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Get-AgentStatus -Value Get-JobSchedulerAgentStatus

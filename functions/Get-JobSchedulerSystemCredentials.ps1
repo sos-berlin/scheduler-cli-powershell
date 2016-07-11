@@ -12,14 +12,11 @@ This cmdlet can only access Generic Credentials.
 The name of the target login informations in the Windows Credential Manager
 
 .EXAMPLE
-PS C:\>Get-SystemCredentials 'localhost'
+PS C:\>Get-JobSchedulerSystemCredentials 'localhost'
 
 UserName                             Password
 --------                             --------
 ap                                   System.Security.SecureString
-
-.INPUTS
-System.String
 
 .OUTPUTS
 System.Management.Automation.PSCredential
@@ -197,5 +194,3 @@ public static extern bool CredFree([In] IntPtr cred);
     
     }
 }
-
-Set-Alias -Name Get-SystemCredentials -Value Get-JobSchedulerSystemCredentials

@@ -43,5 +43,3 @@ param
 		}
 	}
 }
-
-Set-Alias -Name Set-Option -Value Set-JobSchedulerOption

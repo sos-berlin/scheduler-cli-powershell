@@ -3,7 +3,7 @@ function Suspend-JobSchedulerMaster
 <#
 .SYNOPSIS
 Pause JobScheduler Master, i.e. prevent any tasks from starting.
-Respectively the Resume-JobSchedulerInstance cmdlet will resume operations.
+Respectively the Resume-JobSchedulerMaster cmdlet will resume operations.
 
 .DESCRIPTION
 When JobScheduler Master is paused then
@@ -15,7 +15,7 @@ When JobScheduler Master is paused then
 * any task starts that would normally occur during the pause period are postponed until JobScheduler Master is continued.
 
 .EXAMPLE
-Suspend-Master
+Suspend-JobSchedulerMaster
 
 .LINK
 about_jobscheduler
@@ -40,5 +40,3 @@ param
         $result = Send-JobSchedulerXMLCommand $js.Url $command
     }
 }
-
-Set-Alias -Name Suspend-Master -Value Suspend-JobSchedulerMaster

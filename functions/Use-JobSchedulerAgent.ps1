@@ -64,18 +64,18 @@ The URL includes one of the protocols HTTP or HTTPS, the hostname and optionally
 Specifies a credentials object that is used for authentication with a proxy. See parameter -Credentials how to create a credentials object.
 
 .EXAMPLE
-Use-Agent http://somehost:4444
+Use-JobSchedulerAgent http://somehost:4444
 
 Allows to manage a JobScheduler Agent that is operated on the same or on a remote host. 
 This includes to manage Agent instances that are running e.g. in a Linux box.
 
 .EXAMPLE
-Use-Agent -InstallPath "C:\Program Files\sos-berlin.com\agent\scheduler110"
+Use-JobSchedulerAgent -InstallPath "C:\Program Files\sos-berlin.com\agent\scheduler110"
 
 Imports settings from the specified installation path.
 
 .EXAMPLE
-Use-Agent -InstallPath $env:SCHEDULER_HOME
+Use-JobSchedulerAgent -InstallPath $env:SCHEDULER_HOME
 
 Imports settings from the installation path that is specified from the SCHEDULER_HOME environment variable.
 
@@ -226,5 +226,3 @@ param
         $SCRIPT:jsAgent
     }
 }
-
-Set-Alias -Name Use-Agent -Value Use-JobSchedulerAgent

@@ -25,17 +25,17 @@ This results in the fact that for each Get-JobScheduler* cmdlet execution the re
 retrieved directly from the JobScheduler Master and is not resolved from the cache.
 
 .EXAMPLE
-Get-Status
+Get-JobSchedulerStatus
 
 Returns summary information about the JobScheduler Master.
 
 .EXAMPLE
-Get-Status -Statistics -Display
+Get-JobSchedulerStatus -Statistics -Display
 
 Returns statistics information about jobs, job chains, orders and tasks. Formatted output is displayed.
 
 .EXAMPLE
-$status = $Get-Status -Statistics
+$status = $Get-JobSchedulerStatus -Statistics
 
 Returns a status information object including statistics information.
 
@@ -203,5 +203,3 @@ ________________________________________________________________________
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Get-Status -Value Get-JobSchedulerStatus

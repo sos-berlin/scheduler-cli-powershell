@@ -50,17 +50,17 @@ Without this parameter being specified JobScheduler will be started in
 its respective operating mode, i.e. service mode or dialog mode.
 
 .EXAMPLE
-Restart-Master
+Restart-JobSchedulerMaster
 
 Restarts the JobScheduler Master.
 
 .EXAMPLE
-Restart-Master -Service
+Restart-JobSchedulerMaster -Service
 
 Retarts the JobScheduler Master Windows service.
 
 .EXAMPLE
-Restart-Master -Cluster -Timeout 20
+Restart-JobSchedulerMaster -Cluster -Timeout 20
 
 Retarts the JobScheduler Master Cluster and allows running tasks 20s for completion.
 
@@ -92,5 +92,3 @@ param
 		$arguments | Stop-JobSchedulerMaster -Restart
     }
 }
-
-Set-Alias -Name Restart-Master -Value Restart-JobSchedulerMaster

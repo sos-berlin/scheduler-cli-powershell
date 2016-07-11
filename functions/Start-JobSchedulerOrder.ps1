@@ -54,22 +54,22 @@ This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Or
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-Start-Order -JobChain /sos/reporting/Reporting
+Start-JobSchedulerOrder -JobChain /sos/reporting/Reporting
 
 Starts an order of the specified job chain.
 
 .EXAMPLE
-Start-Order -Order 123 -JobChain /sos/reporting/Reporting
+Start-JobSchedulerOrder -Order 123 -JobChain /sos/reporting/Reporting
 
 Starts the order "123" of the specified job chain.
 
 .EXAMPLE
-Start-Order -Order 123 -JobChain /sos/reporting/Reporting -At "now+1800"
+Start-JobSchedulerOrder -Order 123 -JobChain /sos/reporting/Reporting -At "now+1800"
 
 Starts the specified order.
 
 .EXAMPLE
-Start-Order -JobChain /sos/reporting/Reporting -Order 548 -At "now+3600" -Parameters @{'param1'='value1'; 'param2'='value2'}
+Start-JobSchedulerOrder -JobChain /sos/reporting/Reporting -Order 548 -At "now+3600" -Parameters @{'param1'='value1'; 'param2'='value2'}
 
 Starts an order of the specified job chain. The order will start one hour later and will use the
 parameters from the specified hashmap.
@@ -171,5 +171,3 @@ param
         $startOrders | Update-JobSchedulerOrder -Action start
     }
 }
-
-Set-Alias -Name Start-Order -Value Start-JobSchedulerOrder

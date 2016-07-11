@@ -37,12 +37,12 @@ This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job 
 This cmdlet returns an array of job objects.
 
 .EXAMPLE
-Start-Job -Job /sos/dailyschedule/CheckDaysSchedule
+Start-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule
 
 Starts an individual job.
 
 .EXAMPLE
-Get-Job -Directory /some_dir -NoSubfolders | Start-Job
+Get-JobSchedulerJob -Directory /some_dir -NoSubfolders | Start-JobSchedulerJob
 
 Starts all jobs from the specified directory
 without consideration of subfolders.
@@ -108,5 +108,3 @@ param
         $startJobs | Update-JobSchedulerJob -Action start
     }
 }
-
-Set-Alias -Name Start-Job -Value Start-JobSchedulerJob

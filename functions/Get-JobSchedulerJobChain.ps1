@@ -35,18 +35,18 @@ retrieved directly from the JobScheduler Master and is not resolved from the cac
 This cmdlet returns an array of job chain objects.
 
 .EXAMPLE
-$jobChains = Get-JobChain
+$jobChains = Get-JobSchedulerJobChain
 
 Returns all job chains.
 
 .EXAMPLE
-$jobChains = Get-JobChain -Directory / -NoSubfolders
+$jobChains = Get-JobSchedulerJobChain -Directory / -NoSubfolders
 
 Returns all job chains that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-$jobChains = Get-JobChain -JobChain /test/globals/job_chain1
+$jobChains = Get-JobSchedulerJobChain -JobChain /test/globals/job_chain1
 
 Returns the job chain "job_chain1" from the folder "/test/globals".
 
@@ -175,4 +175,3 @@ param
     }
 }
 
-Set-Alias -Name Get-JobChain -Value Get-JobSchedulerJobChain

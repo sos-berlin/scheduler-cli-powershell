@@ -43,12 +43,12 @@ When used with -Service then this behavior will apply to each start of the Windo
 e.g. by use of the Windows service panel.
 
 .EXAMPLE
-Start-Master
+Start-JobSchedulerMaster
 
 Starts the JobScheduler Master in dialog mode.
 
 .EXAMPLE
-Start-Master -Service
+Start-JobSchedulerMaster -Service
 
 Starts the JobScheduler Master Windows service.
 
@@ -144,5 +144,3 @@ param
         }
     }
 }
-
-Set-Alias -Name Start-Master -Value Start-JobSchedulerMaster

@@ -52,12 +52,12 @@ from the "user_bin" directory of a JobScheduler Dashboard installation directory
 Default Value: jobeditor_environment_variables.cmd
 
 .EXAMPLE
-Start-JOE -Id scheduler110
+Start-JobSchedulerJobEditor -Id scheduler110
 
 Starts the JobScheduler Editor from a local JobScheduler Master installation with the specified id.
 
 .EXAMPLE
-Start-JOE -InstallPath c:\Program Files\JOE
+Start-JobSchedulerJobEditor -InstallPath c:\Program Files\JOE
 
 Starts JOE from the specified installation directory. This is a suitable option if
 JOE has been installed independently from a JobScheduler Master installation.
@@ -232,6 +232,3 @@ param
         Set-Location -Path $currentLocation
     }
 }
-
-Set-Alias -Name Start-JobEditor -Value Start-JobSchedulerJobEditor
-Set-Alias -Name Start-JOE -Value Start-JobSchedulerJobEditor

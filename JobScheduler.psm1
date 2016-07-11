@@ -111,9 +111,10 @@ TODOs
 
 $moduleRoot = Split-Path -Path $MyInvocation.MyCommand.Path
 "$moduleRoot\functions\*.ps1" | Resolve-Path | ForEach-Object { . $_.ProviderPath }
-
-Export-ModuleMember -Alias "*"
 Export-ModuleMember -Function "*"
+
+. Use-JobSchedulerAlias -Prefix JS
+. Use-JobSchedulerAlias -Excludes Get-Job,Start-Job,Stop-Job -ExcludesPrefix JS
 
 # ----------------------------------------------------------------------
 # Private Functions
@@ -753,16 +754,16 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
         $request.ContentType = 'application/json'
         $request.Accept = 'application/json'
         $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
-		
-		$headers.Keys | % { 
-			$request.Headers.add( $_, $headers.Item($_) )
-			Write-Debug ".... $($MyInvocation.MyCommand.Name): using header $($_): $($headers.Item($_))"
-		}
-		
-		if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.AccessToken )
-		{
-			$request.Headers.add( 'access_token', $SCRIPT:jsWebService.AccessToken )
-		}
+        
+        $headers.Keys | % { 
+            $request.Headers.add( $_, $headers.Item($_) )
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using header $($_): $($headers.Item($_))"
+        }
+        
+        if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.AccessToken )
+        {
+            $request.Headers.add( 'access_token', $SCRIPT:jsWebService.AccessToken )
+        }
         
         if ( $SCRIPT:jsWebServiceOptionWebRequestUseDefaultCredentials )
         {
@@ -802,37 +803,37 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
         {
             try
             {
-                $response = $request.GetResponse()				
+                $response = $request.GetResponse()                
             } catch {
                 # reset credentials in case of response errors, eg. HTTP 401 not authenticated
                 $SCRIPT:jsWebServiceCredentials = $null
                 throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-WebServiceCredentials cmdlet: " + $_.Exception                
             } finally {
-			
-				if ( $response -and $response.Headers['access_token'] )
-				{
-					if ( !$SCRIPT:jsWebService )
-					{
-						$SCRIPT:jsWebService = Create-WebServiceObject
-						$SCRIPT:jsWebService.Url = $url.scheme + '://' + $url.Authority
-					}
-					$SCRIPT:jsWebService.AccessToken = $response.Headers['access_token']
-				}
-				
-				foreach( $headerKey in $response.Headers ) {				
-					$headerStr = $response.Headers[$headerKey];
-					if ( $headerStr )
-					{
-						Write-Debug ".... $($MyInvocation.MyCommand.Name): response header: $($headerKey): $($headerStr)"
-					}
-				}
-				
-			}
+            
+                if ( $response -and $response.Headers['access_token'] )
+                {
+                    if ( !$SCRIPT:jsWebService )
+                    {
+                        $SCRIPT:jsWebService = Create-WebServiceObject
+                        $SCRIPT:jsWebService.Url = $url.scheme + '://' + $url.Authority
+                    }
+                    $SCRIPT:jsWebService.AccessToken = $response.Headers['access_token']
+                }
+                
+                foreach( $headerKey in $response.Headers ) {                
+                    $headerStr = $response.Headers[$headerKey];
+                    if ( $headerStr )
+                    {
+                        Write-Debug ".... $($MyInvocation.MyCommand.Name): response header: $($headerKey): $($headerStr)"
+                    }
+                }
+                
+            }
     
             if ( $response.StatusCode -ne 'OK' )
             {
                 throw "Web Service returns status code: $($response.StatusCode)"
-			}
+            }
     
             $responseStream = $response.getResponseStream() 
             $streamReader = New-Object System.IO.StreamReader $responseStream            

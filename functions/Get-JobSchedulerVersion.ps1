@@ -13,7 +13,7 @@ This results in the fact that for each Get-JobScheduler* cmdlet execution the re
 retrieved directly from the JobScheduler Master and is not resolved from the cache.
 
 .EXAMPLE
-Get-Version
+Get-JobSchedulerVersion
 
 Returns the JobScheduler version.
 
@@ -59,5 +59,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }    
 }
-
-Set-Alias -Name Get-Version -Value Get-JobSchedulerVersion

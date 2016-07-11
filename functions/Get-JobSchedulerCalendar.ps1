@@ -58,22 +58,22 @@ Specifies that no output is created, i.e. no objects are returned.
 This cmdlet returns an array of start date objects.
 
 .EXAMPLE
-$startDates = Get-Calendar
+$startDates = Get-JobSchedulerCalendar
 
 Returns start dates for the next 24 hrs.
 
 .EXAMPLE
-$startDates = Get-Calendar -Days 3
+$startDates = Get-JobSchedulerCalendar -Days 3
 
 Returns the start dates for the next 3 days.
 
 .EXAMPLE
-$startDates = Get-Calendar -FromDate 2016-06-01 -ToDate 2016-06-30
+$startDates = Get-JobSchedulerCalendar -FromDate 2016-06-01 -ToDate 2016-06-30
 
 Returns the start dates between the specified dates.
 
 .EXAMPLE
-Get-Calendar -Display
+Get-JobSchedulerCalendar -Display
 
 Displays formatted output.
 
@@ -325,5 +325,3 @@ Jobs by repeat interval
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Get-Calendar -Value Get-JobSchedulerCalendar

@@ -36,18 +36,18 @@ Reset-Order -Order Reporting -JobChain /sos/reporting/Reporting
 Resets the order "Reporting" from the specified job chain.
 
 .EXAMPLE
-Get-Order | Reset-Order
+Get-JobSchedulerOrder | Reset-JobSchedulerOrder
 
 Resets all orders for all job chains.
 
 .EXAMPLE
-Get-Order -Directory / -NoSubfolders | Reset-Order
+Get-JobSchedulerOrder -Directory / -NoSubfolders | Reset-JobSchedulerOrder
 
 Resets orders that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-Get-Order -JobChain /test/globals/chain1 | Reset-Order
+Get-JobSchedulerOrder -JobChain /test/globals/chain1 | Reset-JobSchedulerOrder
 
 Resets all orders for the specified job chain.
 
@@ -117,5 +117,3 @@ param
         $parameters | Update-JobSchedulerOrder -Action reset
     }
 }
-
-Set-Alias -Name Reset-Order -Value Reset-JobSchedulerOrder

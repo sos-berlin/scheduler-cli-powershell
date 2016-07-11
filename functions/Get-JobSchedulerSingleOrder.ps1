@@ -43,12 +43,12 @@ This operation is time-consuming and should be restricted to selecting individua
 This cmdlet returns an a single order object.
 
 .EXAMPLE
-$order = Get-SingleOrder -JobChain /sos/reporting/Reporting -Order facts
+$order = Get-JobSchedulerSingleOrder -JobChain /sos/reporting/Reporting -Order facts
 
 Returns the order with the specified name from the specified job chain.
 
 .EXAMPLE
-$order = Get-SingleOrder -JobChain /sos/reporting/Reporting -Order facts -WithLog
+$order = Get-JobSchedulerSingleOrder -JobChain /sos/reporting/Reporting -Order facts -WithLog
 
 Returns the order with the specified name from the specified job chain and the log output of the last order run.
 
@@ -149,5 +149,3 @@ param
     }
     
 }
-
-Set-Alias -Name Get-SingleOrder -Value Get-JobSchedulerSingleOrder

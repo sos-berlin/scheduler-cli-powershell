@@ -126,19 +126,19 @@ take account of values handed over. Any number of parameters can be added.
 This cmdlet returns the XML object of the JobScheduler response.
 
 .EXAMPLE
-Add-Event -EventClass daily_closing -EventId 12345678
+Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678
 
 Creates an event with the specified event class and event id.
 
 .EXAMPLE
-Add-Event -EventClass daily_closing -EventId 12345678 -AllowedExitCodes 1..4
+Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678 -AllowedExitCodes 1..4
 
 Creates an event with the specified event class and event id. The exit code is implicitely added
 from the global $LastExitCode value. Should the exit code be contained in the list of 
 allowed exit codes then its value is set to 0.
 
 .EXAMPLE
-Add-Event -EventClass daily_closing -EventId 12345678 -ExpirationPeriod 04:00
+Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678 -ExpirationPeriod 04:00
 
 Creates an event that will expire 4 hrs. from now.
 
@@ -148,12 +148,12 @@ Add-Event -EventClass daily_closing -EventId 12345678 -ExpirationCycle 21:00
 Creates an event that will expire at 9pm of the current day.
 
 .EXAMPLE
-Add-Event -EventClass daily_closing -EventId 12345678 -ExpirationDate (Get-Date).AddDays(2)
+Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678 -ExpirationDate (Get-Date).AddDays(2)
 
 Creates an event that will expire two days later.
 
 .EXAMPLE
-Add-Event -EventClass daily_closing -EventId 12345678 -Parameters @{'name1'='value1'; 'name2'='value2'}
+Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678 -Parameters @{'name1'='value1'; 'name2'='value2'}
 
 Creates an event with two additional parameters from a hashtable.
 
@@ -421,5 +421,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch        
     }
 }
-
-Set-Alias -Name Add-Event -Value Add-JobSchedulerEvent

@@ -26,23 +26,23 @@ This cmdlet accepts pipelined job chain objects that are e.g. returned from a Ge
 This cmdlet returns an array of job chain objects.
 
 .EXAMPLE
-Resume-JobChain -JobChain /sos/reporting/Reporting
+Resume-JobSchedulerJobChain -JobChain /sos/reporting/Reporting
 
 Resumes the job chain "Reporting" from the specified folder.
 
 .EXAMPLE
-Get-JobChain | Resume-JobChain
+Get-JobSchedulerJobChain | Resume-JobSchedulerJobChain
 
 Resumes all job chains.
 
 .EXAMPLE
-Get-JobChain -Directory / -NoSubfolders | Resume-JobChain
+Get-JobSchedulerJobChain -Directory / -NoSubfolders | Resume-JobSchedulerJobChain
 
 Resumes job chains that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-Get-JobChain -JobChain /test/globals/chain1 | Resume-JobChain
+Get-JobSchedulerJobChain -JobChain /test/globals/chain1 | Resume-JobSchedulerJobChain
 
 Resumes the specified job chain.
 
@@ -108,5 +108,3 @@ param
         $parameters | Update-JobSchedulerJobChain -Action resume
     }
 }
-
-Set-Alias -Name Resume-JobChain -Value Resume-JobSchedulerJobChain

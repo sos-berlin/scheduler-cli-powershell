@@ -56,17 +56,17 @@ This cmdlet accepts pipelined task objects that are e.g. returned from a Get-Tas
 This cmdlet returns an array of task objects.
 
 .EXAMPLE
-Stop-Task -Task 81073 -Job /sos/dailyschedule/CheckDaysSchedule
+Stop-JobSchedulerTask -Task 81073 -Job /sos/dailyschedule/CheckDaysSchedule
 
 Terminates an individual task.
 
 .EXAMPLE
-Get-Task | Stop-Task
+Get-JobSchedulerTask | Stop-JobSchedulerTask
 
 Terminates all running and enqueued tasks for all jobs.
 
 .EXAMPLE
-Get-Task -Directory / -NoSubfolders | Stop-Task -Action terminate -Timeout 30
+Get-JobSchedulerTask -Directory / -NoSubfolders | Stop-JobSchedulerTask -Action terminate -Timeout 30
 
 Terminates all running and enqueued tasks that are configured with the root folder ("live" directory)
 without consideration of subfolders.
@@ -74,7 +74,7 @@ without consideration of subfolders.
 For Unix environments tasks are sent a SIGTERM signal and after expiration of 30s a SIGKILL signal.
 
 .EXAMPLE
-Get-Task -Job /test/globals/job1 | Stop-Task
+Get-JobSchedulerTask -Job /test/globals/job1 | Stop-JobSchedulerTask
 
 Terminates all tasks for job "job1" from the folder "/test/globals".
 
@@ -144,5 +144,3 @@ param
         }
     }
 }
-
-Set-Alias -Name Stop-Task -Value Stop-JobSchedulerTask

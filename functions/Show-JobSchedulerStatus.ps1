@@ -8,12 +8,12 @@ Show summary information and statistics information of a JobScheduler Master.
 This cmdlet is an alias for Get-Status -Display -NoOutputs
 
 .EXAMPLE
-Show-Status
+Show-JobSchedulerStatus
 
 Returns the summary information of a JobScheduler Master.
 
 .EXAMPLE
-Show-Status -Statistics
+Show-JobSchedulerStatus -Statistics
 
 Returns the summary information and statistics information about jobs and orders.
 
@@ -39,5 +39,3 @@ param
 		$arguments | Get-JobSchedulerStatus -Display -NoOutputs		
     }
 }
-
-Set-Alias -Name Show-Status -Value Show-JobSchedulerStatus

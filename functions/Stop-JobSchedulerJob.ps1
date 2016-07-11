@@ -21,12 +21,12 @@ This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job 
 This cmdlet returns an array of job objects.
 
 .EXAMPLE
-Stop-Job -Job /sos/dailyschedule/CheckDaysSchedule
+Stop-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule
 
 Stops an individual job.
 
 .EXAMPLE
-Get-Job -Directory /some_dir -NoSubfolders | Stop-Job
+Get-JobSchedulerJob -Directory /some_dir -NoSubfolders | Stop-JobSchedulerJob
 
 Stops all jobs from the specified directory 
 without consideration of subfolders.
@@ -91,5 +91,3 @@ param
         $parameters | Update-JobSchedulerJob -Action stop
     }
 }
-
-Set-Alias -Name Stop-Job -Value Stop-JobSchedulerJob

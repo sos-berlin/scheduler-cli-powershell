@@ -15,7 +15,7 @@ Specifies the XML command to be executed, e.g. <show_state/>
 This cmdlet returns the XML object of the JobScheduler response.
 
 .EXAMPLE
-$stateXml = Send-Command '<show_state/>'
+$stateXml = Send-JobSchedulerCommand '<show_state/>'
 
 Returns summary information and inventory of jobs and job chains.
 
@@ -48,5 +48,3 @@ param
         Send-JobSchedulerXMLCommand $js.Url $Command
     }
 }
-
-Set-Alias -Name Send-Command -Value Send-JobSchedulerCommand

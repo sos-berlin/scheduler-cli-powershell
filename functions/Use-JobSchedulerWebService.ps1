@@ -26,14 +26,14 @@ Credentials sets can be managed with Windows built-in tools such as:
 
 A previously created credentials set can be retrieved by use of the cmdlet:
 
-* PS C:\> $credentials = Get-SystemCredentials -TargetName "JobScheduler Web Service"
+* PS C:\> $credentials = Get-JobSchedulerSystemCredentials -TargetName "JobScheduler Web Service"
 
 The credentials object can be assigned to the -Credentials parameter.
 
 .EXAMPLE
 cmdkey /generic:JobScheduler Web Service /user:root /pass:secret
-$credentials = Get-SystemCredentials -TargetName "JobScheduler Web Service"
-Use-WebService http://localhost:8080 -Credentials $credentials
+$credentials = Get-JobSchedulerSystemCredentials -TargetName "JobScheduler Web Service"
+Use-JobSchedulerWebService http://localhost:8080 -Credentials $credentials
 
 Prior to use with PowerShell with some external command ("cmdkey") a credentials set is generated for the current user.
 The credentials are retrieved by use of the Get-SystemCredentials cmdlet and are forwarded to the Use-WebService cmdlet.
@@ -136,5 +136,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Use-WebService -Value Use-JobSchedulerWebService

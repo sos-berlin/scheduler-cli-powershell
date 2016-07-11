@@ -14,12 +14,12 @@ Specifies that the current JobScheduler instance is a backup instance in a passi
 Backup instances use the same JobScheduler ID and database connection as the primary instance.
 
 .EXAMPLE
-Remove-Service
+Remove-JobSchedulerService
 
 Removes the Windows service.
 
 .EXAMPLE
-Remove-Service -Backup
+Remove-JobSchedulerService -Backup
 
 Removes the Windows service for a JobScheduler backup instance in a passive cluster.
 
@@ -83,5 +83,3 @@ param
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): JobScheduler service removed: $($serviceName)"
     }
 }
-
-Set-Alias -Name Remove-Service -Value Remove-JobSchedulerService

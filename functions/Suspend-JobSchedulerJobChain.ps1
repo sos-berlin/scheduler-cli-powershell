@@ -26,23 +26,23 @@ This cmdlet accepts pipelined job chain objects that are e.g. returned from a Ge
 This cmdlet returns an array of job chain objects.
 
 .EXAMPLE
-Suspend-JobChain -JobChain /sos/reporting/Reporting
+Suspend-JobSchedulerJobChain -JobChain /sos/reporting/Reporting
 
 Suspends the job chain "Reporting". from the specified folder.
 
 .EXAMPLE
-Get-JobChain | Suspend-JobChain
+Get-JobSchedulerJobChain | Suspend-JobSchedulerJobChain
 
 Suspends all job chains.
 
 .EXAMPLE
-Get-JobChain -Directory / -NoSubfolders | Suspend-JobChain
+Get-JobSchedulerJobChain -Directory / -NoSubfolders | Suspend-JobSchedulerJobChain
 
 Suspends job chains that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-Get-JobChain -JobChain /test/globals/chain1 | Suspend-JobChain
+Get-JobSchedulerJobChain -JobChain /test/globals/chain1 | Suspend-JobSchedulerJobChain
 
 Suspends the specified job chain.
 
@@ -108,7 +108,3 @@ param
         $parameters | Update-JobSchedulerJobChain -Action suspend
     }
 }
-
-Set-Alias -Name Suspend-JobChain -Value Suspend-JobSchedulerJobChain
-Set-Alias -Name Stop-JobChain -Value Suspend-JobSchedulerJobChain
-Set-Alias -Name Stop-JobSchedulerJobChain -Value Suspend-JobSchedulerJobChain

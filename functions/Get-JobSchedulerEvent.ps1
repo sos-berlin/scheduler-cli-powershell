@@ -57,17 +57,17 @@ be made, that would not be possible with the -EventClass, -EventId and -ExitCode
 This cmdlet returns the event objects available with a JobScheduler Master or Supervisor.
 
 .EXAMPLE
-$event = Get-Event -EventClass daily_closing -EventId 12345678
+$event = Get-JobSchedulerEvent -EventClass daily_closing -EventId 12345678
 
 Returns an event object from the event class and event id.
 
 .EXAMPLE
-$events = Get-Event -EventClass daily_closing
+$events = Get-JobSchedulerEvent -EventClass daily_closing
 
 Returns an array of event objects for the specified event class.
 
 .EXAMPLE
-Get-Event -Xpath "//events/event[starts-with(@event_id, 'my')]"
+Get-JobSchedulerEvent -Xpath "//events/event[starts-with(@event_id, 'my')]"
 
 Returns a number of event objects that are assigned an event id starting with the characters 'my'.
 
@@ -210,5 +210,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Get-Event -Value Get-JobSchedulerEvent

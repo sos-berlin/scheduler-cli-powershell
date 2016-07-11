@@ -48,17 +48,17 @@ This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job 
 This cmdlet returns an array of job objects.
 
 .EXAMPLE
-Update-Job -Job /sos/dailyschedule/CheckDaysSchedule -Action stop
+Update-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule -Action stop
 
 Stops an individual job.
 
 .EXAMPLE
-Get-Job | Update-Job -Action unstop
+Get-JobSchedulerJob | Update-JobSchedulerJob -Action unstop
 
 Unstops all jobs that have previously been stopped.
 
 .EXAMPLE
-Get-Job -Directory /some_dir -NoSubfolders | Update-Job -Action stop
+Get-JobSchedulerJob -Directory /some_dir -NoSubfolders | Update-JobSchedulerJob -Action stop
 
 Stops all jobs from the specified directory 
 without consideration of subfolders.
@@ -145,5 +145,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Update-Job -Value Update-JobSchedulerJob

@@ -39,17 +39,17 @@ This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Or
 This cmdlet returns an array of removed order objects.
 
 .EXAMPLE
-Remove-Order -Order 234 -JobChain sos/reporting/Reporting
+Remove-JobSchedulerOrder -Order 234 -JobChain sos/reporting/Reporting
 
 Removes the order from the specified job chain.
 
 .EXAMPLE
-Get-Order -NoPermanent | Remove-Order
+Get-JobSchedulerOrder -NoPermanent | Remove-JobSchedulerOrder
 
 Retrieves and removes all ad hoc orders.
 
 .EXAMPLE
-Get-Order -Directory /sos -NoPermanent | Remove-Order
+Get-JobSchedulerOrder -Directory /sos -NoPermanent | Remove-JobSchedulerOrder
 
 Retrieves and removes all ad hoc orders from the specified directory including subfolders.
 
@@ -139,5 +139,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Remove-Order -Value Remove-JobSchedulerOrder

@@ -52,12 +52,12 @@ from the "user_bin" directory of a JobScheduler Dashboard installation directory
 Default Value: dashboard_environment_variables.cmd
 
 .EXAMPLE
-Start-JID -Id scheduler110
+Start-JobSchedulerDashboard -Id scheduler110
 
 Starts the JobScheduler Dashboard from a local JobScheduler Master installation with the specified id.
 
 .EXAMPLE
-Start-JOD -InstallPath c:\Program Files\JID
+Start-JobSchedulerDashboard -InstallPath c:\Program Files\JID
 
 Starts JID from the specified installation directory. This is a suitable option if
 JID has been installed independently from a JobScheduler Master installation.
@@ -249,6 +249,3 @@ param
         Set-Location -Path $currentLocation
     }
 }
-
-Set-Alias -Name Start-Dashboard -Value Start-JobSchedulerDashboard
-Set-Alias -Name Start-JID -Value Start-JobSchedulerDashboard

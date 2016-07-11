@@ -5,15 +5,15 @@ function Show-JobSchedulerAgentStatus
 Show summary information and statistics information of a JobScheduler Agent.
 
 .DESCRIPTION
-This cmdlet is an alias for Get-AgentStatus -Display -NoOutputs
+This cmdlet is an alias for Get-JobSchedulerAgentStatus -Display -NoOutputs
 
 .EXAMPLE
-Show-AgentStatus http://localhost:4445
+Show-JobSchedulerAgentStatus http://localhost:4445
 
 Returns the summary information of the JobScheduler Agent for the specified host and port.
 
 .EXAMPLE
-Get-AgentCluster | Show-AgentStatus
+Get-JobSchedulerAgentCluster | Show-JobSchedulerAgentStatus
 
 Returns the summary information and statistics information about all JobScheduler Agents
 that are configured with the JobScheduler Master that is currently in use.
@@ -50,5 +50,3 @@ param
         $clusters | Get-JobSchedulerAgentStatus -Display -NoOutputs        
 	}
 }
-
-Set-Alias -Name Show-AgentStatus -Value Show-JobSchedulerAgentStatus

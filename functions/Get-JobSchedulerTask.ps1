@@ -40,18 +40,18 @@ as in most use cases the current information about running tasks is required fro
 This cmdlet returns an array of task objects.
 
 .EXAMPLE
-$tasks = Get-Task
+$tasks = Get-JobSchedulerTask
 
 Returns all running and enqueued tasks for all jobs.
 
 .EXAMPLE
-$tasks = Get-Task -Directory / -NoSubfolders
+$tasks = Get-JobSchedulerTask -Directory / -NoSubfolders
 
 Returns all running and enqueued tasks that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-$tasks = Get-Task -Job /test/globals/job1
+$tasks = Get-JobSchedulerTask -Job /test/globals/job1
 
 Returns all tasks for job "job1" from the folder "/test/globals".
 
@@ -244,5 +244,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
-Set-Alias -Name Get-Task -Value Get-JobSchedulerTask

@@ -71,7 +71,7 @@ The cmdlet returns a [System.Diagnostics.Process] object that includes additiona
 ** output to stderr is available from a temporary file that is indicated with the "StandardErrorFile" property.
 
 .EXAMPLE
-$process = Start-ExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'localhost'
+$process = Start-JobSchedulerExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'localhost'
 
 Runs the command script for the account that is specified with the credentials identified by the target name.
 
@@ -83,7 +83,7 @@ The resulting process object includes the properties
 that contain the output that is created to stdout and stderr.
 
 .EXAMPLE
-$process = Start-ExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'localhost' -NoStandardOutput -NoStandardError
+$process = Start-JobSchedulerExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'localhost' -NoStandardOutput -NoStandardError
 
 Runs the command script for the account that is specified with the credentials identified by the target name.
 
@@ -185,5 +185,3 @@ param
         }
     }
 }
-
-Set-Alias -Name Start-ExecutableFile -Value Start-JobSchedulerExecutableFile

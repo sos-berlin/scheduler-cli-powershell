@@ -55,18 +55,18 @@ Install-Service
 Removes an existing Windows service and installs the new service.
 
 .EXAMPLE
-Install-Service -Start
+Install-JobSchedulerService -Start
 
 Installs and starts the Windows service.
 
 .EXAMPLE
-Install-Service -Start -Pause
+Install-JobSchedulerService -Start -Pause
 
 Installs and starts the Windows service.
-After star-up the Windows service is paused.
+After start-up the Windows service is paused.
 
 .EXAMPLE
-Install-Service -Backup
+Install-JobSchedulerService -Backup
 
 Installs the Windows service for a JobScheduler backup instance in a passive cluster.
 
@@ -195,5 +195,3 @@ param
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): JobScheduler service installed: $($serviceName)"       
     }
 }
-
-Set-Alias -Name Install-Service -Value Install-JobSchedulerService

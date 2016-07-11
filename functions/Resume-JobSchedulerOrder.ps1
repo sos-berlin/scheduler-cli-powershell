@@ -31,23 +31,23 @@ This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Or
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-Resume-Order -Order Reporting -JobChain /sos/reporting/Reporting
+Resume-JobSchedulerOrder -Order Reporting -JobChain /sos/reporting/Reporting
 
 Resumes the order "Reporting" from the specified job chain.
 
 .EXAMPLE
-Get-Order | Resume-Order
+Get-JobSchedulerOrder | Resume-JobSchedulerOrder
 
 Resumes all orders for all job chains.
 
 .EXAMPLE
-Get-Order -Directory / -NoSubfolders | Resume-Order
+Get-JobSchedulerOrder -Directory / -NoSubfolders | Resume-JobSchedulerOrder
 
 Resumes orders that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-Get-Order -JobChain /test/globals/chain1 | Resume-Order
+Get-JobSchedulerOrder -JobChain /test/globals/chain1 | Resume-JobSchedulerOrder
 
 Resumes all orders for the specified job chain.
 
@@ -117,5 +117,3 @@ param
         $parameters | Update-JobSchedulerOrder -Action resume
     }
 }
-
-Set-Alias -Name Resume-Order -Value Resume-JobSchedulerOrder

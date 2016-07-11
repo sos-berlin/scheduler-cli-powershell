@@ -64,23 +64,23 @@ retrieved directly from the JobScheduler Master and is not resolved from the cac
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-$orders = Get-Order
+$orders = Get-JobSchedulerOrder
 
 Returns all orders.
 
 .EXAMPLE
-$orders = Get-Order -Directory / -NoSubfolders
+$orders = Get-JobSchedulerOrder -Directory / -NoSubfolders
 
 Returns all orders that are configured with the root folder ("live" directory)
 without consideration of subfolders.
 
 .EXAMPLE
-$orders = Get-Order -JobChain /test/globals/chain1
+$orders = Get-JobSchedulerOrder -JobChain /test/globals/chain1
 
 Returns the orders for job chain "chain1" from the folder "/test/globals".
 
 .EXAMPLE
-$orders = Get-Order -Order /test/globals/order1
+$orders = Get-JobSchedulerOrder -Order /test/globals/order1
 
 Returns the order "order1" from the folder "/test/globals".
 
@@ -304,4 +304,3 @@ param
     }
 }
 
-Set-Alias -Name Get-Order -Value Get-JobSchedulerOrder

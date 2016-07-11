@@ -82,14 +82,14 @@ This results in the fact that for each Get-JobScheduler* cmdlet execution the re
 retrieved directly from the JobScheduler Master and is not resolved from the cache.
 
 .EXAMPLE
-Use-Master http://somehost:4444
+Use-JobSchedulerMaster http://somehost:4444
 
 Allows to manage a JobScheduler Master that is operated on the same or on a remote host. 
 This includes to manage Master instances that are running e.g. in a Linux box.
 
 .EXAMPLE
-Use-Master http://localhost:4444 scheduler110
-Use-Master -Url http://localhost:4444 -Id scheduler110
+Use-JobSchedulerMaster http://localhost:4444 scheduler110
+Use-JobSchedulerMaster -Url http://localhost:4444 -Id scheduler110
 
 Specifies the URL for a local master and imports settings from the the JobScheduler Master with ID *scheduler110*.
 The installation path is determined from the default value of the -BasePath parameter.
@@ -97,12 +97,12 @@ The installation path is determined from the default value of the -BasePath para
 Cmdlets that require a local Master can be used, e.g. Install-Service, Remove-Service, Start-Master.
 
 .EXAMPLE
-Use-Master -InstallPath "C:\Program Files\sos-berlin.com\jobscheduler\scheduler110"
+Use-JobSchedulerMaster -InstallPath "C:\Program Files\sos-berlin.com\jobscheduler\scheduler110"
 
 Imports settings from the specified installation path.
 
 .EXAMPLE
-Use-Master -InstallPath $env:SCHEDULER_HOME
+Use-JobSchedulerMaster -InstallPath $env:SCHEDULER_HOME
 
 Imports settings from the installation path that is specified from the SCHEDULER_HOME environment variable.
 
@@ -326,5 +326,3 @@ param
         $SCRIPT:js
     }
 }
-
-Set-Alias -Name Use-Master -Value Use-JobSchedulerMaster
