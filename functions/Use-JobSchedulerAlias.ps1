@@ -58,12 +58,12 @@ for aliases that would conflict with any exsting cmdlets, functions or aliases.
 This parameters specifies that no aliases should be created that conflict with existing cmdlets, functions or aliases.
 
 .EXAMPLE
-. Use-JobSchedulerAlias -Prefix JS
+ . Use-JobSchedulerAlias -Prefix JS
 
 Creates aliases for all JobScheduler CLI cmdlets that allow to use e.g. Use-JSMaster for Use-JobSchedulerMaster
 
 .EXAMPLE
-. Use-JobSchedulerAlias -Exclude Get-Job,Start-Job,Stop-Job -ExcludePrefix JS
+ . Use-JobSchedulerAlias -Exclude Get-Job,Start-Job,Stop-Job -ExcludePrefix JS
 
 Creates aliases for all JobScheduler CLI cmdlets that allow to use e.g. Use-Master for Use-JobSchedulerMaster.
 This is specified by omitting the -Prefix parameter.
@@ -71,12 +71,13 @@ This is specified by omitting the -Prefix parameter.
 For the resulting alias names Get-Job, Start-Job and Stop-Job the alias names
 Get-JSJob, Start-JSJob and Stop-JSJob are created by use of the -ExcludePrefix "JS" parameter.
 
-.EXAMPLES
-. Use-JobSchedulerAlias -NoDuplicates -ExcludesPrefix JS
+.EXAMPLE
+ . Use-JobSchedulerAlias -NoDuplicates -ExcludesPrefix JS
 
 Creates aliases for all JobScheduler CLI cmdlets that allow to use e.g. Use-Master for Use-JobSchedulerMaster.
 Should any alias conflice with an existing cmdlet, function or alias then the alias will be created with the
 prefix specified by the -ExcludesPrefix parameter.
+
 .LINK
 about_jobscheduler
 
