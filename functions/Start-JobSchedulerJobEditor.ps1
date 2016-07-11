@@ -228,7 +228,7 @@ param
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler Editor: $($command)"
         Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)"
-$script:jsEnv
+
         Set-Location -Path $currentLocation
     }
 }

@@ -56,6 +56,7 @@ creates an XML output file that includes the inventory.
 .EXAMPLE
 $instances = @( 'http://localhost:4444', 'http://localhost:4454' )
 $inventory = $instances | Get-JobSchedulerInventory -OutputFile /tmp/inventory.xml
+
 .LINK
 about_jobscheduler
 
@@ -127,13 +128,15 @@ param
         
         foreach( $masterInstance in $masterInstances )
         {
-		    # enforce Uri datatype when reading master URLs from input file
+            # enforce Uri datatype when reading master URLs from input file
             [Uri] $masterInstance.Url = $masterInstance.Url
-			
+            
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): checking Master: $($masterInstance.Url)"
-            Use-JobSchedulerMaster -Url $masterInstance.Url | Out-Null
-            $masterStatus = Get-JobSchedulerStatus
+            $SCRIPT:js.Url = $masterInstance.Url
             $agentCluster = Get-JobSchedulerAgentCluster 
+
+            $agentClustersChecked = @()
+            $agentInstancesChecked = @()
 
             foreach( $agentClusterInstance in $AgentCluster ) 
             {
@@ -157,7 +160,7 @@ param
                     $jobs += Start-Job -Name $masterInstance.Url.OriginalString -ScriptBlock $jobScript -ArgumentList $masterInstance.Url.OriginalString, $agentInstance.OriginalString
                 }
             }
-        }                
+        }
     }
 
     End
@@ -178,6 +181,8 @@ param
         foreach( $masterInstance in $masterInstances )
         {        
             $masterNode = $xmlDoc.CreateElement( 'Master' )
+            Use-JobSchedulerMaster -Url $masterInstance.Url | Out-Null
+            $masterStatus = Get-JobSchedulerStatus
             $masterStatus.PSObject.Properties | Foreach { $masterNode.SetAttribute( $_.Name, $_.Value ) }
             
             $agentsNode = $xmlDoc.CreateElement( 'Agents' )
