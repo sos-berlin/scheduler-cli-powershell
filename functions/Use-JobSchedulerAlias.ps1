@@ -26,10 +26,10 @@ You can find the resulting aliases by use of the command Get-Command -Module Job
 .PARAMETER Prefix
 Specifies the prefix that is used for a shorthand notation, e.g.
 
-* the parameter -Prefix "JS" creates an alias Use-JSMaster for Use-JobSchedulerMaster
-* the parameter -Prefix without a value assigned creates an alias Use-Master for Use-JobSchedulerMaster
+* with the parameter -Prefix "JS" used this cmdlet creates an alias Use-JSMaster for Use-JobSchedulerMaster
+* with the parameter -Prefix being omitted this cmdlet creates an alias Use-Master for Use-JobSchedulerMaster
 
-By default aliases are created for both the prefix "JS" and with no prefix being assigned which results in the following possible notation:
+By default aliases are created for both the prefix "JS" and with an empty prefix being assigned which results in the following possible notation:
 
 * Use-JobSchedulerMaster
 * Use-JSMaster
@@ -38,8 +38,8 @@ By default aliases are created for both the prefix "JS" and with no prefix being
 .PARAMETER Excludes
 Specifies a list of resulting alias names that are excluded from alias creation.
 
-When using e.g. Use-JobSchedulerAlias -Prefix without a prefix being assigned then
-- at the time of writing - the following aliases would conflict with cmdlet names from the PowerShell Core
+When omitting the Use-JobSchedulerAlias -Prefix parameter then
+- at the time of writing - the following aliases would conflict with cmdlet names from the PowerShell Core:
 
 * Get-Job
 * Start-Job
@@ -49,7 +49,10 @@ Default: -Excludes Get-Job,Start-Job,Stop-Job
 
 .PARAMETER ExludesPrefix
 Specifies a prefix that is used should a resulting alias be a member of the list of 
-exlcuded aliases that is specified with the -Excludes parameter
+excluded aliases that is specified with the -Excludes parameter.
+
+When used with the -NoDuplicates parameter then this parameter specifies the prefix that is used
+for aliases that would conflict with any exsting cmdlets, functions or aliases.
 
 .PARAMETER NoDuplicates
 This parameters specifies that no aliases should be created that conflict with existing cmdlets, functions or aliases.
@@ -60,14 +63,20 @@ This parameters specifies that no aliases should be created that conflict with e
 Creates aliases for all JobScheduler CLI cmdlets that allow to use e.g. Use-JSMaster for Use-JobSchedulerMaster
 
 .EXAMPLE
-. Use-JobSchedulerAlias -Prefix -Exclude Get-Job,Start-Job,Stop-Job -ExcludePrefix JS
+. Use-JobSchedulerAlias -Exclude Get-Job,Start-Job,Stop-Job -ExcludePrefix JS
 
 Creates aliases for all JobScheduler CLI cmdlets that allow to use e.g. Use-Master for Use-JobSchedulerMaster.
-This is specified by the -Prefix parameter without a value being assigned.
+This is specified by omitting the -Prefix parameter.
 
 For the resulting alias names Get-Job, Start-Job and Stop-Job the alias names
 Get-JSJob, Start-JSJob and Stop-JSJob are created by use of the -ExcludePrefix "JS" parameter.
 
+.EXAMPLES
+. Use-JobSchedulerAlias -NoDuplicates -ExcludesPrefix JS
+
+Creates aliases for all JobScheduler CLI cmdlets that allow to use e.g. Use-Master for Use-JobSchedulerMaster.
+Should any alias conflice with an existing cmdlet, function or alias then the alias will be created with the
+prefix specified by the -ExcludesPrefix parameter.
 .LINK
 about_jobscheduler
 
@@ -86,11 +95,11 @@ param
 )
     Process
     {
-		if ( $NoDuplicates )
-		{
-			$allCommands = Get-Command | Select-Object -Property Name | foreach { $_.Name }
-		}
-		
+        if ( $NoDuplicates )
+        {
+            $allCommands = Get-Command | Select-Object -Property Name | foreach { $_.Name }
+        }
+        
         $commands = Get-Command -Module JobScheduler -CommandType 'Function'
         foreach( $command in $commands )
         {
@@ -105,15 +114,19 @@ param
                     continue
                 }
             }
-			
-			if ( $NoDuplicates )
-			{
-				$allCommands = Get-Command
-				if ( $allCommands -contains $aliasName ) 
-				{
-					continue
-				}
-			}
+            
+            if ( $NoDuplicates )
+            {
+                if ( $allCommands -contains $aliasName ) 
+                {
+                    if ( $ExcludesPrefix )
+                    {
+                        $aliasName = $command.name.Replace( '-JobScheduler', "-$($ExcludesPrefix)" )
+                    } else {
+                        continue
+                    }
+                }
+            }
             
             Set-Alias -Name $aliasName -Value $command.Name
         }
