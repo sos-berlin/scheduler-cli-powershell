@@ -5,7 +5,7 @@ function Resume-JobSchedulerJobChain
 Resumes a number of job chains in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-JobChain -Action "resume"
+This cmdlet is an alias for Update-JobSchedulerJobChain -Action "resume"
 
 .PARAMETER JobChain
 Specifies the path and name of a job chain that should be suspended.
@@ -20,7 +20,7 @@ If the -JobChain parameter specifies the name of job chain then the location spe
 -Directory parameter is added to the job chain location.
 
 .INPUTS
-This cmdlet accepts pipelined job chain objects that are e.g. returned from a Get-JobChain cmdlet.
+This cmdlet accepts pipelined job chain objects that are e.g. returned from a Get-JobSchedulerJobChain cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of job chain objects.

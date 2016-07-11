@@ -5,7 +5,7 @@ function Show-JobSchedulerStatus
 Show summary information and statistics information of a JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Get-Status -Display -NoOutputs
+This cmdlet is an alias for Get-JobSchedulerStatus -Display -NoOutputs
 
 .EXAMPLE
 Show-JobSchedulerStatus

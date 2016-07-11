@@ -48,7 +48,7 @@ Specifies that the order should leave the job chain at the job chain node that
 is assigend the specified state.
 
 .INPUTS
-This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
+This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of order objects.

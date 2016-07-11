@@ -34,6 +34,9 @@ TODOs
 #    Use Cache
 [bool] $jsNoCache = $false
 
+# JobScheduler Master environment
+[hashtable] $jsEnv = @{}
+
 # JobScheduler Master Web Request 
 #     Credentials
 [System.Management.Automation.PSCredential] $jsCredentials = $null
@@ -114,7 +117,7 @@ $moduleRoot = Split-Path -Path $MyInvocation.MyCommand.Path
 Export-ModuleMember -Function "*"
 
 . Use-JobSchedulerAlias -Prefix JS
-. Use-JobSchedulerAlias -Excludes Get-Job,Start-Job,Stop-Job -ExcludesPrefix JS
+. Use-JobSchedulerAlias -NoDuplicates -ExcludesPrefix JS
 
 # ----------------------------------------------------------------------
 # Private Functions
@@ -981,7 +984,8 @@ param
     Get-Content $tempFile | Foreach-Object {
         if($_ -match "^(.*?)=(.*)$")
         {
-            Set-Content "env:\$($matches[1])" $matches[2]
+#           Set-Content "env:\$($matches[1])" $matches[2]
+            $SCRIPT:jsEnv["$($matches[1])"] = $matches[2]
         }
     }
 

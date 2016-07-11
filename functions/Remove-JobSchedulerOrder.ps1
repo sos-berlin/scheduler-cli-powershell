@@ -11,7 +11,7 @@ for one-time execution of a job chain.
 
 Orders are selected for removal
 
-* by a pipelined object, e.g. the output of the Get-Order cmdlet
+* by a pipelined object, e.g. the output of the Get-JobSchedulerOrder cmdlet
 * by specifying an individual order with the -Order and -JobChain parameters.
 
 .PARAMETER Order
@@ -33,7 +33,7 @@ If the -JobChain parameter specifies the name of job chain then the location spe
 -Directory parameter is added to the job chain location.
 
 .INPUTS
-This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
+This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of removed order objects.

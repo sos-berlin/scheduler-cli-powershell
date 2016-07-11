@@ -5,7 +5,7 @@ function Suspend-JobSchedulerOrder
 Suspends a number of orders in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-Order -Action "suspend"
+This cmdlet is an alias for Update-JobSchedulerOrder -Action "suspend"
 
 .PARAMETER Order
 Specifies the identifier of an order.
@@ -25,7 +25,7 @@ If the -JobChain parameter specifies the name of job chain then the location spe
 -Directory parameter is added to the job chain location.
 
 .INPUTS
-This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
+This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of order objects.

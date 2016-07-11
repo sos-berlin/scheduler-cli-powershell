@@ -12,7 +12,7 @@ a remote JobScheduler instance.
 Agent clusters can be selected either by the folder of the Agent cluster location including subfolders 
 or by an individual Agent cluster.
 
-Resulting Agent clusters can be forwarded to cmdlets, such as Get-AgentStatus, for pipelined bulk operations.
+Resulting Agent clusters can be forwarded to cmdlets, such as Get-JobSchedulerAgentStatus, for pipelined bulk operations.
 
 .PARAMETER Directory
 Optionally specifies the folder for which Agent clusters should be returned. The directory is determined

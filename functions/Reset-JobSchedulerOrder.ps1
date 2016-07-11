@@ -5,7 +5,7 @@ function Reset-JobSchedulerOrder
 Resets a number of orders in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-Order -Action reset
+This cmdlet is an alias for Update-JobSchedulerOrder -Action reset
 
 .PARAMETER Order
 Specifies the identifier of an order.
@@ -25,13 +25,13 @@ If the -JobChain parameter specifies the name of job chain then the location spe
 -Directory parameter is added to the job chain location.
 
 .INPUTS
-This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
+This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-Reset-Order -Order Reporting -JobChain /sos/reporting/Reporting
+Reset-JobSchedulerOrder -Order Reporting -JobChain /sos/reporting/Reporting
 
 Resets the order "Reporting" from the specified job chain.
 

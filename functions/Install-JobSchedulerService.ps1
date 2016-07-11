@@ -50,7 +50,7 @@ Credentials include to enter the user account and password when being prompted:
 Alternatively to using this switch the account can be assigned with the Windows service panel.
 
 .EXAMPLE
-Install-Service
+Install-JobSchedulerService
 
 Removes an existing Windows service and installs the new service.
 

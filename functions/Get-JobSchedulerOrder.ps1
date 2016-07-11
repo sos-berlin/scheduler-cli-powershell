@@ -7,7 +7,7 @@ Returns a number of active orders from the JobScheduler Master.
 .DESCRIPTION
 Orders are returned if they are present in the JobScheduler Master.
 No ad hoc orders are returned that are completed and not active
-with a Master. For information on such orders consider the Get-SingleOrder cmdlet.
+with a Master. For information on such orders consider the Get-JobSchedulerSingleOrder cmdlet.
 
 Orders are selected from a JobScheduler Master
 

@@ -9,7 +9,7 @@ Updating job chains includes operations to suspend and resume job chains.
 
 Job chains are selected for update
 
-* by a pipelined object, e.g. the output of the Get-JobChain cmdlet
+* by a pipelined object, e.g. the output of the Get-JobSchedulerJobChain cmdlet
 * by specifying an individual JobChain with the -JobChain parameter.
 
 .PARAMETER JobChain
@@ -33,7 +33,7 @@ Specifies the action to be applied to a job chain:
 ** Resumes a suspended job chain.
 
 .INPUTS
-This cmdlet accepts pipelined job chain objects that are e.g. returned from a Get-JobChain cmdlet.
+This cmdlet accepts pipelined job chain objects that are e.g. returned from a Get-JobSchedulerJobChain cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of updated job chain objects.

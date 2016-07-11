@@ -9,7 +9,7 @@ Updating orders includes operations to suspend, resume and reset orders.
 
 Orders are selected for update
 
-* by a pipelined object, e.g. the output of the Get-Order cmdlet
+* by a pipelined object, e.g. the output of the Get-JobSchedulerOrder cmdlet
 * by specifying an individual order with the -Order and -JobChain parameters.
 
 .PARAMETER Order
@@ -73,7 +73,7 @@ Specifies that the order should leave the job chain at the job chain node that
 is assigend the specified state.
 
 .INPUTS
-This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
+This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of updated order objects.
@@ -84,7 +84,7 @@ Update-JobSchedulerOrder -Order Reporting -JobChain /sos/reporting/Reporting -Ac
 Suspends the order "Reporting" from the specified job chain.
 
 .EXAMPLE
-Get-JobSchedulerOrder | Update-Order -Action reset
+Get-JobSchedulerOrder | Update-JobSchedulerOrder -Action reset
 
 Resets all orders and moves them to their initial state.
 

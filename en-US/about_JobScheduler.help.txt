@@ -98,7 +98,7 @@ LONG DESCRIPTION
     
         As a first operation after importing the module it is required to execute the Use-Master cmdlet.
 
-        PS C:\> Use-Master <Url>   or   PS C:\> Use-Master -Url <Url>
+        PS C:\> Use-JobSchedulerMaster <Url>   or   PS C:\> Use-Master -Url <Url>
         
             specifies the URL for which the JobScheduler Master is available. 
             This is the same URL that you would use when opening the JOC GUI in your browser, 
@@ -111,7 +111,7 @@ LONG DESCRIPTION
             specifying the URL is not sufficient to manage the Windows Service 
 			of the respective Master, see below.
             
-        PS C:\> Use-Master <JobSchedulerID>   or   PS C:\> Use-Master -Id <JobSchedulerID>
+        PS C:\> Use-Master -Id <JobSchedulerID>
 
             references the JobScheduler ID that has been assigned during installation of a Master.
             
@@ -120,19 +120,19 @@ LONG DESCRIPTION
                 A typical base bath would be C:\Program Files\sos-berlin.com\jobscheduler 
                 The path is added the subdirectory with the name of the JobScheduler ID
 
-        PS C:\> Use-Master -InstallPath <InstallationPath>
+        PS C:\> Use-JobSchedulerMaster -InstallPath <InstallationPath>
         
             specifies the full installation path, e.g. 
 			C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10, 
             for a locally available JobScheduler Master
             
-        PS C:\> Use-Master -InstallPath $env:SCHEDULER_HOME
+        PS C:\> Use-JobSchedulerMaster -InstallPath $env:SCHEDULER_HOME
         
             It is recommended to create an environment variable SCHEDULER_HOME that points to the installation path.
             The JobScheduler CLI module on import checks availability of this environment variable 
             The Use-Master cmdlet is executed automatically if SCHEDULER_HOME is present.
             
-        PS C:\> Use-Master <Url> <JobSchedulerID>
+        PS C:\> Use-JobSchedulerMaster -Url <Url> -Id <JobSchedulerID>
         
             specify both URL and JobScheduler ID (recommended).
             
@@ -140,17 +140,17 @@ LONG DESCRIPTION
 
     Manage JobScheduler objects
     
-        PS C:\> Show-Status
+        PS C:\> Show-JobSchedulerStatus
     
             shows the summary information for a JobScheduler Master
     
-        PS C:\> Get-Order
+        PS C:\> Get-JobSchedulerOrder
 		
-        PS C:\> Get-JobChain
+        PS C:\> Get-JobSchedulerJobChain
 		
-        PS C:\> Get-Job
+        PS C:\> Get-JobSchedulerJob
 		
-        PS C:\> Get-Task
+        PS C:\> Get-JobSchedulerTask
     
             retrieves the list of avaiable objects
     
@@ -162,23 +162,23 @@ LONG DESCRIPTION
     JobScheduler commands are Windows PowerShell scripts (.ps1 files), so you can run 
     them at the command line, or in any editor.
 
-        PS C:\> Use-Master scheduler111
+        PS C:\> Use-JobSchedulerMaster scheduler111
     
     Makes the JobScheduler Master with ID "scheduler111" available for use with cmdlets.
     
-        PS C:\> Show-Status
+        PS C:\> Show-JobSchedulerStatus
     
     Shows the summary information of a JobScheduler Master.
 
-        PS C:\> (Get-Task).count
+        PS C:\> (Get-JobSchedulerTask).count
         
     Shows the number of tasks that are currently running.
     
-        PS C:\> Get-Task | Stop-Task
+        PS C:\> Get-JobSchedulerTask | Stop-JobSchedulerTask
     
     Stops all running tasks (emergency stop).
     
-        PS C:\> $orders = Get-Order /sos
+        PS C:\> $orders = Get-JobSchedulerOrder /sos
     
     Collects the list of orders from a directory and stores it in a variable.
     
@@ -191,26 +191,26 @@ LONG DESCRIPTION
 
     Perform an emergency stop:
 
-        Get-Task | Stop-Task -Action kill
+        Get-JobSchedulerTask | Stop-JobSchedulerTask -Action kill
 
         This will terminate all running and enqueued tasks immediately.
     
     Find enqueued tasks, i.e. tasks that are scheduled for a later start:
     
-        Get-Task -NoRunningTasks
+        Get-JobSchedulerTask -NoRunningTasks
         
         Retrieves the list of scheduled tasks.
 
     Suspend any temporary orders that are e.g. created by job scripts:
     
-        $orders = ( Get-Order /my_jobs -NoPermanent | Suspend-Order )
+        $orders = ( Get-JobSchedulerOrder /my_jobs -NoPermanent | Suspend-JobSchedulerOrder )
     
         This will retrieve temporary ad hoc orders from the "my_jobs" directory and any subfolders.
         All temporary orders are suspended and the list of order objects is stored in a variable.
     
     Remove orders from a list that have previously been retrieved
     
-        $orders | Remove-Order
+        $orders | Remove-JobSchedulerOrder
     
         This will remove the orders available from the list.
 
@@ -221,35 +221,35 @@ LONG DESCRIPTION
     
     Start the JobScheduler Master:
     
-        Start-Master -Service
+        Start-JobSchedulerMaster -Service
         
         Starts the Windows service of a JobScheduler Master
         
     Start the JobScheduler Master in paused mode:
     
-        Start-Master -Service -Pause
+        Start-JobSchedulerMaster -Service -Pause
         
         The Windows service is started and immediately paused to prevent any tasks from starting.
     
     Restart the JobScheduler Master:
     
-        Restart-Master -Timeout 120
+        Restart-JobSchedulerMaster -Timeout 120
         
         Restarts the Master having left any running tasks up to 120 seconds to complete.
         
     Stop the JobScheduler Master immediately:
     
-        Stop-Master -Action kill
+        Stop-JobSchedulerMaster -Action kill
         
         This will kill all running tasks immediately and terminate the JobScheduler Master.
         
     Stop the JobScheduler Master cluster:
     
-        Stop-Master -Cluster -Action abort
+        Stop-JobSchedulerMaster -Cluster -Action abort
 
     Install the JobScheduler Master Windows service:
     
-        Install-Service -Start -PauseAfterFailure
+        Install-JobSchedulerService -Start -PauseAfterFailure
         
         Installs and starts the Windows service. Should a previous JobScheduler run
         have been terminated with failure then JobScheduler Master will switch to pause mode.
@@ -258,7 +258,7 @@ LONG DESCRIPTION
 
     Install the JobScheduler Master Windows service for a specific account:
     
-        Install-Service -Start -UseCredentials
+        Install-JobSchedulerService -Start -UseCredentials
         
         This will install the service and ask for the name of the account and password
         that the service is operated for. The account name typically includes the
@@ -266,44 +266,44 @@ LONG DESCRIPTION
 
     Remove the JobScheduler Master Windows service:
     
-        Remove-Service
+        Remove-JobSchedulerService
         
         This will remove the Windows service. Should any tasks be running with the
         JobScheduler Master then the removal will be delayed. Consider to use
         
-            Stop-Master -Action abort
+            Stop-JobSchedulerMaster -Action abort
             
         if immediate removal of the Windows service is required.
         
         
 SEE ALSO
     JobScheduler wiki: https://kb.sos-berlin.com/display/PKB/JobScheduler
-    Get-Calendar
-    Get-Job
-    Get-JobChain
-    Get-Order
-    Get-Status
-    Get-Task
-    Get-Version
-    Install-Service
-    Remove-Order
-    Remove-Service
-    Reset-Order
-    Restart-Master
-    Resume-Master
-    Resume-Order
-    Send-Command
-    Set-MaxOutputSize
-    Show-Calendar
-    Show-Status
-    Start-Master
-    Start-Job
-    Start-Order
-    Stop-Job
-    Stop-Master
-    Stop-Task
-    Suspend-Master
-    Suspend-Order
-    Update-Job
-    Update-Order
-    Use-Master
+    Get-JobSchedulerCalendar
+    Get-JobSchedulerJob
+    Get-JobSchedulerJobChain
+    Get-JobSchedulerOrder
+    Get-JobSchedulerStatus
+    Get-JobSchedulerTask
+    Get-JobSchedulerVersion
+    Install-JobSchedulerService
+    Remove-JobSchedulerOrder
+    Remove-JobSchedulerService
+    Reset-JobSchedulerOrder
+    Restart-JobSchedulerMaster
+    Resume-JobSchedulerMaster
+    Resume-JobSchedulerOrder
+    Send-JobSchedulerCommand
+    Set-JobSchedulerMaxOutputSize
+    Show-JobSchedulerCalendar
+    Show-JobSchedulerStatus
+    Start-JobSchedulerMaster
+    Start-JobSchedulerJob
+    Start-JobSchedulerOrder
+    Stop-JobSchedulerJob
+    Stop-JobSchedulerMaster
+    Stop-JobSchedulerTask
+    Suspend-JobSchedulerMaster
+    Suspend-JobSchedulerOrder
+    Update-JobSchedulerJob
+    Update-JobSchedulerOrder
+    Use-JobSchedulerMaster

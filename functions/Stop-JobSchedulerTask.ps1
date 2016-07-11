@@ -9,7 +9,7 @@ Stopping tasks includes operations to terminate tasks, e.g. by a SIGTERM signal,
 
 Tasks to be stopped are selected
 
-* by a pipelined object, e.g. the output of the Get-Task cmdlet
+* by a pipelined object, e.g. the output of the Get-JobSchedulerTask cmdlet
 * by specifying an individual task with the -Task and -Job parameters.
 
 .PARAMETER Task
@@ -50,7 +50,7 @@ Specifies a timeout to be applied when stopping a task by use of the parameter -
 ** should the job not complete its spooler_process() method within the timeout then the task will be killed.
 
 .INPUTS
-This cmdlet accepts pipelined task objects that are e.g. returned from a Get-Task cmdlet.
+This cmdlet accepts pipelined task objects that are e.g. returned from a Get-JobSchedulerTask cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of task objects.

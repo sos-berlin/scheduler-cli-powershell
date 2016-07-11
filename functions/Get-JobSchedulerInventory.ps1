@@ -131,9 +131,9 @@ param
             [Uri] $masterInstance.Url = $masterInstance.Url
 			
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): checking Master: $($masterInstance.Url)"
-            Use-Master -Url $masterInstance.Url | Out-Null
-            $masterStatus = Get-Status
-            $agentCluster = Get-AgentCluster 
+            Use-JobSchedulerMaster -Url $masterInstance.Url | Out-Null
+            $masterStatus = Get-JobSchedulerStatus
+            $agentCluster = Get-JobSchedulerAgentCluster 
 
             foreach( $agentClusterInstance in $AgentCluster ) 
             {

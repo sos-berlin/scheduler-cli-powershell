@@ -28,7 +28,7 @@ Specifies the Job Scheduler Master instance URL.
 The URL consists of the protocol, host name and port, e.g. http://localhost:4454.
 
 Default: If used with a job then the CLI will assign by default the JobScheduler Master that the job is running for
-otherwise the JobScheduler Master as specified with the Use-Master cmdlet will be used.
+otherwise the JobScheduler Master as specified with the Use-JobSchedulerMaster cmdlet will be used.
 
 .PARAMETER SupervisorUrl
 Specifies a Job Scheduler Supervisor instance URL.

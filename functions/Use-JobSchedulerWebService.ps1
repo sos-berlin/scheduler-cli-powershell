@@ -36,7 +36,7 @@ $credentials = Get-JobSchedulerSystemCredentials -TargetName "JobScheduler Web S
 Use-JobSchedulerWebService http://localhost:8080 -Credentials $credentials
 
 Prior to use with PowerShell with some external command ("cmdkey") a credentials set is generated for the current user.
-The credentials are retrieved by use of the Get-SystemCredentials cmdlet and are forwarded to the Use-WebService cmdlet.
+The credentials are retrieved by use of the Get-JobSchedulerSystemCredentials cmdlet and are forwarded to the Use-JobSchedulerWebService cmdlet.
 
 The cmdlet returns an object with access information including the access token for the JobScheduler Web Service.
 

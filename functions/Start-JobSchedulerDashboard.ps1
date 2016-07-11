@@ -137,7 +137,7 @@ param
         
         if ( !$dashboardInstallPath )
         {
-            throw "$($MyInvocation.MyCommand.Name): no installation path specified, use -Id or -InstallPath parameter or Use-Master -InstallPath cmdlet"
+            throw "$($MyInvocation.MyCommand.Name): no installation path specified, use -Id or -InstallPath parameter or Use-JobSchedulerMaster -InstallPath cmdlet"
         }
         
         if ( !(Test-Path $dashboardInstallPath -PathType Container) )
@@ -162,7 +162,7 @@ param
 
         if ( !$dashboardConfigPath )
         {
-            throw "$($MyInvocation.MyCommand.Name): no configuration path specified, use -ConfigPath parameter or Use-Master cmdlet"
+            throw "$($MyInvocation.MyCommand.Name): no configuration path specified, use -ConfigPath parameter or Use-JobSchedulerMaster cmdlet"
         }
         
         if ( !(Test-Path $dashboardConfigPath -PathType Container) )
@@ -184,34 +184,34 @@ param
             Invoke-CommandScript $environmentVariablesScriptPath
         }
         
-        $envSchedulerHome = if ( $env:SCHEDULER_HOME ) { $env:SCHEDULER_HOME } else { $dashboardInstallPath }
+        $envSchedulerHome = if ( $SCRIPT:jsEnv['SCHEDULER_HOME'] ) { $SCRIPT:jsEnv['SCHEDULER_HOME'] } else { $dashboardInstallPath }
 
-        $envSchedulerData = if ( $env:SCHEDULER_DATA ) { $env:SCHEDULER_DATA } else { $dashboardConfigPath }
+        $envSchedulerData = if ( $SCRIPT:jsEnv['SCHEDULER_DATA'] ) { $SCRIPT:jsEnv['SCHEDULER_DATA'] } else { $dashboardConfigPath }
 
-        $envSchedulerHotFolder = if ( $env:SCHEDULER_HOT_FOLDER ) { $env:SCHEDULER_HOT_FOLDER } else { "$($envSchedulerData)/config/live" }
+        $envSchedulerHotFolder = if ( $SCRIPT:jsEnv['SCHEDULER_HOT_FOLDER'] ) { $SCRIPT:jsEnv['SCHEDULER_HOT_FOLDER'] } else { "$($envSchedulerData)/config/live" }
 
-        $envJavaHome = if ( $env:JAVA_HOME ) { $env:JAVA_HOME } else { "$($env:ProgramFiles)\Java\jre8" }
+        $envJavaHome = if ( $SCRIPT:jsEnv['JAVA_HOME'] ) { $SCRIPT:jsEnv['JAVA_HOME'] } else { "$($env:ProgramFiles)\Java\jre8" }
         
-        $envJavaOptions = if ( $env:JAVA_OPTIONS ) { $env:JAVA_OPTIONS } else { '-Xms128m -Xmx256m' }
+        $envJavaOptions = if ( $SCRIPT:jsEnv['JAVA_OPTIONS'] ) { $SCRIPT:jsEnv['JAVA_OPTIONS'] } else { '-Xms128m -Xmx256m' }
 
-        $envLogBridge = if ( $env:LOG_BRIDGE ) { $env:LOG_BRIDGE } else { 'log4j' }
+        $envLogBridge = if ( $SCRIPT:jsEnv['LOG_BRIDGE'] ) { $SCRIPT:jsEnv['LOG_BRIDGE'] } else { 'log4j' }
 
-        if ( !$env:LOG4JPROP -and ( Test-Path -Path "$($dashboardInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
+        if ( !$SCRIPT:jsEnv['LOG4JPROP'] -and ( Test-Path -Path "$($dashboardInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
         {
             $envLog4JProp = "-Dlog4j.configuration=`"file:///$($dashboardInstallPath -replace "\\","/")/lib/JID-log4j.properties`""
         } else {
-            $envLog4JProp = $env:LOG4JPROP
+            $envLog4JProp = $SCRIPT:jsEnv['LOG4JPROP']
         }
 
-        $envHibernateConfigurationFile = if ( $env:HIBERNATE_CONFIGURATION_FILE ) { $env:HIBERNATE_CONFIGURATION_FILE } else { "$($envSchedulerData)/config/hibernate.cfg.xml" }
+        $envHibernateConfigurationFile = if ( $SCRIPT:jsEnv['HIBERNATE_CONFIGURATION_FILE'] ) { $SCRIPT:jsEnv['HIBERNATE_CONFIGURATION_FILE'] } else { "$($envSchedulerData)/config/hibernate.cfg.xml" }
         
-        $envEnableJoe = if ( $env:ENABLE_JOE ) { $env:ENABLE_JOE } else { 'false' }
+        $envEnableJoe = if ( $SCRIPT:jsEnv['ENABLE_JOE'] ) { $SCRIPT:jsEnv['ENABLE_JOE'] } else { 'false' }
         
-        $envEnableJoc = if ( $env:ENABLE_JOC ) { $env:ENABLE_JOC } else { 'true' }
+        $envEnableJoc = if ( $SCRIPT:jsEnv['ENABLE_JOC'] ) { $SCRIPT:jsEnv['ENABLE_JOC'] } else { 'true' }
         
-        $envEnableJoc = if ( $env:ENABLE_EVENTS ) { $env:ENABLE_EVENTS } else { 'false' }
+        $envEnableJoc = if ( $SCRIPT:jsEnv['ENABLE_EVENTS'] ) { $SCRIPT:jsEnv['ENABLE_EVENTS'] } else { 'false' }
         
-        $envEnableJoc = if ( $env:ENABLE_JOB_START ) { $env:ENABLE_JOB_START } else { 'true' }
+        $envEnableJoc = if ( $SCRIPT:jsEnv['ENABLE_JOB_START'] ) { $SCRIPT:jsEnv['ENABLE_JOB_START'] } else { 'true' }
         
         if ( $DebugPreferences -eq "Continue" )
         {

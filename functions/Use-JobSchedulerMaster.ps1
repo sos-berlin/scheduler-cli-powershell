@@ -94,7 +94,7 @@ Use-JobSchedulerMaster -Url http://localhost:4444 -Id scheduler110
 Specifies the URL for a local master and imports settings from the the JobScheduler Master with ID *scheduler110*.
 The installation path is determined from the default value of the -BasePath parameter.
 
-Cmdlets that require a local Master can be used, e.g. Install-Service, Remove-Service, Start-Master.
+Cmdlets that require a local Master can be used, e.g. Install-JobSchedulerService, Remove-JobSchedulerService, Start-JobSchedulerMaster.
 
 .EXAMPLE
 Use-JobSchedulerMaster -InstallPath "C:\Program Files\sos-berlin.com\jobscheduler\scheduler110"
@@ -187,6 +187,8 @@ param
             $SCRIPT:jsProxyCredentials = $ProxyCredentials
         }
         
+		$SCRIPT:jsEnv = @{}
+
         $SCRIPT:jsNoCache = $NoCache
         $SCRIPT:jsHasCache = $false
 		$SCRIPT:jsHasAgentCache = $false
@@ -254,57 +256,57 @@ param
         
             $SCRIPT:js.Install.Directory = $InstallPath
             
-            if ( $env:SCHEDULER_ID )
+            if ( $SCRIPT:jsEnv['SCHEDULER_ID'] )
             {            
-                $SCRIPT:js.Id = $env:SCHEDULER_ID
+                $SCRIPT:js.Id = $SCRIPT:jsEnv['SCHEDULER_ID']
             }
         
-            if ( $env:SCHEDULER_HOME )
+            if ( $SCRIPT:jsEnv['SCHEDULER_HOME'] )
             {
-                $SCRIPT:js.Install.Directory = $env:SCHEDULER_HOME
+                $SCRIPT:js.Install.Directory = $SCRIPT:jsEnv['SCHEDULER_HOME']
             }
         
-            if ( $env:SCHEDULER_DATA )
+            if ( $SCRIPT:jsEnv['SCHEDULER_DATA'] )
             {
-                $SCRIPT:js.Config.Directory = $env:SCHEDULER_DATA
+                $SCRIPT:js.Config.Directory = $SCRIPT:jsEnv['SCHEDULER_DATA']
             }
         
-            if ( $env:SOS_INI )
+            if ( $SCRIPT:jsEnv['SOS_INI'] )
             {
-                $SCRIPT:js.Config.SosIni = $env:SOS_INI
+                $SCRIPT:js.Config.SosIni = $SCRIPT:jsEnv['SOS_INI']
             }
         
-            if ( $env:SCHEDULER_INI )
+            if ( $SCRIPT:jsEnv['SCHEDULER_INI'] )
             {
-                $SCRIPT:js.Config.FactoryIni = $env:SCHEDULER_INI
+                $SCRIPT:js.Config.FactoryIni = $SCRIPT:jsEnv['SCHEDULER_INI']
             }
         
-            if ( $env:SCHEDULER_PID )
+            if ( $SCRIPT:jsEnv['SCHEDULER_PID'] )
             {
-                $SCRIPT:js.Install.PidFile = $env:SCHEDULER_PID
+                $SCRIPT:js.Install.PidFile = $SCRIPT:jsEnv['SCHEDULER_PID']
             }
         
-            if ( $env:SCHEDULER_CLUSTER_OPTIONS )
+            if ( $SCRIPT:jsEnv['SCHEDULER_CLUSTER_OPTIONS'] )
             {
-                $SCRIPT:js.Install.ClusterOptions = $env:SCHEDULER_CLUSTER_OPTIONS
+                $SCRIPT:js.Install.ClusterOptions = $SCRIPT:jsEnv['SCHEDULER_CLUSTER_OPTIONS']
             }
         
-            if ( $env:SCHEDULER_PARAMS )
+            if ( $SCRIPT:jsEnv['SCHEDULER_PARAMS'] )
             {
-                $SCRIPT:js.Install.Params = $env:SCHEDULER_PARAMS
+                $SCRIPT:js.Install.Params = $SCRIPT:jsEnv['SCHEDULER_PARAMS']
             }
         
-            if ( $env:SCHEDULER_START_PARAMS )
+            if ( $SCRIPT:jsEnv['SCHEDULER_START_PARAMS'] )
             {
-                $SCRIPT:js.Install.StartParams = $env:SCHEDULER_START_PARAMS
+                $SCRIPT:js.Install.StartParams = $SCRIPT:jsEnv['SCHEDULER_START_PARAMS']
             }
         
-            if ( $env:SCHEDULER_BIN )
+            if ( $SCRIPT:jsEnv['SCHEDULER_BIN'] )
             {
-                $SCRIPT:js.Install.ExecutableFile = $env:SCHEDULER_BIN
+                $SCRIPT:js.Install.ExecutableFile = $SCRIPT:jsEnv['SCHEDULER_BIN']
             }
-        
-            $schedulerXmlPath = $env:SCHEDULER_DATA + '/config/scheduler.xml'
+
+            $schedulerXmlPath = $SCRIPT:jsEnv['SCHEDULER_DATA'] + '/config/scheduler.xml'
             if ( Test-Path $schedulerXmlPath -PathType Leaf )
             {
                 $configResponse = ( Select-XML -Path $schedulerXmlPath -Xpath '/spooler/config' ).Node

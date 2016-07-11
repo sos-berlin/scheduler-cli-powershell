@@ -84,7 +84,7 @@ Stops the JobScheduler Windows service with normal termination,
 i.e. with -Action "terminate" without any timeouts and cluster options being applied.
 
 .EXAMPLE
-Stop-Master -Action abort -Restart
+Stop-JobSchedulerMaster -Action abort -Restart
 
 Stops the JobScheduler instance by immediately killing any tasks and aborting the JobScheduler Master.
 After shutdown the JobScheduler instance is restarted.

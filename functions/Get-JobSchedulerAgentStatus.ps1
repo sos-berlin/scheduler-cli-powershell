@@ -20,7 +20,7 @@ This parameter cannot be specified if the -Agents parameter is used.
 .PARAMETER Agents
 Specifies an array of URLs that point to Agents. This is useful if a number of Agents
 should be checked at the same time, e.g. should the Agents from the result of the
-Get-AgentCluster cmdlet be checked.
+Get-JobSchedulerAgentCluster cmdlet be checked.
 
 This parameter cannot be specified if the -Url parameter is used.
 

@@ -9,7 +9,7 @@ Updating jobs includes operations to stop and unstop jobs.
 
 Jobs to be stopped are selected
 
-* by a pipelined object, e.g. the output of the Get-Job cmdlet
+* by a pipelined object, e.g. the output of the Get-JobSchedulerJob cmdlet
 * by specifying an individual job with the -Job parameter.
 
 .PARAMETER Job

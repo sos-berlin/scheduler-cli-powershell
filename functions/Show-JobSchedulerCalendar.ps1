@@ -5,7 +5,7 @@ function Show-JobSchedulerCalendar
 Shows next start dates for jobs and orders of JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Get-Calendar -Display -NoOutputs
+This cmdlet is an alias for Get-JobSchedulerCalendar -Display -NoOutputs
 
 .PARAMETER Directory
 Optionally specifies the folder for which order and job start times should be returned. The directory is determined

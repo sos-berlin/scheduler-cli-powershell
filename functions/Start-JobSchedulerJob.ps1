@@ -5,7 +5,7 @@ function Start-JobSchedulerJob
 Starts a number of jobs in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-Job -Action "start"
+This cmdlet is an alias for Update-JobSchedulerJob -Action "start"
 
 .PARAMETER Job
 Specifies the full path and name of a job.

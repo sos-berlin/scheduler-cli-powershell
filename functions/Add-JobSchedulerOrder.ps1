@@ -58,7 +58,7 @@ with the order object. This parameter is intended for a situation when no order 
 is required when executing the cmdlet.
 
 .INPUTS
-This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Order cmdlet.
+This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of order objects.

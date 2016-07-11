@@ -126,7 +126,7 @@ param
         {
             # standalone instance or included with Master
             $editorInstallPath = $InstallPath
-        } elseif ( $SCRIPT:js.Local ) {
+        } elseif ( $SCRIPT:js.Local ) {		
             # instance included with Master
             $editorInstallPath = $SCRIPT:js.Install.Directory
         } elseif ( $InstallBasePath ) {
@@ -136,7 +136,7 @@ param
         
         if ( !$editorInstallPath )
         {
-            throw "$($MyInvocation.MyCommand.Name): no installation path specified, use -Id or -InstallPath parameter or Use-Master -InstallPath cmdlet"
+            throw "$($MyInvocation.MyCommand.Name): no installation path specified, use -Id or -InstallPath parameter or Use-JobSchedulerMaster -InstallPath cmdlet"
         }
         
         if ( !(Test-Path $editorInstallPath -PathType Container) )
@@ -161,7 +161,7 @@ param
 
         if ( !$editorConfigPath )
         {
-            throw "$($MyInvocation.MyCommand.Name): no configuration path specified, use -ConfigPath parameter or Use-Master cmdlet"
+            throw "$($MyInvocation.MyCommand.Name): no configuration path specified, use -ConfigPath parameter or Use-JobSchedulerMaster cmdlet"
         }
         
         if ( !(Test-Path $editorConfigPath -PathType Container) )
@@ -183,28 +183,28 @@ param
             Invoke-CommandScript $environmentVariablesScriptPath
         }
         
-        $envSchedulerHome = if ( $env:SCHEDULER_HOME ) { $env:SCHEDULER_HOME } else { $editorInstallPath }
+        $envSchedulerHome = if ( $SCRIPT:jsEnv['SCHEDULER_HOME'] ) { $SCRIPT:jsEnv['SCHEDULER_HOME'] } else { $editorInstallPath }
 
-        $envSchedulerData = if ( $env:SCHEDULER_DATA ) { $env:SCHEDULER_DATA } else { $editorConfigPath }
+        $envSchedulerData = if ( $SCRIPT:jsEnv['SCHEDULER_DATA'] ) { $SCRIPT:jsEnv['SCHEDULER_DATA'] } else { $editorConfigPath }
 
-        $envSchedulerHotFolder = if ( $env:SCHEDULER_HOT_FOLDER ) { $env:SCHEDULER_HOT_FOLDER } else { "$($envSchedulerData)/config/live" }
+        $envSchedulerHotFolder = if ( $SCRIPT:jsEnv['SCHEDULER_HOT_FOLDER'] ) { $SCRIPT:jsEnv['SCHEDULER_HOT_FOLDER'] } else { "$($envSchedulerData)/config/live" }
 
-        $envSosJoeHome = if ( $env:SOS_JOE_HOME ) { $env:SOS_JOE_HOME } else { $editorConfigPath }
+        $envSosJoeHome = if ( $SCRIPT:jsEnv['SOS_JOE_HOME'] ) { $SCRIPT:jsEnv['SOS_JOE_HOME'] } else { $editorConfigPath }
 
-        $envJavaHome = if ( $env:JAVA_HOME ) { $env:JAVA_HOME } else { "$($env:ProgramFiles)\Java\jre8" }
+        $envJavaHome = if ( $SCRIPT:jsEnv['JAVA_HOME'] ) { $SCRIPT:jsEnv['JAVA_HOME'] } else { "$($env:ProgramFiles)\Java\jre8" }
 
-        $envJavaOptions = if ( $env:JAVA_OPTIONS ) { $env:JAVA_OPTIONS }
+        $envJavaOptions = if ( $SCRIPT:jsEnv['JAVA_OPTIONS'] ) { $SCRIPT:jsEnv['JAVA_OPTIONS'] }
 
-        $envLogBridge = if ( $env:LOG_BRIDGE ) { $env:LOG_BRIDGE }
+        $envLogBridge = if ( $SCRIPT:jsEnv['LOG_BRIDGE'] ) { $SCRIPT:jsEnv['LOG_BRIDGE'] }
 
-        if ( !$env:LOG4JPROP -and ( Test-Path -Path "$($editorInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
+        if ( !$SCRIPT:jsEnv['LOG4JPROP'] -and ( Test-Path -Path "$($editorInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
         {
             $envLog4JProp = "-Dlog4j.configuration=`"file:///$($editorInstallPath -replace "\\","/")/lib/JOE-log4j.properties`""
         } else {
-            $envLog4JProp = $env:LOG4JPROP
+            $envLog4JProp = $SCRIPT:jsEnv['LOG4JPROP']
         }
 
-        $envJavaHome = if ( $env:CAIRO_JAVA_OPTION ) { $env:CAIRO_JAVA_OPTION } else { '-Dorg.eclipse.swt.internal.gtk.cairoGraphics=false' }
+        $envCairoJavaOptions = if ( $SCRIPT:jsEnv['CAIRO_JAVA_OPTION'] ) { $SCRIPT:jsEnv['CAIRO_JAVA_OPTION'] } else { '-Dorg.eclipse.swt.internal.gtk.cairoGraphics=false' }
         
         if ( $DebugPreferences -eq "Continue" )
         {
@@ -228,7 +228,7 @@ param
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler Editor: $($command)"
         Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)"
-
+$script:jsEnv
         Set-Location -Path $currentLocation
     }
 }

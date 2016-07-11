@@ -5,7 +5,7 @@ function Stop-JobSchedulerJob
 Stops a number of jobs in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-Job -Action "stop"
+This cmdlet is an alias for Update-JobSchedulerJob -Action "stop"
 
 .PARAMETER Job
 Specifies the full path and name of a job.
