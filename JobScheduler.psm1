@@ -319,9 +319,13 @@ function Create-OrderObject()
     $order | Add-Member -Membertype NoteProperty -Name Job -Value ''
     $order | Add-Member -Membertype NoteProperty -Name At -Value ''
     $order | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name StartTime -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name EndTime -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name Task -Value ''
     $order | Add-Member -Membertype NoteProperty -Name StateText -Value ''
     $order | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
     $order | Add-Member -Membertype NoteProperty -Name Log -Value ''
+    $order | Add-Member -Membertype NoteProperty -Name HistoryId -Value ''
 
     $order
 }

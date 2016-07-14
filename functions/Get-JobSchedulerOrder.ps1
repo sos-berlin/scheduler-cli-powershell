@@ -7,7 +7,7 @@ Returns a number of active orders from the JobScheduler Master.
 .DESCRIPTION
 Orders are returned if they are present in the JobScheduler Master.
 No ad hoc orders are returned that are completed and not active
-with a Master. For information on such orders consider the Get-JobSchedulerSingleOrder cmdlet.
+with a Master. For information on such orders consider the Get-JobSchedulerOrderHistory cmdlet.
 
 Orders are selected from a JobScheduler Master
 
@@ -115,11 +115,6 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        if ( $Suspended -and $Setback )
-        {
-            throw "$($MyInvocation.MyCommand.Name): parameters -Suspended and -Setback cannot be combined"
-        }
-        
         $orderCount = 0
     }
         
@@ -198,7 +193,12 @@ param
         
         if ( $Suspended )
         {
-            $xPathOrder = " and @suspended = 'yes'"
+			if ( $Setback )
+			{
+				$xPathOrder = " and ( @suspended = 'yes' or @setback )"
+			} else {
+				$xPathOrder = " and @suspended = 'yes'"
+			}
         } elseif ( $Setback ) {
             $xPathOrder = ' and @setback'
         }    
@@ -276,6 +276,8 @@ param
                 $o.LogFile = $orderNode.Node.log_file
                 $o.Job = $orderNode.Node.job
                 $o.NextStartTime = $orderNode.Node.next_start_time
+                $o.StartTime = $orderNode.Node.start_time
+                $o.Task = $orderNode.Node.task
                 $o.StateText = $orderNode.Node.state_text
                 
                 if ( $WithLog )
@@ -303,4 +305,3 @@ param
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-
