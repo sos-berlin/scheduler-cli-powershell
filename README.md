@@ -74,25 +74,36 @@ As a first operation after importing the module it is required to execute the Us
 
 ## Run Commands
 
+* `PS C:\> Use-JobSchedulerMaster`
+    * Cmdlets come with a full name that includes the term JobScheduler:
+* `PS C:\> Use-JSMaster`
+    * The term JobScheduler can be abbreviated to JS:
+* `PS C:\> Use-Master`
+    * The term JobScheduler can further be omitted if the resulting alias does not conflict with existing cmdlets:
+    * To prevent conflicts with existing cmdlets from other modules no conflicting aliases are created. This includes aliases for cmdlets from the PowerShell Core as e.g. Get-Job, Start-Job, Stop-Job etc.
+* `PS C:\> Get-Command -Module JobScheduler`
+  * provides the complete list of cmdlets.
+* `PS C:\> Get-Help Get-Task -detailed`
+  * displays help information for each cmdlet.
+
+## Command Samples
+
 * `PS C:\> Show-Status`
   * shows the summary information of a JobScheduler Master.
-* `PS C:\> (Get-Job).count`
+* `PS C:\> (Get-JobSchedulerJob).count`
   * shows the number of jobs that are available.
 * `PS C:\> (Get-Task).count`
   * shows the number of tasks that are currently running.
-* `PS C:\> Get-Job /sos | Get-Task | Stop-Task`
+* `PS C:\> Get-JobSchedulerJob /sos | Get-Task | Stop-Task`
   * stops all running tasks from the specified folder.
 * `PS C:\> $orders = Get-Order /sos`
   * collects the list of orders from a directory and stores it in a variable.
 * `PS C:\> $orders = ( Get-Order /my_jobs -NoPermanent | Suspend-Order )`
   * retrieves temporary ad hoc orders from the *my_jobs* directory and any subfolders.
   * all temporary orders are suspended and the list of order objects is stored in a variable.
-* `PS C:\> Get-Command -Module JobScheduler`
-  * provides the complete list of cmdlets.
-* `PS C:\> Get-Help Get-Task -detailed`
-  * displays help information for each cmdlet.
  
 # Further Reading
 
 * [PowerShell Command Line Interface - Introduction](https://kb.sos-berlin.com/x/cID4)
+* [PowerShell Command Line Interface - Use Cases](https://kb.sos-berlin.com/x/4oL4)
 * [PowerShell Command Line Interface - Cmdlets](https://kb.sos-berlin.com/x/aID4)
