@@ -11,16 +11,24 @@ The JobScheduler CLI module supports Windows PowerShell 2.0 and newer.
 The JobScheduler Command Line Interface is used for the following 
 areas of operation:
 
-* work as a replacement for the command script .\bin\jobscheduler.cmd:
-  * provide operations for installing and removing the JobScheduler Windows service
-  * starting and stopping JobScheduler instances including active and passive clusters
+* work as a replacement for command scripts
+    * JobScheduler start script `.\bin\jobscheduler.cmd`:
+        * provide operations for installing and removing the JobScheduler Windows service
+        * starting and stopping JobScheduler instances including active and passive clusters
+    * Job Editor (JOE) start script `.\bin\jobeditor.cmd`
+    * JobScheduler Dashboard (JID) start script `.\bin\dashboard.cmd`
+    * JobScheduler Event script `.\bin\jobscheduler_event.cmd`
 * provide bulk operations:
-  * select jobs, job chains, orders and tasks
-  * manage orders with operations for start, stop and removal
-  * terminate tasks
+    * select jobs, job chains, orders and tasks
+    * manage orders with operations for start, stop and removal
+    * suspend and resume jobs, job chains and orders
+    * terminate tasks
 * schedule jobs and orders:
-  * add orders to job chains
-  * start jobs
+    * add orders to job chains
+    * start jobs
+* manage Agents
+    * retrieve Agent clusters
+    * check Agent status
  
 Find more information and documentation of cmdlets at [PowerShell Command Line Interface](https://kb.sos-berlin.com/x/cID4)
 
