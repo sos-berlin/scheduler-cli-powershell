@@ -11,7 +11,7 @@ The JobScheduler CLI module supports Windows PowerShell 2.0 and newer.
 The JobScheduler Command Line Interface is used for the following 
 areas of operation:
 
-* work as a replacement for command scripts
+* work as a replacement for existing command scripts:
     * JobScheduler start script `.\bin\jobscheduler.cmd`:
         * provide operations for installing and removing the JobScheduler Windows service
         * starting and stopping JobScheduler instances including active and passive clusters
@@ -26,7 +26,7 @@ areas of operation:
 * schedule jobs and orders:
     * add orders to job chains
     * start jobs
-* manage Agents
+* manage Agents:
     * retrieve Agent clusters
     * check Agent status
  
@@ -65,20 +65,20 @@ Hint: you can add the `Import-Module` command to your PowerShell user profile to
 
 ## Use a JobScheduler Master 
 
-As a first operation after importing the module it is required to execute the Use-Master cmdlet:
+As a first operation after importing the module it is recommended to execute the Use-Master cmdlet:
 
 * `PS C:\> Use-Master <Url>`  or  `PS C:\> Use-Master -Url <Url>`
- * specifies the URL for which the JobScheduler Master is available. This is the same URL that you would use when opening the JOC GUI in your browser, e.g. `http://localhost:4444`. Do not omit the protocol (http/https) for the URL.
- * allows to execute cmdlets for the specified Master independently from the server and operating system that the JobScheduler Master is operated for, i.e. you can use PowerShell cmdlets to manage a JobScheduler Master running on a Linux box.
+ * specifies the URL for which the JobScheduler Master is available. This is the same URL that you would use when opening the JOC GUI in your browser, e.g. `http://localhost:4444`. When omitting the protocol (http/https) for the URL then http is assumed.
+ * allows to execute cmdlets for the specified JobScheduler Master independently from the server and operating system that the  Master is operated for, i.e. you can use PowerShell cmdlets to manage a JobScheduler Master running e.g. on a Linux box.
  * specifying the URL is not sufficient to manage the Windows Service of the respective Master, see below.
 * `PS C:\> Use-Master -Id <JobSchedulerID>`
- * references the JobScheduler ID that has been assigned during installation of a Master. 
+ * references the JobScheduler ID that has been assigned during installation of a JobScheduler Master. 
  * adds the JobScheduler ID to the assumed installation base path. A typical installation path would be `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10` with `scheduler1.10` being the JobScheduler ID.
 * `PS C:\> Use-Master -InstallPath <InstallationPath>`
  * specifies the full installation path, e.g. `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10`, for a locally available JobScheduler Master.
-* `PS C:\> Use-Master <Url> <JobSchedulerID>`
- * specify both URL and JobScheduler ID (recommended). 
- * determines if the Master with the specified *JobSchedulerID* is locally available.
+* `PS C:\> Use-Master <Url> <JobSchedulerID>` or `PS C:\> Use-Master -Url <Url> -Id <JobSchedulerID>`
+ * specifies both URL and JobScheduler ID.
+ * determines if the JobScheduler Master with the specified *JobSchedulerID* is locally available.
 
 ## Run Commands
 
@@ -88,7 +88,7 @@ As a first operation after importing the module it is required to execute the Us
     * The term JobScheduler can be abbreviated to JS:
 * `PS C:\> Use-Master`
     * The term JobScheduler can further be omitted if the resulting alias does not conflict with existing cmdlets:
-    * To prevent conflicts with existing cmdlets from other modules no conflicting aliases are created. This includes aliases for cmdlets from the PowerShell Core as e.g. Get-Job, Start-Job, Stop-Job etc.
+    * To prevent conflicts with existing cmdlets from other modules no conflicting aliases are created. This includes aliases for cmdlets from the PowerShell Core as e.g. Get-Job, Start-Job, Stop-Job etc. and cmdlets from other modules loaded prior to the JobScheduler CLI.
 * `PS C:\> Get-Command -Module JobScheduler`
   * provides the complete list of cmdlets.
 * `PS C:\> Get-Help Get-Task -detailed`
@@ -97,7 +97,7 @@ As a first operation after importing the module it is required to execute the Us
 ## Command Samples
 
 * `PS C:\> Show-Status`
-  * shows the summary information of a JobScheduler Master.
+  * shows the summary information for a JobScheduler Master.
 * `PS C:\> (Get-JobSchedulerJob).count`
   * shows the number of jobs that are available.
 * `PS C:\> (Get-Task).count`
