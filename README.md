@@ -83,24 +83,26 @@ As a first operation after importing the module it is recommended to execute the
 ## Run Commands
 
 * `PS C:\> Use-JobSchedulerMaster`
-    * Cmdlets come with a full name that includes the term JobScheduler:
+    * Cmdlets come with a full name that includes the term JobScheduler.
 * `PS C:\> Use-JSMaster`
-    * The term JobScheduler can be abbreviated to JS:
+    * The term JobScheduler can be abbreviated to JS.
 * `PS C:\> Use-Master`
-    * The term JobScheduler can further be omitted if the resulting alias does not conflict with existing cmdlets:
+    * The term JobScheduler can further be omitted if the resulting alias does not conflict with existing cmdlets.
     * To prevent conflicts with existing cmdlets from other modules no conflicting aliases are created. This includes aliases for cmdlets from the PowerShell Core as e.g. Get-Job, Start-Job, Stop-Job etc. and cmdlets from other modules loaded prior to the JobScheduler CLI.
 * `PS C:\> Get-Command -Module JobScheduler`
   * provides the complete list of cmdlets.
-* `PS C:\> Get-Help Get-Task -detailed`
+* `PS C:\> Get-Help Use-Master -detailed`
   * displays help information for each cmdlet.
 
 ## Command Samples
 
 * `PS C:\> Show-Status`
   * shows the summary information for a JobScheduler Master.
-* `PS C:\> (Get-JobSchedulerJob).count`
+* `PS C:\> ( Get-JobChain ).count`
+  * shows the number of job chains that are available.
+* `PS C:\> ( Get-JobSchedulerJob ).count`
   * shows the number of jobs that are available.
-* `PS C:\> (Get-Task).count`
+* `PS C:\> ( Get-Task ).count`
   * shows the number of tasks that are currently running.
 * `PS C:\> Get-JobSchedulerJob /sos | Get-Task | Stop-Task`
   * stops all running tasks from the specified folder.
