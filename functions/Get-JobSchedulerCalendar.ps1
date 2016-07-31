@@ -30,7 +30,8 @@ Otherwise the -Job parameter is assumed to include the full path and name of the
 .PARAMETER Limit
 Limits the number of entries that are returned in order avoid too large a result. 
 Because calender entries are not sorted according to time but by object, this command does not return 
-the next 100 entries but effectively 100 random entries.
+the next 100 entries for a specific job or job chain but effectively 100 entries from which the
+specified jobs and job chains are selected.
 
 The limit should be set high enough so that entries are not lost.
 
@@ -71,6 +72,11 @@ Returns the start dates for the next 3 days.
 $startDates = Get-JobSchedulerCalendar -FromDate 2016-06-01 -ToDate 2016-06-30
 
 Returns the start dates between the specified dates.
+
+.EXAMPLE
+$startDates = Get-JobSchedulerCalendar -JobChain /holidays/some_job_chain -ToDate 2016-06-30
+
+Returns the start dates between the current date and the specified dates for any orders of the given job chain.
 
 .EXAMPLE
 Get-JobSchedulerCalendar -Display
@@ -143,10 +149,6 @@ param
         {
             if ( (Get-JobSchedulerObject-Basename $Order) -ne $Order ) # order name includes a directory
             {
-                if ( $Directory -ne '/' )
-                {
-                    # Write-Warning "$($MyInvocation.MyCommand.Name): parameter -Directory has been specified, but is replaced by by parent folder of -Order parameter"
-                }
                 $Directory = Get-JobSchedulerObject-Parent $Order
             } else { # order name includes no directory
                 # $Order = $Directory + '/' + $Order
@@ -169,9 +171,29 @@ param
             $before = "before='" + (Get-Date (Get-Date).AddDays($Days) -Format u).Replace(' ', 'T') + "'"
         }
         
-        if ( $Days -ge 1 -and $Limit -eq 100 )
+        if ( !$ToDate -and $Days -ge 1 -and $Limit -le 100 )
         {
-            $Limit = $Limit*$Days
+            $Limit = $Limit * $Days
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): using dynamic limit $($Limit) for $($Days) days" 
+        } elseif ( $ToDate -and $Limit -le 100 ) {
+            if ( $FromDate )
+            {
+                $startDate = $FromDate
+            } else {
+                $startDate = Get-Date
+            }
+            $difference = New-TimeSpan -Start $startDate -End $ToDate
+            if ( $difference.Days -gt 1 -and $difference.Days -le 10 )
+            {
+                $Limit = $Limit * $difference.Days
+            } elseif ( $difference.Days -gt 11 -and $difference.Days -le 30 ) {
+                $Limit = $Limit * [int]($difference.Days/2)
+            } elseif ( $difference.Days -gt 31 -and $difference.Days -le 100 ) {
+                $Limit = $Limit * [int]($difference.Days/3)
+            } else {
+                $Limit = $Limit * [int]($difference.Days/5)
+            }
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): using dynamic limit $($Limit) for $($difference.Days) days" 
         }
         
         $command = "<show_calendar what='orders' limit='$($Limit)' $($from) $($before)/>"

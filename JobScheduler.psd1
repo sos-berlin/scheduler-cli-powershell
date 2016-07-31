@@ -4,7 +4,7 @@
 ModuleToProcess = 'JobScheduler.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.0.1'
 
 # ID used to uniquely identify this module
 GUID = 'fcc31359-6e84-425a-9338-49ed7a807bf9'
@@ -35,6 +35,7 @@ FunctionsToExport = @(
     'Get-JobSchedulerInventory',
     'Get-JobSchedulerJob',
     'Get-JobSchedulerJobChain',
+    'Get-JobSchedulerJobHistory',
     'Get-JobSchedulerOrder',
     'Get-JobSchedulerOrderHistory',
     'Get-JobSchedulerStatus',
@@ -42,6 +43,7 @@ FunctionsToExport = @(
     'Get-JobSchedulerTask',
     'Get-JobSchedulerVersion',
     'Install-JobSchedulerService',
+    'New-JobSchedulerHolidays',
     'Remove-JobSchedulerEvent',
     'Remove-JobSchedulerOrder',
     'Remove-JobSchedulerService',
@@ -56,6 +58,7 @@ FunctionsToExport = @(
     'Show-JobSchedulerAgentStatus',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
+#   'Start-JobSchedulerAgent',
     'Start-JobSchedulerDashboard',
     'Start-JobSchedulerJobEditor',
     'Start-JobSchedulerExecutableFile',

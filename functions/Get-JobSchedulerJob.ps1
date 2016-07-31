@@ -30,6 +30,11 @@ Otherwise the -Job parameter is assumed to include the full path and name of the
 
 One of the parameters -Directory, -JobChain or -Job has to be specified.
 
+.PARAMETER WithLog
+Specifies the task log to be returned. 
+
+This operation is time-consuming and should be restricted to selecting individual jobs.
+
 .PARAMETER NoSubfolders
 Specifies that no subfolders should be looked up. By default any subfolders will be searched for jobs.
 
@@ -90,6 +95,8 @@ param
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $WithLog,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $NoSubfolders,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -282,6 +289,20 @@ param
                 $j.ProcessClass = $jobNode.Node.process_class
                 $j.NextStartTime = $jobNode.Node.next_start_time
                 $j.StateText = $jobNode.Node.state_text
+
+                if ( $WithLog )
+                {
+                    $command = "<show_history job='$($j.Path)' prev='1' what='log'/>"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
+                    
+                    $jobLogXml = Send-JobSchedulerXMLCommand $js.Url $command
+                    if ( $jobLogXml )
+                    {
+                        $j.Log = (Select-XML -XML $jobLogXml -Xpath '//spooler/answer/history/history.entry/log').Node."#text"
+                    }
+                }
+                
                 $j
                 $jobCount++
             }

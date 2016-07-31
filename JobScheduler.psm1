@@ -137,7 +137,26 @@ function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo]
     {
         if ( $SCRIPT:jsLocalCommands -notcontains $command.Name )
         {
-            throw "$($command.Name): cmdlet requires a JobScheduler URL. Switch instance with the Use-JobSchedulerMaster cmdlet and specify the -Url parameter"
+            throw "$($command.Name): cmdlet requires a JobScheduler Master URL. Switch instance with the Use-JobSchedulerMaster cmdlet and specify the -Url parameter"
+        }
+    }
+}
+
+function Approve-JobSchedulerAgentCommand( [System.Management.Automation.CommandInfo] $command )
+{
+    if ( !$SCRIPT:jsAgent.Local )
+    {
+        if ( $SCRIPT:jsAgentLocalCommands -contains $command.Name )
+        {
+            throw "$($command.Name): cmdlet is available exclusively for local JobScheduler Agent. Switch instance with the Use-JobSchedulerAgent cmdlet and specify the -InstallPath parameter for a local JobScheduler Agent"
+        }
+    }
+
+    if ( !$SCRIPT:jsAgent.Url -and !$SCRIPT:jsOperations )
+    {
+        if ( $SCRIPT:jsAgentLocalCommands -notcontains $command.Name )
+        {
+            throw "$($command.Name): cmdlet requires a JobScheduler Agent URL. Switch instance with the Use-JobSchedulerAgent cmdlet and specify the -Url parameter"
         }
     }
 }
@@ -325,9 +344,16 @@ function Create-OrderObject()
     $order | Add-Member -Membertype NoteProperty -Name StateText -Value ''
     $order | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
     $order | Add-Member -Membertype NoteProperty -Name Log -Value ''
-    $order | Add-Member -Membertype NoteProperty -Name HistoryId -Value ''
 
     $order
+}
+
+function Create-OrderHistoryObject()
+{
+    $orderHistory = Create-OrderObject
+    $orderHistory | Add-Member -Membertype NoteProperty -Name HistoryId -Value ''
+
+    $orderHistory
 }
 
 function Create-JobObject()
@@ -347,8 +373,25 @@ function Create-JobObject()
     $job | Add-Member -Membertype NoteProperty -Name NextStartTime -Value ''
     $job | Add-Member -Membertype NoteProperty -Name StateText -Value ''
     $job | Add-Member -Membertype NoteProperty -Name Parameters -Value @{}
+    $job | Add-Member -Membertype NoteProperty -Name Log -Value ''
 
     $job
+}
+
+function Create-JobHistoryObject()
+{
+    $jobHistory = Create-JobObject
+
+    $jobHistory | Add-Member -Membertype NoteProperty -Name HistoryId -Value ''
+    $jobHistory | Add-Member -Membertype NoteProperty -Name AgentUrl -Value ''
+    $jobHistory | Add-Member -Membertype NoteProperty -Name Cause -Value ''
+    $jobHistory | Add-Member -Membertype NoteProperty -Name StartTime -Value ''
+    $jobHistory | Add-Member -Membertype NoteProperty -Name EndTime -Value ''
+    $jobHistory | Add-Member -Membertype NoteProperty -Name ExitCode -Value ''
+    $jobHistory | Add-Member -Membertype NoteProperty -Name Task -Value ''
+    $jobHistory | Add-Member -Membertype NoteProperty -Name Steps -Value ''
+
+    $jobHistory
 }
 
 function Create-TaskObject()
@@ -407,7 +450,13 @@ function Create-JSAgentObject()
     $jsAgentInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ''
     $jsAgentInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
     $jsAgentInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name PidFile -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name HttpPort -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name HttpsPort -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name LogDirectory -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name PidFileDirectory -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name WorkingDirectory -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name KillScript -Value ''
+    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name InstanceScript -Value ''
 
     $jsAgentConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
 
@@ -1003,6 +1052,274 @@ function Create-ParamNode( [xml] $xmlDoc, [string] $name, [string] $value )
     $paramNode.SetAttribute( 'value', $value )
         
     $paramNode
+}
+
+function Create-AgentInstanceScript( $SchedulerHome, $SchedulerData, $HttpPort='127.0.0.1:4445', $HttpsPort, $LogDirectory, $PidFileDirectory, $WorkingDirectory, $KillScript, $JavaHome, $JavaOptions )
+{
+    $script = "
+@echo off
+
+rem #  -----------------------------------------------------------------------
+rem #  Company: Software- und Organisations-Service GmbH
+rem #  Purpose: Instance (service) startscript for JobScheduler Agent
+rem #  -----------------------------------------------------------------------
+
+SETLOCAL
+
+rem ### USAGE OF THIS FILE ####################################
+rem #
+rem # This is a template for the JobScheduler Agent Instance 
+rem # script. 
+rem # It can be used as service startscript.
+rem #
+rem # Each instance of the JobScheduler Agent must have a
+rem # different HTTP port. For example if the port 4445 
+rem # is used for the instance then copy this file
+rem # 
+rem # '.\bin\jobscheduler_agent_instance.cmd-example' 
+rem # -> '.\bin\jobscheduler_agent_4445.cmd'
+rem #
+rem # and set the SCHEDULER_HTTP_PORT variable below.
+rem #
+rem # See also the other environment variables below.
+rem #
+rem ###########################################################
+
+rem ### SETTINGS ##############################################
+
+rem # This variable has to point to the installation path of 
+rem # the JobScheduler Agent.
+rem # If this variable not defined then the parent directory 
+rem # of this startscript is used.
+
+"
+    if ( $SchedulerHome )
+    {
+        $script += "
+set SCHEDULER_HOME=$($SchedulerHome)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_HOME=
+"
+    }
+
+    $script += "
+
+rem # The http port of the JobScheduler Agent can be set here,
+rem # as command line option -http-port (see usage) or as
+rem # environment variable. Otherwise the above default port 
+rem # is used.
+rem # If only a port is specified then the JobScheduler Agent 
+rem # listens to all available network interfaces.
+rem # It is the same like 0.0.0.0:port.
+rem # Use the form <ip address or hostname>:port for indicating 
+rem # which network interfaces the JobScheduler Agent should 
+rem # listen to.
+rem # The command line option -http-port beats the environment 
+rem # variable SCHEDULER_HTTP_PORT and the environment variable 
+rem # SCHEDULER_HTTP_PORT beats the default port from 
+rem # SCHEDULER_AGENT_DEFAULT_HTTP_PORT(=4445).
+rem ### NOTE:
+rem # If you start the JobScheduler Agent with the command line 
+rem # option -http-port then you must enter -http-port for 
+rem # stop, status, restart too (see usage). It's recommended 
+rem # to set this environment variable instead.
+
+"
+
+    if ( $HttpPort )
+    {
+        $script += "
+set SCHEDULER_HTTP_PORT=$($HttpPort)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_HTTP_PORT=
+"        
+    }
+
+    $script += "
+
+rem # In addition to the http port a https port of the 
+rem # JobScheduler Agent can be set here, as command line option 
+rem # -https-port (see usage) or as environment variable.
+rem # If only a port is specified then the JobScheduler Agent 
+rem # listens to all available network interfaces.
+rem # It is the same like 0.0.0.0:port.
+rem # Use the form <ip address or hostname>:port for indicating 
+rem # which network interfaces the JobScheduler Agent should 
+rem # listen to.
+rem # The command line option -https-port beats the environment 
+rem # variable SCHEDULER_HTTPS_PORT.
+
+"
+
+    if ( $HttpsPort )
+    {
+        $script += "
+set SCHEDULER_HTTPS_PORT=$($HttpsPort)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_HTTPS_PORT=
+"        
+    }
+
+    $script += "
+
+rem # Set the directory where the JobScheduler Agent has the
+rem # configuration, logs, etc. 
+rem # This directory must be unique for each instance of the 
+rem # JobScheduler Agent. The default is
+rem # SCHEDULER_HOME\var_SCHEDULER_HTTP_PORT
+rem # Make sure that the JobScheduler Agent user has read/write 
+rem # permissions
+
+"
+
+    if ( $SchedulerData )
+    {
+        $script += "
+set SCHEDULER_DATA=$($SchedulerData)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_DATA=
+"
+    }
+
+    $script += "
+ 
+rem # Set the directory where the JobScheduler Agent log file 
+rem # is created. The default is SCHEDULER_DATA\logs
+rem ### NOTE:
+rem # Make sure that the JobScheduler Agent user has write 
+rem # permissions
+
+"
+
+    if ( $LogDirectory )
+    {
+        $script += "
+set SCHEDULER_LOG_DIR=$($LogDirectory)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_LOG_DIR=
+"
+    }
+
+    $script += "
+
+rem # Set the directory where the JobScheduler Agent pid file 
+rem # is created. The default is SCHEDULER_LOG_DIR
+rem ### NOTE:
+rem # Make sure that the JobScheduler Agent user has write 
+rem # permissions
+
+"
+
+    if ( $PidFileDirectory )
+    {
+        $script += "
+set SCHEDULER_PID_FILE_DIR=$($PidFileDirectory)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_PID_FILE_DIR=
+"
+    }
+
+    $script += "
+
+rem # The working directory of the JobScheduler Agent is  
+rem # SCHEDULER_HOME. Here you can set a different working 
+rem # directory (e.g. %USERPROFILE%).
+
+"
+
+    if ( $WorkingDirectory )
+    {
+        $script += "
+set SCHEDULER_WORK_DIR=$($WorkingDirectory)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_WORK_DIR=
+"
+    }
+
+    $script += "
+
+rem # Set the location of a script which is called by the 
+rem # JobScheduler Agent to kill a process and it's children.
+
+"
+
+    if ( $KillScript )
+    {
+        $script += "
+set SCHEDULER_KILL_SCRIPT=$($KillScript)
+"
+    } else {
+        $script += "
+rem set SCHEDULER_KILL_SCRIPT=
+"
+    }
+
+    $script += "
+
+rem # Actually JAVA_HOME is already set. If you want to use 
+rem # another Java environment then you can set it here. If  
+rem # no JAVA_HOME is set then the Java from the path is used.
+
+"
+
+    if ( $JavaHome )
+    {
+        $script += "
+set JAVA_HOME=$($JavaHome)
+"
+    } else {
+        $script += "
+rem set JAVA_HOME=
+"
+    }
+
+    $script += "
+
+rem # With Java 1.8 the initial memory allocation has changed, 
+rem # for details see https://kb.sos-berlin.com/x/aIC9
+rem # As a result on start-up of the JobScheduler Agent an 
+rem # excessive amount of virtual memory is assigned by Java.  
+rem # The environment variable JAVA_OPTIONS can use to apply 
+rem # memory settings such as '-Xms100m' (default).
+
+"
+
+    if ( $JavaOptions )
+    {
+        $script += "
+set JAVA_OPTIONS=$($JavaOptions)
+"
+    } else {
+        $script += "
+rem set JAVA_OPTIONS=
+"
+    }
+
+    $script += '
+
+rem ###########################################################
+
+if not defined SCHEDULER_HOME set SCHEDULER_HOME=%~dp0..
+
+"%SCHEDULER_HOME%\bin\jobscheduler_agent.cmd" %*
+
+ENDLOCAL
+'
+    $script
 }
 
 # ----------------------------------------------------------------------

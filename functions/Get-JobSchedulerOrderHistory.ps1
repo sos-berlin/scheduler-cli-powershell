@@ -2,10 +2,10 @@ function Get-JobSchedulerOrderHistory
 {
 <#
 .SYNOPSIS
-Returns a number of orders from the JobScheduler history.
+Returns a number of JobScheduler history entries for orders.
 
 .DESCRIPTION
-Orders are returned independently from the fact if they are present in the JobScheduler Master.
+Order history entries are returned independently from the fact that the order is present in the JobScheduler Master.
 This includes temporary ad hoc orders to be returned that are completed and not active
 with a Master.
 
@@ -30,6 +30,12 @@ Optionally specifies the path and name of an order that should be returned.
 If the name of an order is specified then the -Directory parameter is used to determine the folder.
 Otherwise the -Order parameter is assumed to include the full path and name of the order.
 
+.PARAMETER MaxHistoryEntries
+Specifies the number of entries that are returned from the history. Entries are provided
+in descending order starting with the latest history entry.
+
+Default: 1
+
 .PARAMETER WithLog
 Specifies the order log to be returned. 
 
@@ -39,14 +45,24 @@ This operation is time-consuming and should be restricted to selecting individua
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-$orders = Get-JobSchedulerOrderHistory -JobChain /test/globals/chain1
+$history = Get-JobSchedulerOrderHistory -JobChain /test/globals/chain1
 
-Returns the orders for job chain "chain1" from the folder "/test/globals".
+Returns the latest history entry for job chain "chain1" from the folder "/test/globals".
 
 .EXAMPLE
-$orders = Get-JobSchedulerOrderHistory -JobChain /test/globals/chain1 -Order order1
+$history = Get-JobSchedulerOrderHistory -JobChain /test/globals/chain1 -Order order1
 
-Returns the order "order1" from the folder "/test/globals" with the job chain "chain1".
+Returns the latest history entry order "order1" from the folder "/test/globals" with the job chain "chain1".
+
+.EXAMPLE
+$history = Get-JobSchedulerOrderHistory -JobChain /test/globals/chain1 -MaxHistoryEntries 5
+
+Returns the 5 latest history entries for the specified job chain and includes the log output.
+
+.EXAMPLE
+$history = Get-JobSchedulerOrderHistory -JobChain /test/globals/chain1 -WithLog
+
+Returns the 5 latest history entries for the specified job chain and includes the log output.
 
 .LINK
 about_jobscheduler
@@ -61,6 +77,8 @@ param
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Order,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $MaxHistoryEntries = 1,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $WithLog
 )
@@ -69,18 +87,13 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        $orderCount = 0
+        $orderHistoryCount = 0
     }
         
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain, Order=$Order, WithLog=$WithLog"
     
-        if ( !$Directory -and !$JobChain -and !$Order )
-        {
-            throw "$($MyInvocation.MyCommand.Name): no directory, no job chain or order specified, use -Directory or -JobChain  or -Order"
-        }
-
         if ( $Directory -and $Directory -ne '/' )
         { 
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
@@ -142,7 +155,14 @@ param
         
         $xPath += ']'
 
-        $command = "<show_job_chain job_chain='$($JobChain)' what='order_history' max_orders='10'/>"        
+        if ( $WithLog )
+        {
+            $whatWithLog = ' log'
+        } else {
+            $whatWithLog = ''
+        }
+                
+        $command = "<show_job_chain job_chain='$($JobChain)' what='order_history$($whatWithLog)' max_order_history='$($MaxHistoryEntries)'/>"        
 
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
@@ -161,7 +181,7 @@ param
                     continue
                 }
         
-                $o = Create-OrderObject
+                $o = Create-OrderHistoryObject
                 $o.Order = $orderNode.Node.id
                 $o.Name = $orderNode.Node.id
                 $o.Path = $orderNode.Node.path
@@ -175,16 +195,32 @@ param
                 $o.EndTime = $orderNode.Node.end_time
                 $o.StateText = $orderNode.Node.state_text
                 $o.HistoryId = $orderNode.Node.history_id
-                
+
+#                not available from <show_job_chain>
+#                $o.Log = $orderNode.Node.log."#text"
+
+                if ( $WithLog )
+                {
+                    $command = "<show_order history_id='$($orderNode.Node.history_id)' job_chain='$($o.JobChain)' what='log'/>"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
+                    
+                    $orderLogXml = Send-JobSchedulerXMLCommand $js.Url $command
+                    if ( $orderLogXml )
+                    {
+                        $o.Log = (Select-XML -XML $orderLogXml -Xpath '//spooler/answer/order/log').Node."#text"
+                    }
+                }
+
                 $o
-                $orderCount++
+                $orderHistoryCount++
             }            
         }
     }
 
     End
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $orderCount orders found"
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $orderHistoryCount order history entries found"
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
