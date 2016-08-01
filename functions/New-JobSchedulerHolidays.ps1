@@ -76,7 +76,12 @@ This parameter is used with the -Select and -Days parameters to specify
 the interval for which start dates are caluclated, e.g. a number of working days before end of each month.
 
 .PARAMETER Weekdays
-Optionally specifies a list of weekdays for which jobs or job chains can be started.
+Optionally specifies a list of weekdays for which jobs or job chains are not started, e.g.
+due to run-time constraints.
+
+The cmdlet will not create non-working days for the specified weekdays in order to avoid 
+redundancy as it is assumed that a run-time setting anyway excludes such dates. 
+When used with the -Force parameter then the cmdlet will generate such non-working days.
 
 Weekdays kann be specified either by numbers 1..7 or by literals that are separated by a comma:
 
@@ -86,7 +91,12 @@ Weekdays kann be specified either by numbers 1..7 or by literals that are separa
 Both settings exclude Saturday and Sunday for which days the cmdlet will create non-working days.
 
 .PARAMETER NonWorkingWeekdays
-Optionally specifies a list of weekdays for which jobs or job chains cannot be started.
+Optionally specifies a list of weekdays for which jobs or job chains are not started, e.g.
+due to run-time constraints.
+
+The cmdlet will not create non-working days for the specified weekdays in order to avoid 
+redundancy as it is assumed that a run-time setting anyway excludes such dates. 
+When used with the -Force parameter then the cmdlet will generate such non-working days.
 
 Weekdays kann be specified either by numbers 1..7 or by literals that are separated by a comma:
 
@@ -123,46 +133,49 @@ Optionally specifies the newly calculated non-working days to be appended
 to an existing output file that is specified by use of the -OutputFile parameter.
 
 .EXAMPLE
-New-JobSchedulerHolidays -Select first -Days 2 -Interval year -ToDate '2018-12-31'
+New-JobSchedulerHolidays -Select first -Days 2 -Interval year -NonWorkingWeekdays 6,7 -ToDate '2018-12-31' -Force
 
-Calculates the non-working days for the second woring kday of each year from the current date until end of 2018.
+Calculates the non-working days for the second working day of each year from the current date until end of 2018.
+Saturday and Sunday are specified as non-working days and for which respective holiday dates are forced.
 
 .EXAMPLE
-New-JobSchedulerHolidays -Select first -Days 3 -Interval quarter -FromDate '2016-01-01' -ToDate '2018-12-31'
+New-JobSchedulerHolidays -Select first -Days 3 -Interval quarter -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31' -Force
 
 Calculates the non-working days for the third working day of each quarter from the specified date until end of 2018.
 
 .EXAMPLE
-New-JobSchedulerHolidays -Select first -Days 3 -Interval month -FromDate '2016-01-01' -ToDate '2018-12-31'
+New-JobSchedulerHolidays -Select first -Days 3 -Interval month -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31' -Force
 
 Calculates the non-working days for the third working day of each month from the specified date until end of 2018.
 
 .EXAMPLE
-New-JobSchedulerHolidays -Select last -Days 3 -Interval quarter -FromDate '2016-01-01' -ToDate '2018-12-31'
+New-JobSchedulerHolidays -Select last -Days 3 -Interval quarter -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31' -Force
 
 Calculates the non-working days for the third last working day of each quarter from the specified date until end of 2018.
 
 .EXAMPLE
-New-JobSchedulerHolidays -Select last -Days 3 -Interval month -FromDate '2016-01-01' -ToDate '2018-12-31'
+New-JobSchedulerHolidays -Select last -Days 3 -Interval month -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31' -Force
 
 Calculates the non-working days for the third last working day of each month from the specified date until end of 2018.
 
 .EXAMPLE
-New-JobSchedulerHolidays -Select last -Days 3 -Interval year -FromDate '2016-01-01' -ToDate '2018-12-31'
+New-JobSchedulerHolidays -Select last -Days 3 -Interval year -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31' -Force
 
 Calculates the non-working days for the third last working day of each year from the specified date until end of 2018.
 
 .EXAMPLE
-New-JobSchedulerHolidays -Select last -Days 2 -Interval week -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31'
+New-JobSchedulerHolidays -Select last -Days 2 -Interval week -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31' -Force
 
 Calculates the non-working days for the second last working day of each week (excluding Saturday and Sunday) from the specified date until end of 2018.
 
 .EXAMPLE
 $holidayFile = "$($env:ProgramFiles)\sos-berlin.com\jobscheduler\scheduler110\scheduler_data\config\live\globals\global_holidays.xml"
-New-JobSchedulerHolidays -Select first -Days 2 -Interval year -FromDate '2016-01-01' -ToDate '2018-12-31' -HolidayFiles $holidayFile
+New-JobSchedulerHolidays -Select first -Days 2 -Interval year -NonWorkingWeekdays 6,7 -FromDate '2016-01-01' -ToDate '2018-12-31' -HolidayFiles $holidayFile
 
 Calculates the non-working days for the second working day of each year from the specified date until end of 2018
 and considers non-working days from a global holidays file.
+
+No non-working days are created for Saturday and Sunday and for non-working days from the global holidays file.
 
 .LINK
 about_jobscheduler
@@ -190,7 +203,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $OutputFile,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Append
+    [switch] $Append,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Force
 )
 
     Begin
@@ -221,15 +236,26 @@ param
                     {
                         if ( ( $globalHolidays.Weekdays -contains $fromDateIndex.DayOfWeek ) -or ( $globalHolidays.Dates -contains (Get-Date $fromDateIndex -format 'yyyy-MM-dd') ) )
                         {
+                            Write-Debug ".... $($MyInvocation.MyCommand.Name): due to global holidays counting up fromDateIndex to $(Get-Date $fromDateIndex.AddDays( 1 ) -format 'yyyy-MM-dd')"
+                            if ( $Force )
+                            {
+                                $holidayNode = $xmlDoc.CreateElement( 'holiday' )
+                                $holidayNode.SetAttribute( 'date', (Get-Date $fromDateIndex -format 'yyyy-MM-dd') )
+                                $SCRIPT:holidaysNode.AppendChild( $holidayNode ) | Out-Null
+                            }
+
                             $fromDateIndex = $fromDateIndex.AddDays( 1 )
                         } else {
                             $isWorkingDay = $true
 
                             if ( $workingDayIndex -lt $daysIndex-1 )
                             {
+                                Write-Debug ".... $($MyInvocation.MyCommand.Name): adding non-working day for: $(Get-Date $fromDateIndex -format 'yyyy-MM-dd')"
                                 $holidayNode = $xmlDoc.CreateElement( 'holiday' )
                                 $holidayNode.SetAttribute( 'date', (Get-Date $fromDateIndex -format 'yyyy-MM-dd') )
                                 $SCRIPT:holidaysNode.AppendChild( $holidayNode ) | Out-Null
+                            } else {
+                                Write-Debug ".... $($MyInvocation.MyCommand.Name): no non-working day added for: $(Get-Date $fromDateIndex -format 'yyyy-MM-dd')"
                             }
                         }
                     }
@@ -248,15 +274,26 @@ param
                     {
                         if ( ( $globalHolidays.Weekdays -contains $toDateIndex.DayOfWeek ) -or ( $globalHolidays.Dates -contains (Get-Date $toDateIndex -format 'yyyy-MM-dd') ) )
                         {
+                            Write-Debug ".... $($MyInvocation.MyCommand.Name): due to global holidays counting down toDateIndex to $(Get-Date $toDateIndex.AddDays( -1 ) -format 'yyyy-MM-dd')"
+                            if ( $Force )
+                            {
+                                $holidayNode = $xmlDoc.CreateElement( 'holiday' )
+                                $holidayNode.SetAttribute( 'date', (Get-Date $toDateIndex -format 'yyyy-MM-dd') )
+                                $SCRIPT:holidaysNode.AppendChild( $holidayNode ) | Out-Null
+                            }
+                            
                             $toDateIndex = $toDateIndex.AddDays( -1 )
                         } else {
                             $isWorkingDay = $true
                             
                             if ( $workingDayIndex -gt 1 )
                             {
+                                Write-Debug ".... $($MyInvocation.MyCommand.Name): adding non-working day for: $(Get-Date $toDateIndex -format 'yyyy-MM-dd')"
                                 $holidayNode = $xmlDoc.CreateElement( 'holiday' )
                                 $holidayNode.SetAttribute( 'date', (Get-Date $toDateIndex -format 'yyyy-MM-dd') )
                                 $SCRIPT:holidaysNode.AppendChild( $holidayNode ) | Out-Null
+                            } else {
+                                Write-Debug ".... $($MyInvocation.MyCommand.Name): no non-working day added for: $(Get-Date $toDateIndex -format 'yyyy-MM-dd')"
                             }
                         }
                     }
@@ -277,19 +314,30 @@ param
                         {
                             if ( ( $globalHolidays.Weekdays -contains $fromDateIndex.DayOfWeek ) -or ( $globalHolidays.Dates -contains (Get-Date $fromDateIndex -format 'yyyy-MM-dd') ) )
                             {
+                                Write-Debug ".... $($MyInvocation.MyCommand.Name): due to global holidays counting up fromDateIndex to $(Get-Date $fromDateIndex.AddDays( 1 ) -format 'yyyy-MM-dd')"
+                                if ( $Force )
+                                {
+                                    $holidayNode = $xmlDoc.CreateElement( 'holiday' )
+                                    $holidayNode.SetAttribute( 'date', (Get-Date $fromDateIndex -format 'yyyy-MM-dd') )
+                                    $SCRIPT:holidaysNode.AppendChild( $holidayNode ) | Out-Null
+                                }
+                                
                                 $fromDateIndex = $fromDateIndex.AddDays( 1 )
                             } else {
                                 $isWorkingDay = $true
                                 
                                 if ( $workingDayIndex -lt $daysIndex-1 )
                                 {
+                                    Write-Debug ".... $($MyInvocation.MyCommand.Name): adding non-working day for: $(Get-Date $fromDateIndex -format 'yyyy-MM-dd')"
                                     $holidayNode = $xmlDoc.CreateElement( 'holiday' )
                                     $holidayNode.SetAttribute( 'date', (Get-Date $fromDateIndex -format 'yyyy-MM-dd') )
                                     $SCRIPT:holidaysNode.AppendChild( $holidayNode ) | Out-Null
                                 } else {
+                                    Write-Debug ".... $($MyInvocation.MyCommand.Name): no non-working day added for: $(Get-Date $fromDateIndex -format 'yyyy-MM-dd')"
                                 }
                             }
                         }
+                        
                         $fromDateIndex = $fromDateIndex.AddDays( 1 )
                     }
                 }
