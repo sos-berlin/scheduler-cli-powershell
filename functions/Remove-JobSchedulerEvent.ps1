@@ -87,7 +87,7 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
         
-        [xml] $xmlDoc  = "<?xml version='1.0' encoding='ISO-8859-1'?><commands/>"
+        [xml] $xmlDoc  = "<commands/>"
         $commandsNode = $xmlDoc.CreateElement( 'commands' )
 
         $eventCount = 0

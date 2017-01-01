@@ -53,12 +53,12 @@ FunctionsToExport = @(
     'Resume-JobSchedulerMaster',
     'Resume-JobSchedulerOrder',
     'Send-JobSchedulerCommand',
+    'Send-JobSchedulerWebServiceCommand',
     'Set-JobSchedulerCredentials',
     'Set-JobSchedulerOption',
     'Show-JobSchedulerAgentStatus',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
-#   'Start-JobSchedulerAgent',
     'Start-JobSchedulerDashboard',
     'Start-JobSchedulerJobEditor',
     'Start-JobSchedulerExecutableFile',
@@ -75,9 +75,9 @@ FunctionsToExport = @(
     'Update-JobSchedulerJobChain',
     'Update-JobSchedulerOrder',
     'Use-JobSchedulerAlias',
-    'Use-JobSchedulerMaster'
+    'Use-JobSchedulerMaster',
 #   'Use-JobSchedulerAgent'
-#   'Use-JobSchedulerWebService'
+    'Use-JobSchedulerWebService'
 )
 
 # # Cmdlets to export from this module

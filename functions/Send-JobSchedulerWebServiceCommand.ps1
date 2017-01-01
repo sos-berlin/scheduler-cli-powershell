@@ -1,11 +1,11 @@
-function Send-JobSchedulerCommand
+function Send-JobSchedulerWebServiceCommand
 {
 <#
 .SYNOPSIS
-Sends an XMl command to the JobScheduler Master.
+Sends an XMl command to the JobScheduler Web Service.
 
 .DESCRIPTION
-JobScheduler Master supports a number of XML commands.
+JobScheduler Web Service supports a number of XML commands.
 This cmdlet accepts XML commands and forwards them to the JobScheduler Master.
 
 .PARAMETER Command
@@ -18,12 +18,12 @@ A hashmap can be specified with name/value pairs for HTTP headers.
 This cmdlet returns the XML object of the JobScheduler response.
 
 .EXAMPLE
-$stateXml = Send-JobSchedulerCommand '<show_state/>'
+$stateXml = Send-JobSchedulerWebServiceCommand '<show_state/>'
 
 Returns summary information and inventory of jobs and job chains.
 
 .EXAMPLE
-$stateXml = Send-JobSchedulerCommand '<show_state/>' @{'Cache-Control'='no-cache'}
+$stateXml = Send-JobSchedulerWebServiceCommand '<show_state/>' @{'Cache-Control'='no-cache'}
 
 Returns summary information including the inventory while using individual HTTP headers.
 
@@ -52,9 +52,12 @@ param
             throw "$($MyInvocation.MyCommand.Name): no XML command specified, use -Command"
         }
         
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $Command"
+        $commandUrl = $jsWebService.Url.scheme + '://' + $jsWebService.Url.Authority + '/joc/api/jobscheduler/command'
+        $commandBody = "<jobscheduler_command jobschedulerId='$($jsWebService.ID)'>$($Command)</jobscheduler_command>"
         
-        Send-JobSchedulerXMLCommand -Url $js.Url -Command $Command -Headers $Headers
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($commandUrl)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $commandBody"
+        
+        Send-JobSchedulerWebServiceRequest -Url $commandUrl -Method 'POST' -ContentType 'application/xml' -Body $commandBody -Headers $Headers
     }
 }

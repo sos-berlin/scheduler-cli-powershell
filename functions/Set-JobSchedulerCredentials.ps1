@@ -95,8 +95,20 @@ param
             throw "$($MyInvocation.MyCommand.Name): Use just one of the parameters -ProxyUseDefaultCredentials and -ProxyCredentials"
         }
     
-        $SCRIPT:jsOptionWebRequestUseDefaultCredentials = $UseDefaultCredentials
-        $SCRIPT:jsCredentials = $Credentials
+        if ( $UseDefaultCredentials )
+        {           jsWebServiceOptionWebRequestUseDefaultCredentials
+            $SCRIPT:jsOptionWebRequestUseDefaultCredentials = $UseDefaultCredentials
+            $SCRIPT:jsWebServiceOptionWebRequestUseDefaultCredentials = $UseDefaultCredentials
+        } else {
+            $SCRIPT:jsOptionWebRequestUseDefaultCredentials = $false
+            $SCRIPT:jsWebServiceOptionWebRequestUseDefaultCredentials = $false
+        }
+        
+        if ( $Credentials )
+        {
+            $SCRIPT:jsCredentials = $Credentials
+            $SCRIPT:jsWebServiceCredentials = $Credentials
+        }
     
         if ( $AskForCredentials )
         {
@@ -110,11 +122,24 @@ param
             {
                 $password = Read-Host 'Enter password for JobScheduler web access: ' -AsSecureString
                 $SCRIPT:jsCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $account, $password
+                $SCRIPT:jsWebServiceCredentials = $SCRIPT:jsCredentials
             }
         }
 
-        $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials = $ProxyUseDefaultCredentials
-        $SCRIPT:jsProxyCredentials = $ProxyCredentials
+        if ( $ProxyUseDefaultCredentials )
+        {
+            $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials = $ProxyUseDefaultCredentials
+            $SCRIPT:jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $ProxyUseDefaultCredentials
+        } else {
+            $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials = $false
+            $SCRIPT:jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $false
+        }
+        
+        if ( $ProxyCredentials )
+        {
+            $SCRIPT:jsProxyCredentials = $ProxyCredentials
+            $SCRIPT:jsWebServiceProxyCredentials = $ProxyCredentials
+        }
 
         if ( $ProxyAskForCredentials )
         {
@@ -128,6 +153,7 @@ param
             {
                 $proxyPassword = Read-Host 'Enter password for JobScheduler proxy access: ' -AsSecureString
                 $SCRIPT:jsProxyCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $proxyAccount, $proxyPassword
+                $SCRIPT:jsWebServiceProxyCredentials = $SCRIPT:jsProxyCredentials
             }
         }
     }

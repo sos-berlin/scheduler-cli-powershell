@@ -10,10 +10,6 @@ If the documentation is not available for your language then consider to use
 
     PS C:\> [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
     
-TODOs
-
-    * Add proxy support: implemented, feedback require
-    * Add Agent availability checks via process classes: implemented, possible improvement: use PowerShell jobs for parallelization
 #>
 
 # --------------------------------
@@ -133,7 +129,7 @@ function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo]
         }
     }
 
-    if ( !$SCRIPT:js.Url -and !$SCRIPT:jsOperations )
+    if ( !$SCRIPT:js.Url -and !$SCRIPT:jsOperations -and !$SCRIPT:jsWebService.Id )
     {
         if ( $SCRIPT:jsLocalCommands -notcontains $command.Name )
         {
@@ -509,14 +505,27 @@ function Create-WebServiceObject()
 
     $jsWebService | Add-Member -Membertype NoteProperty -Name Url -Value ''
     $jsWebService | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
+    $jsWebService | Add-Member -Membertype NoteProperty -Name Id -Value ''
     $jsWebService | Add-Member -Membertype NoteProperty -Name AccessToken -Value ''
 
     $jsWebService
 }
 
 # send XML encoded command to JobScheduler Master
-function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command, [bool] $checkResponse=$true ) 
+function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command, [bool] $checkResponse=$true, [hashtable] $headers ) 
 {
+    # if web service access is active then redirect to the respective method
+    if ( $SCRIPT:jsWebService )
+    {
+        $commandUrl = $SCRIPT:jsWebService.Url.scheme + '://' + $SCRIPT:jsWebService.Url.Authority + '/joc/api/jobscheduler/command'
+        $commandBody = "<jobscheduler_command jobschedulerId='$($SCRIPT:jsWebService.ID)'>$($Command)</jobscheduler_command>"
+        
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command to JobScheduler $($commandUrl)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command: $commandBody"
+        
+        return Send-JobSchedulerWebServiceRequest -Url $commandUrl -Method 'POST' -ContentType 'application/xml' -Body $commandBody -Headers $headers
+    }
+
     $output = $null
 
     $request = $null
@@ -538,6 +547,14 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
             $request.ContentType = 'text/xml'
             $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
             
+            if ( $headers )
+            {
+                $headers.Keys | % { 
+                    $request.Headers.add( $_, $headers.Item($_) )
+                    Write-Debug ".... $($MyInvocation.MyCommand.Name): using header $($_): $($headers.Item($_))"
+                }
+            }
+        
             if ( $SCRIPT:jsOptionWebRequestUseDefaultCredentials )
             {
                 Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
@@ -567,7 +584,6 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
             $request.ContentLength = $bytes.Length
             $requestStream = $request.GetRequestStream()
             $requestStream.Write( $bytes, 0, $bytes.Length )
-    
             $requestStream.Close()
             
             if ( $checkResponse )
@@ -577,7 +593,7 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
                     $response = $request.GetResponse()
                 } catch {
                     # reset credentials in case of response errors, eg. HTTP 401 not authenticated
-                    $SCRIPT:jsCredentials = $null
+                    # $SCRIPT:jsCredentials = $null
                     throw "$($MyInvocation.MyCommand.Name): JobScheduler returns error, if credentials are missing consider to use the Set-Credentials cmdlet: " + $_.Exception                
                 }
     
@@ -719,7 +735,7 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
                 $response = $request.GetResponse()
             } catch {
                 # reset credentials in case of response errors, eg. HTTP 401 not authenticated
-                $SCRIPT:jsAgentCredentials = $null
+                # $SCRIPT:jsAgentCredentials = $null
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler Agent returns error, if credentials are missing consider to use the Set-AgentCredentials cmdlet: " + $_.Exception                
             }
     
@@ -792,7 +808,7 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
 }
 
 # send JSON encoded request to JobScheduler Web Service
-function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET', [string] $body, [bool] $checkResponse=$true, [hashtable] $headers )
+function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST', [string] $contentType='application/xml', [string] $body, [bool] $checkResponse=$true, [hashtable] $headers )
 {
     $output = $null
 
@@ -807,13 +823,18 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
     {
         $request = [System.Net.WebRequest]::Create( $url )
         $request.Method = $method
-        $request.ContentType = 'application/json'
-        $request.Accept = 'application/json'
+        if ( $contentType )
+        {
+            $request.ContentType = $contentType
+        }
         $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
         
-        $headers.Keys | % { 
-            $request.Headers.add( $_, $headers.Item($_) )
-            Write-Debug ".... $($MyInvocation.MyCommand.Name): using header $($_): $($headers.Item($_))"
+        if ( $headers )
+        {
+            $headers.Keys | % { 
+                $request.Headers.add( $_, $headers.Item($_) )
+                Write-Debug ".... $($MyInvocation.MyCommand.Name): using header $($_): $($headers.Item($_))"
+            }
         }
         
         if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.AccessToken )
@@ -826,8 +847,8 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
             Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
             $request.UseDefaultCredentials = $true
         } elseif ( $SCRIPT:jsWebServiceCredentials ) {
-            # Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
-            # $request.Credentials = $SCRIPT:jsWebServiceCredentials
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
+            $request.Credentials = $SCRIPT:jsWebServiceCredentials
         }
     
         if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.ProxyUrl )
@@ -862,10 +883,9 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
                 $response = $request.GetResponse()                
             } catch {
                 # reset credentials in case of response errors, eg. HTTP 401 not authenticated
-                $SCRIPT:jsWebServiceCredentials = $null
+                # $SCRIPT:jsWebServiceCredentials = $null
                 throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-WebServiceCredentials cmdlet: " + $_.Exception                
-            } finally {
-            
+            } finally {            
                 if ( $response -and $response.Headers['access_token'] )
                 {
                     if ( !$SCRIPT:jsWebService )
@@ -875,15 +895,17 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
                     }
                     $SCRIPT:jsWebService.AccessToken = $response.Headers['access_token']
                 }
-                
-                foreach( $headerKey in $response.Headers ) {                
-                    $headerStr = $response.Headers[$headerKey];
-                    if ( $headerStr )
+
+                foreach( $headerKey in $response.Headers ) {
+                    if ( $headerKey )
                     {
-                        Write-Debug ".... $($MyInvocation.MyCommand.Name): response header: $($headerKey): $($headerStr)"
+                        $headerStr = $response.Headers[$headerKey];
+                        if ( $headerStr )
+                        {
+                            Write-Debug ".... $($MyInvocation.MyCommand.Name): response header: $($headerKey): $($headerStr)"
+                        }
                     }
                 }
-                
             }
     
             if ( $response.StatusCode -ne 'OK' )
@@ -891,9 +913,19 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
                 throw "Web Service returns status code: $($response.StatusCode)"
             }
     
-            $responseStream = $response.getResponseStream() 
-            $streamReader = New-Object System.IO.StreamReader $responseStream            
-            $output = $streamReader.ReadToEnd()
+            $responseStream = $response.getResponseStream()
+            
+            if ( $contentType -eq 'application/json' )
+            {
+                $streamReader = New-Object System.IO.StreamReader $responseStream            
+                $output = $streamReader.ReadToEnd()
+            } elseif ( $contentType -eq 'application/xml' ) {
+                $encoding = [Text.Encoding]::GetEncoding(28591)
+                $streamReader = New-Object System.IO.StreamReader -Argumentlist $responseStream, $encoding
+                $output = $streamReader.ReadToEnd()
+            } else {
+                throw "Web Service response used with unsupported content type: $($contentType)"
+            }
         }
 
         if ( $checkResponse -and $output )
@@ -910,25 +942,54 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='GET',
                 }
             }
 
-            try
+            if ( $contentType -eq 'application/json' )
             {
-                Add-Type -AssemblyName System.Web.Extensions
-                $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
-                $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
-
-               if ( !$answer ) 
+                try
                 {
-                    throw 'missing JSON content in Web Service response'
+                    Add-Type -AssemblyName System.Web.Extensions
+                    $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                    $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
+
+                    if ( !$answer ) 
+                    {
+                        throw 'missing JSON content in Web Service response'
+                    }
+                } catch {
+                    throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
                 }
-            } catch {
-                throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
-            }
             
-            try
-            {
-                $answer
-            } catch {
-                throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
+                try
+                {
+                    $answer
+                } catch {
+                    throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
+                }
+            } elseif ( $contentType -eq 'application/xml' ) {
+                try
+                {
+                    $answer = Select-XML -Content $output -Xpath '/spooler/answer'
+                    if ( !$answer ) 
+                    {
+                        throw 'missing answer element /spooler/answer in response'
+                    }
+                } catch {
+                    throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
+                }
+            
+                $errorText = Select-XML -Content $output -Xpath '/spooler/answer/ERROR/@text'
+                if ( $errorText.Node."#text" )
+                {
+                    throw $errorText.Node."#text"
+                }
+
+                try
+                {
+                    [xml] $output
+                } catch {
+                    throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
+                }
+            } else {
+                throw "Web Service response used with unsupported content type: $($contentType)"
             }
         }
     } catch {
@@ -1327,6 +1388,7 @@ ENDLOCAL
 # ----------------------------------------------------------------------
 
 $js = Create-JSObject
+$jsWebService = Create-WebServiceObject
 
 if ( $jsOperations )
 {
@@ -1334,6 +1396,7 @@ if ( $jsOperations )
     $js.Url = "http://$($spooler.hostname()):$($spooler.tcp_port())"
     $js.Id = $spooler.id()
     $js.Local = $false
+    $jsWebService.Id = $js.Id
 } elseif ( $env:SCHEDULER_URL ) {
     Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Id $env:SCHEDULER_ID
 } elseif ( $env:SCHEDULER_ID ) {

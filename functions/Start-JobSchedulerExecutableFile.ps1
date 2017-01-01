@@ -114,18 +114,20 @@ param
     Begin
     {
         $process = $null
+Write-Verbose "starting cmdlet: begin"
     }
         
     Process
     {
+Write-Verbose "starting cmdlet: Process"
         $tempStdoutFile = [IO.Path]::GetTempFileName()
         $tempStderrFile = [IO.Path]::GetTempFileName()
 
         Write-Debug ".. $($MyInvocation.MyCommand.Name): using temporary file for stdout: $($tempStdoutFile)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): using temporary file for stderr: $($tempStderrFile)"
     
-        try
-        {
+#       try
+#        {
             if ( $TargetName )
             {
                 $systemCredentials = Get-JobSchedulerSystemCredentials -TargetName $TargetName
@@ -143,16 +145,24 @@ param
                 if ( $NoLoadUserProfile )
                 {
                     Write-Verbose ".. $($MyInvocation.MyCommand.Name): running executable file without profile for user account '$($systemCredentials.UserName)': cmd.exe /c `"$Path`" $Argumentlist"
-                    $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Wait -Credential $credentials -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
+                    $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Credential $credentials -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
                 } else {
                     Write-Verbose ".. $($MyInvocation.MyCommand.Name): running executable file with profile for user account '$($systemCredentials.UserName)': cmd.exe /c `"$Path`" $Argumentlist"
-                    $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Wait -Credential $credentials -LoadUserProfile -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
+                    $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Credential $credentials  -LoadUserProfile -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
                 }
             } else {
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): running executable file for current user account: cmd.exe /c `"$Path`" $Argumentlist"
-                $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Wait -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
+                $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
             }
-    
+
+			if ( !$process.HasExited )
+			{
+                $process.WaitForExit()
+			}
+
+           $process.ExitCode | Out-Null
+            $process | Add-Member -Membertype NoteProperty -Force -Name ExitCode -Value $process.GetType().GetField("exitCode", "NonPublic,Instance").GetValue($process)
+            
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): process terminated with exit code: $($process.ExitCode)"
     
             if ( $NoStandardOutput )
@@ -170,18 +180,28 @@ param
             }
             
             $process
-        } catch {
-            throw $_.Exception
-        } finally {
+#        } catch {
+#            throw $_.Exception
+#        } finally {
             if ( !$NoStandardOutput )
             {
-                Remove-Item -Path $tempStdoutFile
+                try
+                {
+                    Remove-Item -Path $tempStdoutFile
+                } catch {
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): could not remove temporary file for stdout: $tempStdoutFile"
+                }
             }
 
             if ( !$NoStandardError )
             {
-                Remove-Item -Path $tempStderrFile
+                try
+                {
+                    Remove-Item -Path $tempStderrFile
+                } catch {
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): could not remove temporary file for stderr: $tempStderrFile"
+                }
             }
-        }
+#       }
     }
 }

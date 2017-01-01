@@ -131,7 +131,7 @@ param
             }
         }
     
-        [xml] $xmlDoc  = "<?xml version='1.0' encoding='ISO-8859-1'?><params.get name='JobSchedulerEventJob.events'/>"
+        [xml] $xmlDoc  = "<params.get name='JobSchedulerEventJob.events'/>"
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.outerxml)"

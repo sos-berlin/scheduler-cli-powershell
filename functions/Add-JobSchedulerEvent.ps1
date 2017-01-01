@@ -210,7 +210,7 @@ param
             $eventCount = $xmlDoc.commands.SelectNodes( 'add_order' ).count
             Write-Warning ".. $($MyInvocation.MyCommand.Name): found $($eventCount) enqueued events, events are processed for dequeueing"
         } else {
-            [xml] $xmlDoc  = "<?xml version='1.0' encoding='ISO-8859-1'?><commands/>"
+            [xml] $xmlDoc  = "<commands/>"
             $commandsNode = $xmlDoc.CreateElement( 'commands' )
             $eventCount = 0
         }
