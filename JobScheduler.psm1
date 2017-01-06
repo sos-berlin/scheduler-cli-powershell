@@ -882,9 +882,9 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
             {
                 $response = $request.GetResponse()                
             } catch {
-                # reset credentials in case of response errors, eg. HTTP 401 not authenticated
+                # do not reset credentials in case of response errors, eg. HTTP 401 not authenticated
                 # $SCRIPT:jsWebServiceCredentials = $null
-                throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-WebServiceCredentials cmdlet: " + $_.Exception                
+                throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-JobSchedulerCredentials cmdlet: " + $_.Exception                
             } finally {            
                 if ( $response -and $response.Headers['access_token'] )
                 {
