@@ -256,7 +256,10 @@ param
             {
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders added"                
             } else {
-                $command = "<commands>$($command)</commands>"
+                if ( !$SCRIPT:jsWebService )
+                {
+                    $command = "<commands>$($command)</commands>"
+                }
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
                 $addOrderXml = Send-JobSchedulerXMLCommand $js.Url $command
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders added"                

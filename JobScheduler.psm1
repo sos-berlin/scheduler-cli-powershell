@@ -517,8 +517,8 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
     # if web service access is active then redirect to the respective method
     if ( $SCRIPT:jsWebService )
     {
-        $commandUrl = $SCRIPT:jsWebService.Url.scheme + '://' + $SCRIPT:jsWebService.Url.Authority + '/joc/api/jobscheduler/command'
-        $commandBody = "<jobscheduler_command jobschedulerId='$($SCRIPT:jsWebService.ID)'>$($Command)</jobscheduler_command>"
+        $commandUrl = $SCRIPT:jsWebService.Url.scheme + '://' + $SCRIPT:jsWebService.Url.Authority + '/joc/api/jobscheduler/commands'
+        $commandBody = "<jobscheduler_commands jobschedulerId='$($SCRIPT:jsWebService.ID)'>$($Command)</jobscheduler_commands>"
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command to JobScheduler $($commandUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command: $commandBody"
@@ -826,6 +826,7 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
         if ( $contentType )
         {
             $request.ContentType = $contentType
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): using header Content-Type: $($contentType)"
         }
         $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
         
@@ -867,15 +868,25 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
             $request.Proxy = $proxy
         }
 
+        if ( $request.Headers )
+        {
+            $request.Headers.Keys | % { 
+                Write-Debug ".... $($MyInvocation.MyCommand.Name): display header $($_): $($request.Headers.Item($_))"
+            }
+        }
+
         if ( $method -eq 'POST' )
         {
             $bytes = [System.Text.Encoding]::ASCII.GetBytes( $body )
-            $request.ContentLength = $bytes.Length
+			if ( $bytes.Length )
+			{
+				$request.ContentLength = $bytes.Length
+			}
             $requestStream = $request.GetRequestStream()
             $requestStream.Write( $bytes, 0, $bytes.Length )
             $requestStream.Close()
         }
-
+		
         if ( $checkResponse )
         {
             try

@@ -52,8 +52,8 @@ param
             throw "$($MyInvocation.MyCommand.Name): no XML command specified, use -Command"
         }
         
-        $commandUrl = $jsWebService.Url.scheme + '://' + $jsWebService.Url.Authority + '/joc/api/jobscheduler/command'
-        $commandBody = "<jobscheduler_command jobschedulerId='$($jsWebService.ID)'>$($Command)</jobscheduler_command>"
+        $commandUrl = $jsWebService.Url.scheme + '://' + $jsWebService.Url.Authority + '/joc/api/jobscheduler/commands'
+        $commandBody = "<jobscheduler_commands jobschedulerId='$($jsWebService.ID)'>$($Command)</jobscheduler_commands>"
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($commandUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $commandBody"
