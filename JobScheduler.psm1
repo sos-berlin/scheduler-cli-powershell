@@ -808,7 +808,7 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
 }
 
 # send JSON encoded request to JobScheduler Web Service
-function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST', [string] $contentType='application/xml', [string] $body, [bool] $checkResponse=$true, [hashtable] $headers )
+function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST', [string] $contentType='application/json', [string] $body, [bool] $checkResponse=$true, [hashtable] $headers )
 {
     $output = $null
 

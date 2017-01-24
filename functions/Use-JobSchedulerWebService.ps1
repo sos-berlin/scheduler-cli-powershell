@@ -33,6 +33,25 @@ A previously created credentials set can be retrieved by use of the cmdlet:
 
 The credentials object can be assigned to the -Credentials parameter.
 
+.PARAMETER Base
+The Base is used as a prefix to the Path for web service URLs and is configured with the web server
+that hosts the JobScheduler Web Service.
+
+This value is fixed and should not be modified for most use cases.
+
+Default: /joc/api
+
+.PARAMETER Disconnect
+This parameter is used to disconnect from a previously connected JobScheduler Web Service.
+
+After successful connection to the JobScheduler Web Service a session is established that
+will last until this cmdlet is used with the Disconnect parameter or the session timeout has been exceeded.
+
+It is recommended to disconnect from the JobScheduler Web Service in order to ensure that the
+current session is closed.
+
+This parameter cannot be used with other parameters.
+
 .EXAMPLE
 cmdkey /generic:JobScheduler Web Service /user:root /pass:secret
 $credentials = Get-JobSchedulerSystemCredentials -TargetName "JobScheduler Web Service"
@@ -59,7 +78,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [Uri] $ProxyUrl,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [System.Management.Automation.PSCredential] $ProxyCredentials
+    [System.Management.Automation.PSCredential] $ProxyCredentials,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Base = '/joc/api',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Disconnect
 )
     Begin
     {
@@ -133,17 +156,34 @@ param
 
         try
         {
-            $authenticationUrl = $Url.scheme + '://' + $Url.Authority + '/joc/api/security/login'
-            $headers = @{}
-            
-            if ( $Credentials )
+            if ( $Disconnect )
             {
-                $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
-                $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
+                $path = '/security/logout'
+            } else {
+                $path = '/security/login'
             }
             
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending authentication request to JobScheduler Web Service $($authenticationUrl)"
-            $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Headers $headers
+            $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + $path
+            $headers = @{}
+            
+            if ( $Disconnect )
+            {
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending disconnect request to JobScheduler Web Service $($authenticationUrl)"
+                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -CheckResponse $false -Headers $headers
+                
+                $SCRIPT:js = Create-JSObject
+                $SCRIPT:jsWebService = Create-WebServiceObject
+
+            } else {
+                if ( $Credentials )
+                {
+                    $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
+                    $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
+                }
+            
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending authentication request to JobScheduler Web Service $($authenticationUrl)"
+                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Headers $headers
+            }
             
             if ( $response )
             {

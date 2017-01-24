@@ -53,7 +53,7 @@ FunctionsToExport = @(
     'Resume-JobSchedulerMaster',
     'Resume-JobSchedulerOrder',
     'Send-JobSchedulerCommand',
-    'Send-JobSchedulerWebServiceCommand',
+    'Send-JobSchedulerRequest',
     'Set-JobSchedulerCredentials',
     'Set-JobSchedulerOption',
     'Show-JobSchedulerAgentStatus',
