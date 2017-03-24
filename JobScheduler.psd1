@@ -59,10 +59,11 @@ FunctionsToExport = @(
     'Show-JobSchedulerAgentStatus',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
+#   'Start-JobSchedulerAgent',
     'Start-JobSchedulerDashboard',
-    'Start-JobSchedulerJobEditor',
     'Start-JobSchedulerExecutableFile',
     'Start-JobSchedulerJob',
+    'Start-JobSchedulerJobEditor',
     'Start-JobSchedulerMaster',
     'Start-JobSchedulerOrder',
     'Stop-JobSchedulerJob',
@@ -76,7 +77,7 @@ FunctionsToExport = @(
     'Update-JobSchedulerOrder',
     'Use-JobSchedulerAlias',
     'Use-JobSchedulerMaster',
-#   'Use-JobSchedulerAgent'
+#   'Use-JobSchedulerAgent',
     'Use-JobSchedulerWebService'
 )
 

@@ -198,6 +198,8 @@ param
         $SCRIPT:js.Id = $Id
         $SCRIPT:js.Local = $false
 
+		$SCRIPT:jsWebService = $null
+		
         if ( $ProxyUrl )
         {
             $SCRIPT:js.ProxyUrl = $ProxyUrl

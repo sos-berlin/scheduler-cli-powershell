@@ -604,11 +604,11 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
     
                 $responseStream = $response.getResponseStream() 
                 
-                # $streamReader = new-object System.IO.StreamReader $responseStream
+                # $streamReader = New-Object System.IO.StreamReader $responseStream
                 # $output = $streamReader.ReadToEnd()
                 
                 $encoding = [Text.Encoding]::GetEncoding(28591)
-                $streamReader = new-object System.IO.StreamReader -Argumentlist $responseStream, $encoding
+                $streamReader = New-Object System.IO.StreamReader -Argumentlist $responseStream, $encoding
                 $output = $streamReader.ReadToEnd()
             }
         }

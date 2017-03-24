@@ -71,7 +71,7 @@ param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $Url,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Id,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [System.Management.Automation.PSCredential] $Credentials,
@@ -164,16 +164,16 @@ param
             }
             
             $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + $path
+            $body  = '{}'
             $headers = @{}
             
             if ( $Disconnect )
             {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending disconnect request to JobScheduler Web Service $($authenticationUrl)"
-                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -CheckResponse $false -Headers $headers
+                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -CheckResponse $false -Headers $headers
                 
                 $SCRIPT:js = Create-JSObject
                 $SCRIPT:jsWebService = Create-WebServiceObject
-
             } else {
                 if ( $Credentials )
                 {
@@ -182,7 +182,7 @@ param
                 }
             
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending authentication request to JobScheduler Web Service $($authenticationUrl)"
-                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Headers $headers
+                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -Headers $headers
             }
             
             if ( $response )
