@@ -127,7 +127,10 @@ param
     {
         if ( $orderCount )
         {
-            $command = "<commands>$($command)</commands>"
+			if ( !$SCRIPT:jsWebService )
+			{
+				$command = "<commands>$($command)</commands>"
+			}
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
         
             $orderXml = Send-JobSchedulerXMLCommand $js.Url $command

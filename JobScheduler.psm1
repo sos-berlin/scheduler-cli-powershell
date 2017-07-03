@@ -814,7 +814,6 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
 
     $request = $null
     $requestStream = $null
-
     $response = $null
     $responseStream = $null
     $streamReader = $null

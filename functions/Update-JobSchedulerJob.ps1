@@ -134,7 +134,11 @@ param
         if ( $updateJobCount )
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($updateJobCount) jobs are requested for update"
-            $command = "<commands>$($command)</commands>"
+
+			if ( !$SCRIPT:jsWebService )
+			{
+				$command = "<commands>$($command)</commands>"
+			}
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
         
             $updateXml = Send-JobSchedulerXMLCommand $js.Url $command

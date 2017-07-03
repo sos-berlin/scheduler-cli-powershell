@@ -135,7 +135,10 @@ param
         if ( $stopTaskCount )
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($stopTaskCount) tasks are requested to stop"
-            $command = "<commands>$($command)</commands>"
+			if ( !$SCRIPT:jsWebService )
+			{
+				$command = "<commands>$($command)</commands>"
+			}
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
         
             $killXml = Send-JobSchedulerXMLCommand $js.Url $command

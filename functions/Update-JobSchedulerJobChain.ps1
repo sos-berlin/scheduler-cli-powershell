@@ -135,7 +135,10 @@ param
     {
         if ( $JobChainCount )
         {
-            $command = "<commands>$($command)</commands>"
+			if ( !$SCRIPT:jsWebService )
+			{
+				$command = "<commands>$($command)</commands>"
+			}
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"        
             $jobChainXml = Send-JobSchedulerXMLCommand $js.Url $command
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($jobChainCount) job chains updated"
