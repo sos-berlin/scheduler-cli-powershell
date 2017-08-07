@@ -592,9 +592,13 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
                 {
                     $response = $request.GetResponse()
                 } catch {
-                    # reset credentials in case of response errors, eg. HTTP 401 not authenticated
+                    # do not reset credentials in case of response errors, eg. HTTP 401 not authenticated
                     # $SCRIPT:jsCredentials = $null
-                    throw "$($MyInvocation.MyCommand.Name): JobScheduler returns error, if credentials are missing consider to use the Set-Credentials cmdlet: " + $_.Exception                
+                    $response = $_.Exception.InnerException.Response
+                    if ( !$response )
+                    {
+                        throw "$($MyInvocation.MyCommand.Name): JobScheduler returns error, if credentials are missing consider to use the Set-Credentials cmdlet: " + $_.Exception                
+                    }
                 }
     
                 if ( $response.StatusCode -ne 'OK' )
@@ -651,8 +655,6 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
                 throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
             }
         }
-    } catch {
-        throw "$($MyInvocation.MyCommand.Name): " + $_.Exception.Message
     } finally {
         if ( $streamReader )
         {
@@ -736,7 +738,11 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
             } catch {
                 # reset credentials in case of response errors, eg. HTTP 401 not authenticated
                 # $SCRIPT:jsAgentCredentials = $null
-                throw "$($MyInvocation.MyCommand.Name): JobScheduler Agent returns error, if credentials are missing consider to use the Set-AgentCredentials cmdlet: " + $_.Exception                
+                $response = $_.Exception.InnerException.Response
+                if ( !$response )
+                {
+                    throw "$($MyInvocation.MyCommand.Name): JobScheduler Agent returns error, if credentials are missing consider to use the Set-AgentCredentials cmdlet: " + $_.Exception                
+                }
             }
     
             if ( $response.StatusCode -ne 'OK' )
@@ -784,8 +790,6 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
                 throw 'not a valid JobScheduler Agent JSON response: ' + $_.Exception.Message
             }
         }
-    } catch {
-        throw "$($MyInvocation.MyCommand.Name): " + $_.Exception.Message
     } finally {
         if ( $streamReader )
         {
@@ -869,13 +873,6 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
             $request.Proxy = $proxy
         }
 
-#        if ( $request.Headers )
-#        {
-#            $request.Headers.Keys | % { 
-#                Write-Debug ".... $($MyInvocation.MyCommand.Name): display header $($_): $($request.Headers.Item($_))"
-#            }
-#        }
-
         if ( $method -eq 'POST' )
         {
             $bytes = [System.Text.Encoding]::ASCII.GetBytes( $body )
@@ -898,6 +895,10 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
                 # $SCRIPT:jsWebServiceCredentials = $null
                 # throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-JobSchedulerCredentials cmdlet: " + $_.Exception
                 $response = $_.Exception.InnerException.Response
+                if ( !$response )
+                {
+                    throw "$($MyInvocation.MyCommand.Name): JobScheduler Web Service returns error: " + $_.Exception                
+                }
             } finally {
                 if ( $response -and $response.Headers['access_token'] )
                 {
@@ -1005,8 +1006,6 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
                 throw "Web Service response received with unsupported content type: $($response.ContentType)"
             }
         }
-    } catch {
-        throw "$($MyInvocation.MyCommand.Name): " + $_.Exception.Message
     } finally {
         if ( $streamReader )
         {
@@ -1410,8 +1409,4 @@ if ( $jsOperations )
     $js.Id = $spooler.id()
     $js.Local = $false
     $jsWebService.Id = $js.Id
-} elseif ( $env:SCHEDULER_URL ) {
-    Use-JobSchedulerMaster -Url $env:SCHEDULER_URL -Id $env:SCHEDULER_ID
-} elseif ( $env:SCHEDULER_ID ) {
-    Use-JobSchedulerMaster -Id $env:SCHEDULER_ID
 }

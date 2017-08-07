@@ -86,11 +86,20 @@ param
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
-        
-        [xml] $xmlDoc  = "<commands/>"
-        $commandsNode = $xmlDoc.CreateElement( 'commands' )
 
-        $eventCount = 0
+        $tmpEventsLocation = "$env:TEMP\jobscheduler.events.log"
+
+        if ( Test-Path $tmpEventsLocation -PathType Leaf )
+        {
+            [xml] $xmlDoc = '<commands>' + ( Get-Content $tmpEventsLocation ) + '</commands>'
+            $commandsNode = $xmlDoc.commands
+            $eventCount = $xmlDoc.commands.SelectNodes( 'add_order' ).count
+            Write-Warning ".. $($MyInvocation.MyCommand.Name): found $($eventCount) enqueued events, events are processed for dequeueing"
+        } else {
+            [xml] $xmlDoc  = "<commands/>"
+            $commandsNode = $xmlDoc.CreateElement( 'commands' )
+            $eventCount = 0
+        }
     }
 
     Process
@@ -118,7 +127,7 @@ param
             }
         }
 
-		$orderNode = $xmlDoc.CreateElement( 'add_order' )
+        $orderNode = $xmlDoc.CreateElement( 'add_order' )
         $orderNode.SetAttribute( 'job_chain', $SupervisorJobChain )
         
         $paramsNode = $xmlDoc.CreateElement( 'params' )
@@ -128,11 +137,11 @@ param
         $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_port' -Value $MasterUrl.Port ) ) | Out-Null
     
         $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'event_class' -Value $EventClass ) ) | Out-Null
-		
-		if ( $EventId )
-		{
-			$paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'event_id' -Value $EventId ) ) | Out-Null
-		}
+        
+        if ( $EventId )
+        {
+            $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'event_id' -Value $EventId ) ) | Out-Null
+        }
             
         $orderNode.AppendChild( $paramsNode ) | Out-Null
         $commandsNode.AppendChild( $orderNode ) | Out-Null
@@ -140,7 +149,7 @@ param
         $e = Create-EventObject
         $e.EventClass = $EventClass
         $e.EventId = $EventId
-        $e.MasterUrl = $MasterUrl
+        # $e.MasterUrl = $MasterUrl
 
         $e
         $eventCount++
@@ -157,9 +166,32 @@ param
         {
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.innerXml)"
-            $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.innerXml
             
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events removed"                
+            try
+            {
+                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.innerXml
+
+                if ( Test-Path $tmpEventsLocation -PathType Leaf )
+                {
+                    Remove-Item $tmpEventsLocation -Force
+                }
+                
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events removed"                
+            } catch {                
+                if ( Test-Path $tmpEventsLocation -PathType Leaf )
+                {
+                    Remove-Item $tmpEventsLocation -Force
+                }
+
+                $nodes = Select-Xml -Xml $xmlDoc.commands -XPath '//add_order'
+                foreach( $item in $nodes )
+                {
+                    $item.node.outerXml | Out-File $tmpEventsLocation -Encoding UTF8 -Append
+                }
+
+                Write-Warning ".. $($MyInvocation.MyCommand.Name): could not forward $($eventCount) events to JobScheduler, events are stored for later dequeueing in $($tmpEventsLocation): $($_.Exception.Message)"
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): response: $($response)"
+            }            
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no events found to remove"
         }

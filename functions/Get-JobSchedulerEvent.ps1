@@ -171,7 +171,7 @@ param
                 }
             }
 
-			$eventsXml = $responseNode.Node.value.Replace( "$($responseNode.Node.value[0])$($responseNode.Node.value[1])", '<' ).Replace( "$($responseNode.Node.value[$responseNode.Node.value.length-2])$($responseNode.Node.value[$responseNode.Node.value.length-1])", '>' )
+            $eventsXml = $responseNode.Node.value.Replace( "$($responseNode.Node.value[0])$($responseNode.Node.value[1])", '<' ).Replace( "$($responseNode.Node.value[$responseNode.Node.value.length-2])$($responseNode.Node.value[$responseNode.Node.value.length-1])", '>' )
             # $eventsXml = $responseNode.Node.value.Replace( 0xfe -as [char], '<' ).Replace( 0xff -as [char], '>' )
 
             Write-Debug ".. $($MyInvocation.MyCommand.Name): using events document: $($eventsXml)"

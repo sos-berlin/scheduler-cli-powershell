@@ -201,11 +201,11 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
         
-        $tmpEventsLocation = "$env:TEMP/jobscheduler.events.xml"
+        $tmpEventsLocation = "$env:TEMP\jobscheduler.events.log"
 
         if ( Test-Path $tmpEventsLocation -PathType Leaf )
         {
-            [xml] $xmlDoc = Get-Content $tmpEventsLocation
+            [xml] $xmlDoc = '<commands>' + ( Get-Content $tmpEventsLocation ) + '</commands>'
             $commandsNode = $xmlDoc.commands
             $eventCount = $xmlDoc.commands.SelectNodes( 'add_order' ).count
             Write-Warning ".. $($MyInvocation.MyCommand.Name): found $($eventCount) enqueued events, events are processed for dequeueing"
@@ -417,7 +417,17 @@ param
                 
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events added"                
             } catch {
-                $xmlDoc.Save( $tmpEventsLocation ) 
+                if ( Test-Path $tmpEventsLocation -PathType Leaf )
+                {
+                    Remove-Item $tmpEventsLocation -Force
+                }
+
+                $nodes = Select-Xml -Xml $xmlDoc.commands -XPath '//add_order'
+                foreach( $item in $nodes )
+                {
+                    $item.node.outerXml | Out-File $tmpEventsLocation -Encoding UTF8 -Append
+                }
+                
                 Write-Warning ".. $($MyInvocation.MyCommand.Name): could not forward $($eventCount) events to JobScheduler, events are stored for later dequeueing in $($tmpEventsLocation): $($_.Exception.Message)"
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): response: $($response)"
             }

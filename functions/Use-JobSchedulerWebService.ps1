@@ -154,49 +154,44 @@ param
             $ProxyCredentials = $SCRIPT:jsWebServiceProxyCredentials
         }
 
-        try
+        if ( $Disconnect )
         {
-            if ( $Disconnect )
+            $path = '/security/logout'
+        } else {
+            $path = '/security/login'
+        }
+        
+        $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + $path
+        $body  = '{}'
+        $headers = @{}
+        
+        if ( $Disconnect )
+        {
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending disconnect request to JobScheduler Web Service $($authenticationUrl)"
+            $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -CheckResponse $false -Headers $headers
+            
+            $SCRIPT:js = Create-JSObject
+            $SCRIPT:jsWebService = Create-WebServiceObject
+        } else {
+            if ( $Credentials )
             {
-                $path = '/security/logout'
-            } else {
-                $path = '/security/login'
+                $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
+                $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
             }
-            
-            $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + $path
-            $body  = '{}'
-            $headers = @{}
-            
-            if ( $Disconnect )
+        
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending authentication request to JobScheduler Web Service $($authenticationUrl)"
+            $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -Headers $headers
+        }
+        
+        if ( $response )
+        {
+            if ( $ProxyUrl )
             {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending disconnect request to JobScheduler Web Service $($authenticationUrl)"
-                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -CheckResponse $false -Headers $headers
-                
-                $SCRIPT:js = Create-JSObject
-                $SCRIPT:jsWebService = Create-WebServiceObject
-            } else {
-                if ( $Credentials )
-                {
-                    $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
-                    $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
-                }
-            
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending authentication request to JobScheduler Web Service $($authenticationUrl)"
-                $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -Headers $headers
+                $SCRIPT:jsWebService.ProxyUrl = $ProxyUrl
             }
-            
-            if ( $response )
-            {
-                if ( $ProxyUrl )
-                {
-                    $SCRIPT:jsWebService.ProxyUrl = $ProxyUrl
-                }
-            
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($response.accessToken)"
-                $SCRIPT:jsWebService
-            }
-        } catch {
-            throw "$($MyInvocation.MyCommand.Name): Authentication error occurred: $($_.Exception.Message)"
+        
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($response.accessToken)"
+            $SCRIPT:jsWebService
         }
     }
 
