@@ -422,7 +422,7 @@ function Create-EventObject()
     $event | Add-Member -Membertype NoteProperty -Name Job -Value ''
     $event | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
     $event | Add-Member -Membertype NoteProperty -Name Order -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name MasterUrl -Value ''
+   #$event | Add-Member -Membertype NoteProperty -Name MasterUrl -Value ''
     $event | Add-Member -Membertype NoteProperty -Name ExpirationDate -Value ''
     $event | Add-Member -Membertype NoteProperty -Name ExpirationCycle -Value ''
     $event | Add-Member -Membertype NoteProperty -Name ExpirationPeriod -Value ''
@@ -822,11 +822,13 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
     {
         $request = [System.Net.WebRequest]::Create( $url )
         $request.Method = $method
+
         if ( $contentType )
         {
             $request.ContentType = $contentType
             Write-Debug ".... $($MyInvocation.MyCommand.Name): using header Content-Type: $($contentType)"
         }
+
         $request.Timeout = $SCRIPT:jsOptionWebRequestTimeout
         
         if ( $headers )
@@ -867,35 +869,36 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
             $request.Proxy = $proxy
         }
 
-        if ( $request.Headers )
-        {
-            $request.Headers.Keys | % { 
-                Write-Debug ".... $($MyInvocation.MyCommand.Name): display header $($_): $($request.Headers.Item($_))"
-            }
-        }
+#        if ( $request.Headers )
+#        {
+#            $request.Headers.Keys | % { 
+#                Write-Debug ".... $($MyInvocation.MyCommand.Name): display header $($_): $($request.Headers.Item($_))"
+#            }
+#        }
 
         if ( $method -eq 'POST' )
         {
             $bytes = [System.Text.Encoding]::ASCII.GetBytes( $body )
-			if ( $bytes.Length )
-			{
-				$request.ContentLength = $bytes.Length
-			}
+            if ( $bytes.Length )
+            {
+                $request.ContentLength = $bytes.Length
+            }
             $requestStream = $request.GetRequestStream()
             $requestStream.Write( $bytes, 0, $bytes.Length )
             $requestStream.Close()
         }
-		
+        
         if ( $checkResponse )
         {
             try
             {
                 $response = $request.GetResponse()                
             } catch {
-                # do not reset credentials in case of response errors, eg. HTTP 401 not authenticated
+                # do not reset credentials in case of response errors, e.g. HTTP 401 not authenticated
                 # $SCRIPT:jsWebServiceCredentials = $null
-                throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-JobSchedulerCredentials cmdlet: " + $_.Exception                
-            } finally {            
+                # throw "$($MyInvocation.MyCommand.Name): Web Service returns error, if credentials are missing consider to use the Set-JobSchedulerCredentials cmdlet: " + $_.Exception
+                $response = $_.Exception.InnerException.Response
+            } finally {
                 if ( $response -and $response.Headers['access_token'] )
                 {
                     if ( !$SCRIPT:jsWebService )
@@ -920,21 +923,21 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
     
             if ( $response.StatusCode -ne 'OK' )
             {
-                throw "Web Service returns status code: $($response.StatusCode)"
+                Write-Debug ".... Web Service returns status code: $($response.StatusCode)"
             }
-    
+
             $responseStream = $response.getResponseStream()
             
-            if ( $contentType -eq 'application/json' )
+            if ( $response.ContentType -eq 'application/json' )
             {
                 $streamReader = New-Object System.IO.StreamReader $responseStream            
                 $output = $streamReader.ReadToEnd()
-            } elseif ( $contentType -eq 'application/xml' ) {
+            } elseif ( $response.ContentType -eq 'application/xml' ) {
                 $encoding = [Text.Encoding]::GetEncoding(28591)
                 $streamReader = New-Object System.IO.StreamReader -Argumentlist $responseStream, $encoding
                 $output = $streamReader.ReadToEnd()
             } else {
-                throw "Web Service response used with unsupported content type: $($contentType)"
+                throw "Web Service response received with unsupported content type: $($response.ContentType)"
             }
         }
 
@@ -952,7 +955,7 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
                 }
             }
 
-            if ( $contentType -eq 'application/json' )
+            if ( $response.ContentType -eq 'application/json' )
             {
                 try
                 {
@@ -968,13 +971,13 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
                     throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
                 }
             
-                try
+                if ( $answer.error )
                 {
+                    throw $answer.error.code + ': ' + $answer.error.message
+                } else {
                     $answer
-                } catch {
-                    throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
                 }
-            } elseif ( $contentType -eq 'application/xml' ) {
+            } elseif ( $response.ContentType -eq 'application/xml' ) {
                 try
                 {
                     $answer = Select-XML -Content $output -Xpath '/spooler/answer'
@@ -999,7 +1002,7 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
                     throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
                 }
             } else {
-                throw "Web Service response used with unsupported content type: $($contentType)"
+                throw "Web Service response received with unsupported content type: $($response.ContentType)"
             }
         }
     } catch {
@@ -1022,7 +1025,7 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
             $response.Close()
             $response = $null
         }
-    }
+    }    
 }
 
 # return the directory name of a path

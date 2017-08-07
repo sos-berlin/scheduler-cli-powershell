@@ -70,7 +70,7 @@ about_jobscheduler
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $EventClass,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $EventId,
@@ -156,8 +156,8 @@ param
         if ( $eventCount )
         {
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.outerxml)"
-            $response = Send-JobSchedulerXMLCommand $SupervisorUrl $xmlDoc.outerxml
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.innerXml)"
+            $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.innerXml
             
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events removed"                
         } else {

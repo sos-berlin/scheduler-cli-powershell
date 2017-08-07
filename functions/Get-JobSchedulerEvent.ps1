@@ -134,9 +134,9 @@ param
         [xml] $xmlDoc  = "<params.get name='JobSchedulerEventJob.events'/>"
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.outerxml)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.innerXml)"
         
-        $responseXml = Send-JobSchedulerXMLCommand $SupervisorUrl $xmlDoc.outerxml
+        $responseXml = Send-JobSchedulerXMLCommand $SupervisorUrl $xmlDoc.innerXml
         $responseNode = Select-XML -XML $responseXml -XPath "//param[@name='JobSchedulerEventJob.events']/@value"
         
         if ( $responseNode )
@@ -171,8 +171,9 @@ param
                 }
             }
 
-            $eventsXml = $responseNode.Node.value.Replace( 0xfe -as [char], '<' ).Replace( 0xff -as [char], '>' )
-            
+			$eventsXml = $responseNode.Node.value.Replace( "$($responseNode.Node.value[0])$($responseNode.Node.value[1])", '<' ).Replace( "$($responseNode.Node.value[$responseNode.Node.value.length-2])$($responseNode.Node.value[$responseNode.Node.value.length-1])", '>' )
+            # $eventsXml = $responseNode.Node.value.Replace( 0xfe -as [char], '<' ).Replace( 0xff -as [char], '>' )
+
             Write-Debug ".. $($MyInvocation.MyCommand.Name): using events document: $($eventsXml)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): using XPath: $($XPath)"
             $eventNodes = Select-XML -Content $eventsXml -XPath $XPath
@@ -181,7 +182,7 @@ param
             {    
                 foreach( $eventNode in $eventNodes )
                 {
-                    if ( !$eventNode.Node.event_class )
+                    if ( !$eventNode.Node.event_class -And !$eventNode.Node.event_id )
                     {
                         continue
                     }
@@ -195,7 +196,7 @@ param
                     $e.JobChain = $eventNode.Node.job_chain
                     $e.ExpirationDate = $eventNode.Node.expires
                     $e.Created = $eventNode.Node.created
-                    $e.MasterUrl = "http://$($eventNode.Node.remote_scheduler_host):$($eventNode.Node.remote_scheduler_port)"
+                    # $e.MasterUrl = "http://$($eventNode.Node.remote_scheduler_host):$($eventNode.Node.remote_scheduler_port)"
                     
                     $e
                     $eventCount++

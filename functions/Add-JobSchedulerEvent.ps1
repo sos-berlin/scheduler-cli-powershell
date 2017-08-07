@@ -383,7 +383,7 @@ param
         $e.ExpirationCycle = $ExpirationCycle
         $e.ExpirationPeriod = $ExpirationPeriod
         $e.Created = Get-Date $currentDate -Format 'yyyy-MM-dd HH:mm:ss'
-        $e.MasterUrl = $MasterUrl
+        # $e.MasterUrl = $MasterUrl
 
         $e
         $eventCount++
@@ -398,11 +398,17 @@ param
 
         if ( $eventCount )
         {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.outerxml)"
+            if ( $SupervisorUrl )
+            {
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
+            } else {
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JOC Cockpit Web Service"
+            }
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.innerXml)"
+
             try 
             {
-                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $xmlDoc.outerxml
+                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.innerXml
                 
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {
@@ -412,7 +418,8 @@ param
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events added"                
             } catch {
                 $xmlDoc.Save( $tmpEventsLocation ) 
-                Write-Warning ".. $($MyInvocation.MyCommand.Name): could not forward $($eventCount) events to $($SupervisorUrl), events are stored for later dequeueing in $($tmpEventsLocation)"
+                Write-Warning ".. $($MyInvocation.MyCommand.Name): could not forward $($eventCount) events to JobScheduler, events are stored for later dequeueing in $($tmpEventsLocation): $($_.Exception.Message)"
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): response: $($response)"
             }
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no events found to add"
