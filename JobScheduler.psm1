@@ -517,8 +517,13 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
     # if web service access is active then redirect to the respective method
     if ( $SCRIPT:jsWebService )
     {
+        $xmlDoc = [xml] $command
+        if ($xmlDoc.commands)
+        {
+            $command = $xmlDoc.commands.innerXml
+        }
         $commandUrl = $SCRIPT:jsWebService.Url.scheme + '://' + $SCRIPT:jsWebService.Url.Authority + '/joc/api/jobscheduler/commands'
-        $commandBody = "<jobscheduler_commands jobschedulerId='$($SCRIPT:jsWebService.ID)'>$($Command)</jobscheduler_commands>"
+        $commandBody = "<jobscheduler_commands jobschedulerId='$($SCRIPT:jsWebService.ID)'>$($command)</jobscheduler_commands>"
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command to JobScheduler $($commandUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command: $commandBody"

@@ -171,8 +171,7 @@ param
                 }
             }
 
-            $eventsXml = $responseNode.Node.value.Replace( "$($responseNode.Node.value[0])$($responseNode.Node.value[1])", '<' ).Replace( "$($responseNode.Node.value[$responseNode.Node.value.length-2])$($responseNode.Node.value[$responseNode.Node.value.length-1])", '>' )
-            # $eventsXml = $responseNode.Node.value.Replace( 0xfe -as [char], '<' ).Replace( 0xff -as [char], '>' )
+            $eventsXml = $($responseNode.Node.value -replace '\xFE|\uC3BE|þ|Ã¾','<' -replace '\xFF|\uC3BF|ÿ|Ã¿','>')
 
             Write-Debug ".. $($MyInvocation.MyCommand.Name): using events document: $($eventsXml)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): using XPath: $($XPath)"

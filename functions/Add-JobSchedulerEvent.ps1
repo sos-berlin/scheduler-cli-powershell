@@ -404,11 +404,11 @@ param
             } else {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JOC Cockpit Web Service"
             }
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.innerXml)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.outerXml)"
 
             try 
             {
-                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.innerXml
+                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.outerXml
                 
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {
