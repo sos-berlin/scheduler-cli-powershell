@@ -165,11 +165,11 @@ param
         if ( $eventCount )
         {
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.innerXml)"
+            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.outerXml)"
             
             try
             {
-                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.innerXml
+                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.outerXml
 
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {
