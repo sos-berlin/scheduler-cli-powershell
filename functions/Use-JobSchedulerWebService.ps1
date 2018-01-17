@@ -102,7 +102,7 @@ param
             # is valid hostname specified?
             if ( [System.Uri]::CheckHostName( $Url.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
             {
-                throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4444: $($Url.OriginalString)"
+                throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4446: $($Url.OriginalString)"
             }
 
             if ( !$jsWebService )
@@ -161,7 +161,13 @@ param
             $path = '/security/login'
         }
         
-        $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + $path
+        if ( $Url.UserInfo )
+        {
+            $authenticationUrl = $Url.scheme + '://' + $Url.UserInfo + '@' + $Url.Authority + $Base + $path
+        } else {
+            $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + $path
+        }
+
         $body  = '{}'
         $headers = @{}
         
@@ -176,6 +182,9 @@ param
             if ( $Credentials )
             {
                 $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
+                $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
+            } elseif ( $Url.UserInfo ) {
+                $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $url.UserInfo ))
                 $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
             }
         

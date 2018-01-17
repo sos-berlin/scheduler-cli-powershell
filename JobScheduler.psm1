@@ -85,7 +85,7 @@ If the documentation is not available for your language then consider to use
 #     Credentials
 [System.Management.Automation.PSCredential] $jsWebServiceCredentials = $null
 #    Use default credentials of the current user?
-[bool] $jsWebServiceOptionWebRequestUseDefaultCredentials = $true
+[bool] $jsWebServiceOptionWebRequestUseDefaultCredentials = $false
 #     Proxy Credentials
 [System.Management.Automation.PSCredential] $jsWebServiceProxyCredentials = $null
 #    Use default credentials of the current user?
@@ -133,7 +133,7 @@ function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo]
     {
         if ( $SCRIPT:jsLocalCommands -notcontains $command.Name )
         {
-            throw "$($command.Name): cmdlet requires a JobScheduler Master URL. Switch instance with the Use-JobSchedulerMaster cmdlet and specify the -Url parameter"
+            throw "$($command.Name): cmdlet requires a JobScheduler URL. Switch instance with the Use-JobSchedulerWebService cmdlet and specify the -Url parameter"
         }
     }
 }
@@ -526,7 +526,7 @@ function Send-JobSchedulerXMLCommand( [Uri] $jobSchedulerURL, [string] $command,
         $commandBody = "<jobscheduler_commands jobschedulerId='$($SCRIPT:jsWebService.ID)'>$($command)</jobscheduler_commands>"
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command to JobScheduler $($commandUrl)"
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command: $commandBody"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): redirecting command: $commandBody"   
         
         return Send-JobSchedulerWebServiceRequest -Url $commandUrl -Method 'POST' -ContentType 'application/xml' -Body $commandBody -Headers $headers
     }
@@ -776,11 +776,13 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
 
             try
             {
-                Add-Type -AssemblyName System.Web.Extensions
-                $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
-                $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
+                # Add-Type -AssemblyName System.Web.Extensions
+                # $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                # $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
 
-               if ( !$answer ) 
+                $answer = ConvertFrom-JSON $output;
+
+                if ( !$answer ) 
                 {
                     throw 'missing JSON content in response'
                 }
@@ -788,11 +790,13 @@ function Send-JobSchedulerAgentRequest( [Uri] $url, [string] $method='GET', [str
                 throw 'not a valid JobScheduler Agent JSON response: ' + $_.Exception.Message
             }
             
-            try
+            if ( $answer.error )
             {
+                throw $answer.error.code + ': ' + $answer.error.message
+            } elseif ( $response.StatusCode -ne 'OK' -and $answer.message ) {
+                throw $answer.message
+            } else {
                 $answer
-            } catch {
-                throw 'not a valid JobScheduler Agent JSON response: ' + $_.Exception.Message
             }
         }
     } finally {
@@ -850,16 +854,24 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
         
         if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.AccessToken )
         {
-            $request.Headers.add( 'access_token', $SCRIPT:jsWebService.AccessToken )
+            $request.Headers.add( 'X-Access-Token', $SCRIPT:jsWebService.AccessToken )
         }
-        
+
         if ( $SCRIPT:jsWebServiceOptionWebRequestUseDefaultCredentials )
         {
             Write-Debug ".... $($MyInvocation.MyCommand.Name): using default credentials"
             $request.UseDefaultCredentials = $true
-        } elseif ( $SCRIPT:jsWebServiceCredentials ) {
-            Write-Debug ".... $($MyInvocation.MyCommand.Name): using explicit credentials"
+        } elseif ( 1 -eq 0 -and $SCRIPT:jsWebServiceCredentials ) {
+            Write-Debug ".... $($MyInvocation.MyCommand.Name): here using explicit credentials"
             $request.Credentials = $SCRIPT:jsWebServiceCredentials
+        } elseif ( $url.UserInfo ) {
+            $userInfo = $url.UserInfo.split(':')
+            if ( $userInfo.length -eq 2 )
+            {
+                Write-Debug ".... $($MyInvocation.MyCommand.Name): using URL credentials"
+                $SCRIPT:jsWebServiceCredentials = ( New-Object -typename System.Management.Automation.PSCredential -ArgumentList $userInfo[0], ($userInfo[1] | ConvertTo-SecureString -AsPlainText -Force) )
+                $request.Credentials = $SCRIPT:jsWebServiceCredentials
+            }
         }
     
         if ( $SCRIPT:jsWebService -and $SCRIPT:jsWebService.ProxyUrl )
@@ -905,14 +917,14 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
                     throw "$($MyInvocation.MyCommand.Name): JobScheduler Web Service returns error: " + $_.Exception                
                 }
             } finally {
-                if ( $response -and $response.Headers['access_token'] )
+                if ( $response -and $response.Headers['X-Access-Token'] )
                 {
                     if ( !$SCRIPT:jsWebService )
                     {
                         $SCRIPT:jsWebService = Create-WebServiceObject
                         $SCRIPT:jsWebService.Url = $url.scheme + '://' + $url.Authority
                     }
-                    $SCRIPT:jsWebService.AccessToken = $response.Headers['access_token']
+                    $SCRIPT:jsWebService.AccessToken = $response.Headers['X-Access-Token']
                 }
 
                 foreach( $headerKey in $response.Headers ) {
@@ -965,9 +977,11 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
             {
                 try
                 {
-                    Add-Type -AssemblyName System.Web.Extensions
-                    $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
-                    $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
+                    # Add-Type -AssemblyName System.Web.Extensions
+                    # $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                    # $answer = New-Object PSObject -Property $serializer.DeserializeObject( $output )
+                    
+                    $answer = ConvertFrom-JSON $output;
 
                     if ( !$answer ) 
                     {
@@ -976,10 +990,12 @@ function Send-JobSchedulerWebServiceRequest( [Uri] $url, [string] $method='POST'
                 } catch {
                     throw 'not a valid Web Service JSON response: ' + $_.Exception.Message
                 }
-            
+
                 if ( $answer.error )
                 {
                     throw $answer.error.code + ': ' + $answer.error.message
+                } elseif ( $response.StatusCode -ne 'OK' -and $answer.message ) {
+                    throw $answer.message
                 } else {
                     $answer
                 }
