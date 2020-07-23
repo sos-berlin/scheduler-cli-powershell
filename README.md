@@ -51,7 +51,7 @@ Find more information and documentation of cmdlets at [PowerShell Command Line I
  * or to a location that is available for all users, e.g. `C:\Windows\system32\WindowsPowerShell\v1.0\Modules\`
  * or to an arbitrary location that later on is specified when importing the module.
 * Directory names might differ according to PowerShell versions.
-* The required JobScheduler CLI module folder name is *JobScheduler*. If you download the module it is wrapped in a folder that specifies the current branch, e.g. *scheduler-cli-powershell-1.0.0*. Manually create the *JobScheduler* folder in the module location and add the contents of the *scheduler-cli-powershell-1.0.0* folder from the archive.
+* The required JobScheduler CLI module folder name is *JobScheduler*. If you download the module it is wrapped in a folder that specifies the current branch, e.g. *scheduler-cli-powershell-1.1.0*. Manually create the *JobScheduler* folder in the module location and add the contents of the *scheduler-cli-powershell-1.1.0* folder from the archive.
 
 ## Import Module
 
@@ -71,12 +71,12 @@ As a first operation after importing the module it is recommended to execute the
  * specifies the ID that a JobScheduler Master has been installed with. As JOC Cockpit can manage a number of Master instances the `-Id` parameter is used to select the respective Master.
  * specifies the credentials (user account and password) that are used to connect to the Web Service.
    * A credentials object can be created by keyboard input like this:
-     * `Set-JobSchedulerCredentials -AskForCredentials`
+     * `Set-JSCredentials -AskForCredentials`
    * A credentials object can be created like this:
      * `$credentials = ( New-Object -typename System.Management.Automation.PSCredential -ArgumentList 'account', ( 'password' | ConvertTo-SecureString -AsPlainText -Force) )`
      * A possible location for the above code is a user's PowerShell Profile that would be executed for a PowerShell session.
    * Credentials can be forwarded with the Url parameter like this: 
-     * `Use-WebService -Url http://root:root@localhost:4446 -Id scheduler112`
+     * `Use-JSWebService -Url http://root:root@localhost:4446 -Id scheduler112`
      * Specifying account and password with a URL is considered insecure.
  * allows to execute cmdlets for the specified JobScheduler Master independently from the server and operating system that the  Master is operated for, i.e. you can use PowerShell cmdlets on Windows to manage a JobScheduler Master running e.g. on a Linux box and vice versa.
  * specifying the URL is not sufficient to connect to the Windows Web Service of a Master, see below.
