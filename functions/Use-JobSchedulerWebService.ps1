@@ -127,7 +127,7 @@ param
             $script:jsWebService.Url = $Url
         }
 
-        if ( $ProxUrl )
+        if ( $ProxyUrl )
         {
             # is protocol provided? e.g. http://localhost:3128
             if ( !$ProxyUrl.OriginalString.startsWith('http://') -and !$ProxyUrl.OriginalString.startsWith('https://') )

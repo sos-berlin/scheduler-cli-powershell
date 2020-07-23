@@ -117,7 +117,7 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [ValidateSet('terminate','terminate-fail-safe','abort','kill')] [string] $Action = "terminate",
+    [ValidateSet('terminate','terminate-fail-safe','abort','kill','reactivate')] [string] $Action = 'terminate',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Restart,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -127,11 +127,26 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [int] $Pid,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Service
+    [switch] $Service,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
+
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
     }
 
     Process
@@ -164,76 +179,62 @@ param
                 
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): JobScheduler service stopped: $($serviceName)"
         } else {
+            $resource = $null
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+
             switch ( $Action )
             {
                 'terminate' 
                 {
-                    if ( $Timeout )
-                    {
-                        $attributeTimeout = " timeout='$($Timeout)'"
-                        $messageTimeout = " with timeout $($Tiemout)s"
-                    } else {
-                        $attributeTimeout = ""
-                        $messageTimeout = ""
-                    }
-    
                     if ( $Cluster )
-                    {                            
+                    {
                         if ( $Restart )
                         {
-                            Write-Verbose ".. $($MyInvocation.MyCommand.Name): restarting JobScheduler cluster$($messageTimeout)"
-                            $command = "<terminate all_schedulers='yes' restart='yes'$($attributeTimeout)/>"
+                            $resource = '/jobscheduler/cluster/restart'
                         } else {
-                            Write-Verbose ".. $($MyInvocation.MyCommand.Name): shutting down JobScheduler cluster$($messageTimeout)"
-                            $command = "<terminate all_schedulers='yes'$($attributeTimeout)/>"
+                            $resource = '/jobscheduler/cluster/terminate'
                         }
                     } else {
                         if ( $Restart )
                         {
-                            Write-Verbose ".. $($MyInvocation.MyCommand.Name): restarting JobScheduler gracefully$($messageTimeout)"
-                            $command = "<modify_spooler cmd='terminate_and_restart'$($attributeTimeout)/>"
+                            $resource = '/jobscheduler/restart'
                         } else {
-                            Write-Verbose ".. $($MyInvocation.MyCommand.Name): shutting down JobScheduler gracefully$($messageTimeout)"
-                            $command = "<modify_spooler cmd='terminate'$($attributeTimeout)/>"
+                            $resource = '/jobscheduler/terminate'
                         }
-                    }
-    
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
-
-                    $result = Send-JobSchedulerXMLCommand $js.Url $command
-                }
-                'terminate-fail-safe' 
-                {
+                    } 
+                
                     if ( $Timeout )
                     {
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): shutting down JobScheduler fail-safe with timeout $($Timeout)s"
-                        $terminateTimeout = " timeout='$($Timeout)'"
-                    } else {
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): shutting down JobScheduler fail-safe"
-                        $terminateTimeout
+                        Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
                     }
-                    $command = "<terminate continue_exclusive_operation='yes'$($terminateTimeout)/>"
-    
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
-            
-                    $result = Send-JobSchedulerXMLCommand $js.Url $command
                 }
-                'abort' 
+                'terminate-fail-safe'
                 {
-                    if ( $Restart ) {
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): shutting down JobScheduler immediately and restarting"
-                        $command = "<modify_spooler cmd='abort_immediately_and_restart'/>"
-                    } else {
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): shutting down JobScheduler immediately"
-                        $command = "<modify_spooler cmd='abort_immediately'/>"
+                    $resource = '/jobscheduler/cluster/terminate_failsafe'
+                
+                    if ( $Timeout )
+                    {
+                        Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
                     }
-    
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
-            
-                    $result = Send-JobSchedulerXMLCommand $js.Url $command $false
+                }
+                'reactivate'
+                {
+                    $resource = '/jobscheduler/cluster/reactivate'
+                
+                    if ( $Timeout )
+                    {
+                        Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
+                    }
+                }
+                'abort'
+                {
+                    if ( $Restart ) 
+                    {
+                        $resource = '/jobscheduler/abort_and_restart'
+                    } else {
+                        $resource = '/jobscheduler/abort'
+                    }    
                 }
                 'kill' 
                 {
@@ -249,6 +250,44 @@ param
                     Write-Debug ".. $($MyInvocation.MyCommand.Name): kill by command: $($arguments)"
                     $process = Start-Process -FilePath "$($js.Install.ExecutableFile)" "$($arguments)" -PassThru
                 }
+            }
+            
+            if ( $resource )
+            {
+                if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+                {
+                    $objAuditLog = New-Object PSObject
+                    Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+        
+                    if ( $AuditTimeSpent )
+                    {
+                        Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                    }
+        
+                    if ( $AuditTicketLink )
+                    {
+                        Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                    }
+        
+                    Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+                }
+        
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest -Path $resource -Body $requestBody
+                
+                if ( $response.StatusCode -eq 200 )
+                {
+                    $requestResult = ( $response.Content | ConvertFrom-JSON )
+                    
+                    if ( !$requestResult.ok )
+                    {
+                        throw ( $response | Format-List -Force | Out-String )
+                    }
+
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): command resource for JobScheduler Master: $resouroce"
+                } else {
+                    throw ( $response | Format-List -Force | Out-String )
+                }        
             }
         }
     }

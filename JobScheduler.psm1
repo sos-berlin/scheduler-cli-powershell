@@ -622,7 +622,7 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
     }
 }
 
-function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [string] $Path='/jobscheduler/commands', $ContentType='application/xml', [hashtable] $Headers=@{'Accept' = 'application/xml'} ) 
+function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $CheckResponse, [string] $Path='/jobscheduler/commands', $ContentType='application/xml', [hashtable] $Headers=@{'Accept' = 'application/xml'} ) 
 {
     $xmlDoc = [xml] $command
     if ($xmlDoc.commands)
@@ -639,7 +639,7 @@ function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [string] $P
         throw ( $response | Format-List -Force | Out-String )
     }    
     
-    if ( $response.ContentType -eq 'application/xml' )
+    if ( $CheckResponse -and $response.ContentType -eq 'application/xml' )
     {
         try
         {
