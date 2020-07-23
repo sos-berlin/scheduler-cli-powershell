@@ -99,31 +99,44 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Order,
+    [string] $OrderId,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [hashtable] $Parameters,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Title,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [string] $At = 'now',
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $At,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Timezone,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RunTime,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $State,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $EndState,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $Replace,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoImmediate
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        $command = ''
-        $orderCount = 0
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
+
+        $objOrders = @()
     }
     
     Process
@@ -155,12 +168,12 @@ param
             }
         }
     
-        if ( $Order )
+        if ( $OrderId )
         {
-            if ( (Get-JobSchedulerObject-Basename $Order) -ne $Order ) # order id includes a directory
+            if ( (Get-JobSchedulerObject-Basename $OrderId) -ne $OrderId ) # order id includes a directory
             {
-                $Directory = Get-JobSchedulerObject-Parent $Order
-                $Order = Get-JobSchedulerObject-Basename $Order
+                $Directory = Get-JobSchedulerObject-Parent $OrderId
+                $Order = Get-JobSchedulerObject-Basename $OrderId
                 if ( $Directory -eq '/' )
                 {
                     $JobChain = $Directory + (Get-JobSchedulerObject-Basename $JobChain)
@@ -169,103 +182,106 @@ param
                 }
             }
         }
-    
-        $orderAttributes = ''
 
-        if ( !$NoImmediate )
+
+        $objOrder = New-Object PSObject
+
+        if ( $OrderId )
         {
-            $command = ''
+            Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
         }
 
-        if ( $Order )
-        {
-            $orderAttributes += " id='$($Order)'"
-        }
-        
-        if ( $Title )
-        {
-            $orderAttributes += " title='$([System.Security.SecurityElement]::Escape($Title))'"
-        }
-        
+        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
+
         if ( $At )
         {
-            $orderAttributes += " at='$($At)'"
+            Add-Member -Membertype NoteProperty -Name 'at' -value $At -InputObject $objOrder
         }
-        
+
+        if ( $Timezone )
+        {
+            Add-Member -Membertype NoteProperty -Name 'timezone' -value $Timezone -InputObject $objOrder
+        }
+
         if ( $State )
         {
-            $orderAttributes += " state='$($State)'"
+            Add-Member -Membertype NoteProperty -Name 'state' -value $State -InputObject $objOrder
         }
-        
+
         if ( $EndState )
         {
-            $orderAttributes += " end_state='$($EndState)'"
+            Add-Member -Membertype NoteProperty -Name 'endState' -value $EndState -InputObject $objOrder
         }
-        
-        if ( $Replace )
-        {
-            $orderAttributes += " replace='yes'"
-        } else {
-            $orderAttributes += " replace='no'"
-        }
-        
-        $command += "<add_order job_chain='$($JobChain)' $($orderAttributes)>"
 
         if ( $Parameters )
         {
-            $command += '<params>'
-            foreach ($p in $Parameters.GetEnumerator()) {
-                $command += "<param name='$($p.Name)' value='$([System.Security.SecurityElement]::Escape($p.Value))'/>"
-            }            
-            $command += '</params>'
+            Add-Member -Membertype NoteProperty -Name 'params' -value $Parameters -InputObject $objOrder
         }
-        
-        $command += "</add_order>"
 
-        $addOrder = Create-OrderObject
-        $addOrder.Order = $Order
-        $addOrder.JobChain = Get-JobSchedulerObject-Basename $JobChain
-        $addOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
-        $addOrder.Title = $Title
-        $addOrder.State = $State
-        $addOrder.EndState = $EndState
-        $addOrder.At = $At
-        $addOrder.Parameters = $Parameters
-        
-        if ( !$NoImmediate )
+        if ( $Title )
         {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
-            $addOrderXml = Send-JobSchedulerXMLCommand $js.Url $command
-            $addOrder.Order = $addOrderXml.spooler.answer.ok.order.order
-            $addOrder.Name = $addOrder.JobChain + ',' + $addOrder.Order            
-            # for permanent orders
-            # $addOrder.Path = $addOrder.Directory + '/' + $addOrder.Name        
-            # for ad hoc orders
-            $addOrder.Path = '/'
+            Add-Member -Membertype NoteProperty -Name 'title' -value $Title -InputObject $objOrder
         }
-        
-        $addOrder
-        $orderCount++
+
+        if ( $RunTime )
+        {
+            Add-Member -Membertype NoteProperty -Name 'runTime' -value $RunTime -InputObject $objOrder
+        }
+
+        $objOrders += $objOrder
     }
 
     End
     {
-        if ( $orderCount )
+        if ( $objOrders.count )
         {
-            if ( !$NoImmediate )
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'orders' -value $objOrders -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
             {
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders added"                
-            } else {
-                if ( !$SCRIPT:jsWebService )
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
                 {
-                    $command = "<commands>$($command)</commands>"
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
                 }
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
-                $addOrderXml = Send-JobSchedulerXMLCommand $js.Url $command
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders added"                
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $objOrder
+            }
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/orders/add' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw "could not add orders: $($requestResult.message)"
+                } elseif ( !$requestResult.orders ) {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+        
+            $requestResult.orders
+
+            if ( $requestResult.orders.count -ne $objOrders.count )
+            {
+                Write-Error "$($MyInvocation.MyCommand.Name): not all orders could be added, $($objOrders.count) orders requested, $($requestResult.orders.count) orders added"
             }
         } else {
-            Write-Warning "$($MyInvocation.MyCommand.Name): no order found to add"
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"                
         }
 
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch

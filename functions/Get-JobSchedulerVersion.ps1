@@ -24,8 +24,6 @@ about_jobscheduler
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
 )
     Begin
     {
@@ -34,24 +32,20 @@ param
     }
     
     Process
-    {
-        if ( $NoCache -or !$SCRIPT:jsHasCache )
+    {    
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/jobscheduler/p' $requestBody
+    
+        if ( $response.StatusCode -eq 200 )
         {
-            $command = "<show_state what='job_chain_orders' max_task_history='0'/>"
-            Write-Debug ". $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ". $($MyInvocation.MyCommand.Name): sending command: $command"
-            
-            $stateXml = Send-JobSchedulerXMLCommand $js.Url $command
-            if ( $stateXml )
-            {
-                $stateXml.spooler.answer.state.version
-            }
+            $returnStatus = ( $response.Content | ConvertFrom-JSON ).jobscheduler
+            $returnStatus.version            
         } else {
-            if ( $SCRIPT:jsStateCache )
-            {
-                $SCRIPT:jsStateCache.spooler.answer.state.version
-            }
-        }
+            throw ( $response | Format-List -Force | Out-String )
+        }    
     }
 
     End

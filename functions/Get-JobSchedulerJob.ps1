@@ -2,11 +2,13 @@ function Get-JobSchedulerJob
 {
 <#
 .SYNOPSIS
-Returns a number of jobs from the JobScheduler Master.
+Returns job information from the JobScheduler Master.
 
 .DESCRIPTION
-Jobs are retrieved from a JobScheduler Master.
-Jobs can be selected either by the folder of the job location including subfolders or by an individual job.
+Jobs are returned from a JobScheduler Master. Jobs can be selected by name, folder, status etc. including subfolders.
+
+The job information retured includes volatile status information and the permanent configuration.
+The cmdlet optionally returns the task history and logs of recent task executions.
 
 Resulting jobs can be forwarded to other cmdlets for pipelined bulk operations.
 
@@ -30,33 +32,49 @@ Otherwise the -Job parameter is assumed to include the full path and name of the
 
 One of the parameters -Directory, -JobChain or -Job has to be specified.
 
-.PARAMETER WithLog
-Specifies the task log to be returned. 
+.PARAMETER Recursive
+Specifies that any subfolders should be looked up when used with the -Directory parameter. 
+By default no subfolders will be looked up for jobs.
+
+.PARAMETER Compact
+Specifies that a smaller subset of information is provided, e.g. no task qqueues for jobs.
+By default all information available for jobs is returned.
+
+.PARAMETER WithHistory
+Specifies the task history to be returned. 
+The parameter -MaxLastHstoryitems specifies the number of history items returne.d
 
 This operation is time-consuming and should be restricted to selecting individual jobs.
 
-.PARAMETER NoSubfolders
-Specifies that no subfolders should be looked up. By default any subfolders will be searched for jobs.
+.PARAMETER WithLog
+Specifies the task log to be returned. This implicitely includes to return the task history.
+For each history item - up to the number speicifed with the -MaxLastHistoryItems parameter -
+the task log is returned.
+
+This operation can be time-consuming.
+
+.PARAMETER MaxLastHistoryItems
+Specifies the number of the most recent history items of task executions to be returned.
+
+Default: 1
+
+.PARAMETER IsOrderJob
+Specifies to exlucisively return jobs that can be used in job chains.
+
+.PARAMETER IsStandaloneJob
+Specifies to exlucisively return jobs that can be used standalone (without job chains).
+
+.PARAMETER Pending
+Returns jobs in a pending state, i.e. jobs that are ready to be executed at a later date.
 
 .PARAMETER Stopped
-Specifies that only stopped jobs should be returned.
+Returns stopped jobs.
 
-This parameter cannot be combined with -JobChain, -RunningTasks, -EnqueuedTasks.
+.PARAMETER Running
+Specifies that jobs with running tasks should be returned.
 
-.PARAMETER RunningTasks
-Specifies that only jobs with running tasks should be returned.
-
-This parameter cannot be combined with -Stopped and -EnqueuedTasks.
-
-.PARAMETER EnqueuedTasks
-Specifies that only jobs with enqueued tasks should be returned.
-
-This parameter cannot be combined with -Stopped and -RunningTasks.
-
-.PARAMETER NoCache
-Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
-retrieved directly from the JobScheduler Master and is not resolved from the cache.
+.PARAMETER Enqueued
+Specifies that jobs with enqueued tasks should be returned.
 
 .OUTPUTS
 This cmdlet returns an array of job objects.
@@ -67,20 +85,41 @@ $jobs = Get-JobSchedulerJob
 Returns all jobs.
 
 .EXAMPLE
-$jobs = Get-JobSchedulerJob -Directory / -NoSubfolders
+$jobs = Get-JobSchedulerJob -Directory /test
 
-Returns all jobs that are configured with the root folder ("live" directory)
+Returns all jobs that are configured with the folder "test"
 without consideration of subfolders.
+
+.EXAMPLE
+$jobs = Get-JobSchedulerJob -Directory /test -Recursive
+
+Returns all jobs that are configured with the folder "test"
+include jobs from any subfolders.
 
 .EXAMPLE
 $jobs = Get-JobSchedulerJob -JobChain /test/globals/job_chain1
 
-Returns the jobs that are associated with job chain job_chain1 from the folder "/test/globals".
+Returns the jobs that are associated with the job chain "job_chain1" from the folder "/test/globals".
 
 .EXAMPLE
 $jobs = Get-JobSchedulerJob -Job /test/globals/job1
 
 Returns the job "job1" from the folder "/test/globals".
+
+.EXAMPLE
+$jobs = Get-JobSchedulerJob -Stopped
+
+Returns any stopped jobs.
+
+.EXAMPLE
+$jobs = Get-JobSchedulerJob -Directory /test -Pending -Running
+
+Returns any pending or running jobs from the "/test" directory.
+
+.EXAMPLE
+$jobs = Get-JobSchedulerJob
+
+Returns all jobs.
 
 .LINK
 about_jobscheduler
@@ -90,46 +129,50 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory = '/',
+    [string] $Job,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Job,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Compact,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $WithHistory,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $WithLog,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoSubfolders,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $MaxLastHistoryItems = 1,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $IsOrderJob,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $IsStandaloneJob,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Pending,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Stopped,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $RunningTasks,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $EnqueuedTasks,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $WaitingForResource,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Running,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Enqueued
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        if ( $JobChain -and $Stopped )
+        if ( $isOrderJob -and $isStsandaloneJob )
         {
-            throw "$($MyInvocation.MyCommand.Name): parameters -JobChain and -Stopped cannot be combined, use -Directory or -Job with -Stopped"
+            throw 'only one of the parameters -IsOrderJob and -IsStandaloneJob can be specified'
         }
-
-        if ( $Stopped -and ( $RunningTasks -or $EnqueuedTasks ) )
-        {
-            throw "$($MyInvocation.MyCommand.Name): parameter -Stopped cannot be combined with -RunningTasks or -EnqueuedTasks"
-        }
-
-        if ( $RunningTasks -and $EnqueuedTasks )
-        {
-            throw "$($MyInvocation.MyCommand.Name): parameters -RunningTasks and -EnqueuedTasks cannot be combined"
-        }
-
-        $jobCount = 0        
-    }        
+        
+        $volatileJobChainJobs = @()
+        $returnJobs = @()        
+        $states = @()
+    }
         
     Process
     {
@@ -181,137 +224,224 @@ param
                 }
             }
         }
-
-
-        $xPath = '//folder'
-
-        if ( $Directory )
+        
+        if ( $Directory -eq '/' -and !$JobChain -and !$Job -and !$Recursive )
         {
-            if ( $NoSubfolders )
-            {
-                $xPath += "[@path='$($Directory)']"
-            } else {
-                $xPath += "[starts-with(@path, '$($Directory)')]"
-            }
-        }
-
-        $xPathTask = ''
-
-        if ( $Job -or !$JobChain )
-        {
-            if ( $Stopped )
-            {
-                $xPathTask = "[@state = 'stopped']"
-            } elseif ( $RunningTasks )
-            {
-                $xPathTask = '[tasks[@count > 0]]'
-            } elseif ( $EnqueuedTasks ) {
-                $xPathTask = '[queued_tasks[@length > 0]]'
-            }
-        } else {
-            if ( $RunningTask )
-            {
-                $xPathTask = '[order_queue/order[@task]]'
-            }
+            $Recursive = $true
         }
         
-        if ( $Job )
+        if ( $WithLog )
         {
-            $xPath += "/jobs/job[@path = '$($Job)']$($xPathTask)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): selection by job: $xPath"
-        } elseif ( $JobChain ) {
-            $xPath += "/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node$($xPathTask)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): selection by job chain: $xPath"
-        } else {
-            $xPath += "/jobs/job$($xPathTask)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of jobs: $xPath"
+            $WithHistory = $true
         }
 
-        if ( $NoCache -or !$SCRIPT:jsHasCache )
-        {        
-            $whatNoSubfolders = if ( $NoSubfolders ) { ' no_subfolders' } else { '' }
+        if ( $Pending )
+        {
+            $states += 'PENDING'
+        }
+
+        if ( $Stopped )
+        {
+            $states += 'STOPPED'
+        }
+
+        if ( $WaitingForResource )
+        {
+            $states += 'WAITINGFORRESOURCE'
+        }
+
+        if ( $Running )
+        {
+            $states += 'RUNNING'
+        }
+
+        if ( $Enqueued )
+        {
+            $states += 'QUEUED'
+        }
+
+
+        if ( $JobChain )
+        {
+            # JOB CHAIN VOLATILE API
     
-            if ( $JobChain )
-            {
-                $command = "<show_state subsystems='folder order' what='folders job_chain_orders jobs$($whatNoSubfolders)' path='$($Directory)'/>"
-            } else {
-                $command = "<show_state subsystems='folder job' what='folders jobs$($whatNoSubfolders)' path='$($Directory)'/>"
-            }
-        
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $body
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/job_chain' $requestBody
             
-            $jobXml = Send-JobSchedulerXMLCommand $js.Url $command
-            $jobNodes = Select-XML -XML $jobXml -Xpath $xPath
-        } else {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache: $xPath"
-            $jobNodes = Select-XML -XML $SCRIPT:jsStateCache -Xpath $xPath
-        }
-
-        if ( $jobNodes )
-        {    
-            foreach( $jobNode in $jobNodes )
-            {        
-                $j = Create-JobObject
-
-                if ( $Job )
-                {
-                    if ( !$jobNode.Node.name )
-                    {
-                        continue
-                    }
-                    $j.Job = $jobNode.Node."name"
-                    $j.Path = $jobNode.Node.path
-                    $j.Directory = Get-JobSchedulerObject-Parent $jobNode.Node.path                
-                } elseif ( $JobChain ) {
-                    if ( !$jobNode.Node.job )
-                    {
-                        continue
-                    }
-                    $j.Job = Get-JobSchedulerObject-Basename $jobNode.Node.GetAttribute('job')
-                    $j.Path = $jobNode.Node.GetAttribute('job')
-                    $j.Directory = Get-JobSchedulerObject-Parent $jobNode.Node.GetAttribute('job')
-                } else {
-                    if ( !$jobNode.Node.name )
-                    {
-                        continue
-                    }
-                    $j.Job = $jobNode.Node."name"
-                    $j.Path = $jobNode.Node.path
-                    $j.Directory = Get-JobSchedulerObject-Parent $jobNode.Node.path
-                }
-
-                $j.State = $jobNode.Node.state
-                $j.Title = $jobNode.Node.title
-                $j.LogFile = $jobNode.Node.log_file
-                $j.Tasks = $jobNode.Node.tasks
-                $j.IsOrder = $jobNode.Node.order
-                $j.ProcessClass = $jobNode.Node.process_class
-                $j.NextStartTime = $jobNode.Node.next_start_time
-                $j.StateText = $jobNode.Node.state_text
-
-                if ( $WithLog )
-                {
-                    $command = "<show_history job='$($j.Path)' prev='1' what='log'/>"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
-                    
-                    $jobLogXml = Send-JobSchedulerXMLCommand $js.Url $command
-                    if ( $jobLogXml )
-                    {
-                        $j.Log = (Select-XML -XML $jobLogXml -Xpath '//spooler/answer/history/history.entry/log').Node."#text"
-                    }
-                }
-                
-                $j
-                $jobCount++
+            if ( $response.StatusCode -eq 200 )
+            {
+                $volatileJobChainJobs = ( $response.Content | ConvertFrom-JSON ).jobchain.nodes
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
             }
         }
+        
+
+        # JOBS VOLATILE API
+
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+        
+        if ( $Compact )
+        {
+            Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
+        }
+        
+        if ( !$JobChain -and $Directory )
+        {
+            $objFolder = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $objFolder
+            Add-Member -Membertype NoteProperty -Name 'recursive' -value ($Recursive -eq $true) -InputObject $objFolder
+
+            Add-Member -Membertype NoteProperty -Name 'folders' -value @( $objFolder ) -InputObject $body
+        }
+        
+        if ( $VolatileJobChainJobs )
+        {
+            $tmpJobs = @()
+            foreach( $volatileJobChainJob in $volatileJobChainJobs )
+            {
+                $objJob = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'job' -value $volatileJobChainJob.job.path -InputObject $objJob
+                $tmpJobs += $objJob
+            }
+            
+            Add-Member -Membertype NoteProperty -Name 'jobs' -value $tmpJobs -InputObject $body
+        } elseif ( $Job ) {
+            $objJob = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
+
+            Add-Member -Membertype NoteProperty -Name 'jobs' -value @( $objJob ) -InputObject $body
+        }
+        
+        if ( $IsOrderJob )
+        {
+            Add-Member -Membertype NoteProperty -Name 'isOrderJob' -value $true -InputObject $body
+        } elseif ( $isStandaloneJob ) {
+            Add-Member -Membertype NoteProperty -Name 'isOrderJob' -value $false -InputObject $body
+        }
+        
+        if ( $states.count -gt 0 )
+        {
+            Add-Member -Membertype NoteProperty -Name 'states' -value $states -InputObject $body
+        }
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/jobs' $requestBody
+        
+        if ( $response.StatusCode -eq 200 )
+        {
+            $volatileJobs = ( $response.Content | ConvertFrom-JSON ).jobs
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }
+
+        foreach( $volatileJob in $volatileJobs )
+        {
+            $returnJob = Create-JobObject
+            $returnJob.Job = $volatileJob.name
+            $returnJob.Path = $volatileJob.path
+            $returnJob.Directory = Get-JobSchedulerObject-Parent $volatileJob.path
+            $returnJob.Volatile = $volatileJob
+            $returnJob.Tasks = $volatileJob.runningTasks
+            
+            # additional properties for use with Get-JobSchedulerTask and Stop-JobSchedulerTask
+            for ( $i=0; $i -lt $returnJob.Tasks.count; $i++ )
+            {
+                Add-Member -Membertype NoteProperty -Name 'job' -value $volatileJob.name -InputObject $returnJob.Tasks[$i]
+                Add-Member -Membertype NoteProperty -Name 'path' -value $volatileJob.path -InputObject $returnJob.Tasks[$i]
+                Add-Member -Membertype NoteProperty -Name 'directory' -value (Get-JobSchedulerObject-Parent $volatileJob.path) -InputObject $returnJob.Tasks[$i]
+            }
+
+        
+            # JOBS PERMANENT API
+
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+
+            if ( $Compact )
+            {
+                Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
+            }
+
+            $objJob = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'job' -value $volatileJob.path -InputObject $objJob
+
+            Add-Member -Membertype NoteProperty -Name 'jobs' -value @( $objJob ) -InputObject $body
+
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/jobs/p' $requestBody
+        
+            if ( $response.StatusCode -eq 200 )
+            {
+                $returnJob.Permanent = ( $response.Content | ConvertFrom-JSON ).jobs
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+
+            if ( $WithHistory )
+            {
+                # JOB HISTORY API
+        
+                $body = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+                Add-Member -Membertype NoteProperty -Name 'job' -value $volatileJob.path -InputObject $body
+                Add-Member -Membertype NoteProperty -Name 'maxLastHistoryItems' -value $MaxLastHistoryItems -InputObject $body
+
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest '/job/history' $requestBody
+        
+                if ( $response.StatusCode -eq 200 )
+                {
+                    $requestHistoryEntries = ( $response.Content | ConvertFrom-JSON ).history
+                    $taskHistory = @()                    
+                } else {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+
+                foreach( $requestHistoryEntry in $requestHistoryEntries )
+                {
+                    $task = New-Object PSObject
+                    Add-Member -Membertype NoteProperty -Name 'history' -value $requestHistoryEntry -InputObject $task
+
+                    if ( $WithLog )
+                    {
+                        # TASK API
+
+                        $body = New-Object PSObject
+                        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+                        Add-Member -Membertype NoteProperty -Name 'taskId' -value $requestHistoryEntry.taskId -InputObject $body
+
+                        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                        $response = Invoke-JobSchedulerWebRequest '/task/log' $requestBody
+        
+                        if ( $response.StatusCode -eq 200 )
+                        {
+                            Add-Member -Membertype NoteProperty -Name 'log' -value $response.Content -InputObject $task
+                        } else {
+                            throw ( $response | Format-List -Force | Out-String )
+                        }
+                    }
+                    
+                    $taskHistory += $task
+                }
+
+                $returnJob.TaskHistory = $taskHistory
+            }
+            
+            $returnJobs += $returnJob
+        }
+
+        $returnJobs
     }
     
     End
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $jobCount jobs found"
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnJobs.count) jobs found"
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

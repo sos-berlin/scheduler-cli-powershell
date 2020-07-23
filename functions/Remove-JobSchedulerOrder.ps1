@@ -67,15 +67,28 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Path = '/'
+    [string] $Path = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink    
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        $command = ""
-        $orderCount = 0
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
+
+        $objOrders = @()
     }
 
     Process
@@ -107,38 +120,59 @@ param
             }
         }
 
-        if ( $Path -and $Path -ne '/' )
-        {
-            # only ad hoc orders use the path = '/', therefore we check if a different path property is provided by a pipelined object
-            throw "$($MyInvocation.MyCommand.Name): no ad hoc order specified, no removal is carried out for permanent orders"
-        }
+        $objOrder = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
+        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
 
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): removing order with Order='$($Order)', JobChain='$($JobChain)'"
-
-        $command += "<remove_order job_chain='$($JobChain)' order='$($Order)'/>"
-        $updateOrder = Create-OrderObject
-        $updateOrder.Order = $Order
-        $updateOrder.JobChain = $JobChain
-        $updateOrder
-        $orderCount++
+        $objOrders += $objOrder
      }
 
     End
     {
-        if ( $orderCount )
+        if ( $objOrders.count )
         {
-			if ( !$SCRIPT:jsWebService )
-			{
-				$command = "<commands>$($command)</commands>"
-			}
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
-        
-            $orderXml = Send-JobSchedulerXMLCommand $js.Url $command
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($orderCount) orders removed"
-        } else {
-            Write-Warning "$($MyInvocation.MyCommand.Name): no order found"
-        }
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'orders' -value $objOrders -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            {
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                }
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+            }
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/orders/delete' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }        
 
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objOrders.count) orders reset"                
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"                
+        }
+    
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

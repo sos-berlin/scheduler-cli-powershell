@@ -63,13 +63,28 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory = '/'
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
-        $parameters = @()
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
+
+        $objOrders = @()
     }
     
     Process
@@ -101,19 +116,59 @@ param
             }
         }
 
-        $resetOrder = Create-OrderObject
-        $resetOrder.Order = $Order
-        $resetOrder.JobChain = Get-JobSchedulerObject-Basename $JobChain
-        $resetOrder.Name = $resetOrder.JobChain + ',' + $resetOrder.Order
-        $resetOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
-        $resetOrder.Path = $resetOrder.Directory + '/' + $resetOrder.Name
-        # output objects are created by Update-JobSchedulerOrder
-        # $resetOrder
-        $parameters += $resetOrder
+        $objOrder = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
+        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
+
+        $objOrders += $objOrder
     }
 
     End
     {
-        $parameters | Update-JobSchedulerOrder -Action reset
+        if ( $objOrders.count )
+        {
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'orders' -value $objOrders -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            {
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                }
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+            }
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/orders/reset' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }        
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objOrders.count) orders reset"                
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"                
+        }
+    
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch    
     }
 }

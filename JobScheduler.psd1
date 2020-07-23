@@ -4,7 +4,7 @@
 ModuleToProcess = 'JobScheduler.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.1'
+ModuleVersion = '1.1.0'
 
 # ID used to uniquely identify this module
 GUID = 'fcc31359-6e84-425a-9338-49ed7a807bf9'
@@ -22,7 +22,7 @@ Copyright = 'Copyright (c) 2016 by SOS GmbH, licensed under Apache 2.0 License.'
 Description = 'JobScheduler provides a set of cmdlets to control a JobScheduler Master and Agents from the command line.'
 
 # Minimum version of the Windows PowerShell engine required by this module
-PowerShellVersion = '2.0'
+PowerShellVersion = '5.1'
 
 # Functions to export from this module
 FunctionsToExport = @( 
@@ -30,7 +30,7 @@ FunctionsToExport = @(
     'Add-JobSchedulerOrder',
     'Get-JobSchedulerAgentCluster',
     'Get-JobSchedulerAgentStatus',
-    'Get-JobSchedulerCalendar',
+    'Get-JobSchedulerDailyPlan',
     'Get-JobSchedulerEvent',
     'Get-JobSchedulerInventory',
     'Get-JobSchedulerJob',
@@ -49,6 +49,7 @@ FunctionsToExport = @(
     'Remove-JobSchedulerService',
     'Reset-JobSchedulerOrder',
     'Restart-JobSchedulerMaster',
+    'Resume-JobSchedulerJob',
     'Resume-JobSchedulerJobChain',
     'Resume-JobSchedulerMaster',
     'Resume-JobSchedulerOrder',
@@ -59,25 +60,20 @@ FunctionsToExport = @(
     'Show-JobSchedulerAgentStatus',
     'Show-JobSchedulerCalendar',
     'Show-JobSchedulerStatus',
-#   'Start-JobSchedulerAgent',
     'Start-JobSchedulerDashboard',
     'Start-JobSchedulerExecutableFile',
     'Start-JobSchedulerJob',
     'Start-JobSchedulerJobEditor',
     'Start-JobSchedulerMaster',
     'Start-JobSchedulerOrder',
-    'Stop-JobSchedulerJob',
     'Stop-JobSchedulerMaster',
     'Stop-JobSchedulerTask',
+    'Suspend-JobSchedulerJob',
     'Suspend-JobSchedulerJobChain',
     'Suspend-JobSchedulerMaster',
     'Suspend-JobSchedulerOrder',
-    'Update-JobSchedulerJob',
-    'Update-JobSchedulerJobChain',
-    'Update-JobSchedulerOrder',
     'Use-JobSchedulerAlias',
     'Use-JobSchedulerMaster',
-#   'Use-JobSchedulerAgent',
     'Use-JobSchedulerWebService'
 )
 

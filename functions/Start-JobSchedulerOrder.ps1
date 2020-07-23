@@ -82,27 +82,44 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Order,
+    [string] $OrderId,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [hashtable] $Parameters,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Title,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $At = 'now',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Timezone,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RunTime,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $State,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $EndState
+    [string] $EndState,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
+        
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
 
-        $startOrders = @()
+        $objOrders = @()
     }
     
     Process
@@ -134,12 +151,12 @@ param
             }
         }
     
-        if ( $Order )
+        if ( $OrderId )
         {
-            if ( (Get-JobSchedulerObject-Basename $Order) -ne $Order ) # order id includes a directory
+            if ( (Get-JobSchedulerObject-Basename $OrderId) -ne $OrderId ) # order id includes a directory
             {
-                $Directory = Get-JobSchedulerObject-Parent $Order
-                $Order = Get-JobSchedulerObject-Basename $Order
+                $Directory = Get-JobSchedulerObject-Parent $OrderId
+                $OrderId = Get-JobSchedulerObject-Basename $OrderId
                 if ( $Directory -eq '/' )
                 {
                     $JobChain = $Directory + (Get-JobSchedulerObject-Basename $JobChain)
@@ -148,26 +165,97 @@ param
                 }
             }
         }
-    
-        $o = Create-OrderObject
-        $o.Order = $Order
-        $o.JobChain = $JobChain
-        $o.Directory = $Directory
-        $o.Parameters = $Parameters
-        $o.Title = $Title
+
+        $objOrder = New-Object PSObject
+
+        if ( $OrderId )
+        {
+            Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
+        }
+
+        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
+
         if ( $At )
         {
-            $o.At = $At
-        } else {
-            $o.At = 'now'
+            Add-Member -Membertype NoteProperty -Name 'at' -value $At -InputObject $objOrder
         }
-        $o.State = $State
-        $o.EndState = $EndState
-        $startOrders += $o
+
+        if ( $Timezone )
+        {
+            Add-Member -Membertype NoteProperty -Name 'timezone' -value $Timezone -InputObject $objOrder
+        }
+
+        if ( $State )
+        {
+            Add-Member -Membertype NoteProperty -Name 'state' -value $State -InputObject $objOrder
+        }
+
+        if ( $EndState )
+        {
+            Add-Member -Membertype NoteProperty -Name 'endState' -value $EndState -InputObject $objOrder
+        }
+
+        if ( $Parameters )
+        {
+            Add-Member -Membertype NoteProperty -Name 'params' -value $Parameters -InputObject $objOrder
+        }
+
+        $objOrders += $objOrder
     }
 
     End
     {
-        $startOrders | Update-JobSchedulerOrder -Action start
+        if ( $objOrders.count )
+        {
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'orders' -value $objOrders -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            {
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                }
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+            }
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/orders/start' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+        
+            $requestResult.orders
+            
+            if ( $requestResult.orders.count -ne $objOrders.count )
+            {
+                Write-Error "$($MyInvocation.MyCommand.Name): not all orders could be started, $($objOrders.count) orders requested, $($requestResult.orders.count) orders started"
+            }
+            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.orders.count) orders started"                
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"                
+        }
+
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

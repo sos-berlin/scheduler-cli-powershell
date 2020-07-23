@@ -56,13 +56,28 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory = '/'
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
-        $parameters = @()
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
+
+        $objJobChains = @()
     }
     
     Process
@@ -94,17 +109,59 @@ param
             }
         }
 
-        $resumeJobChain = Create-JobChainObject
-        $resumeJobChain.JobChain = Get-JobSchedulerObject-Basename $JobChain
-        $resumeJobChain.Directory = Get-JobSchedulerObject-Parent $JobChain
-        $resumeJobChain.Path = $jobChain
-        # output objects are created by Update-JobSchedulerJobChain
-        # $resumeJobChain
-        $parameters += $resumeJobChain
+
+        $objJobChain = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objJobChain
+
+        $objJobChains += $objJobChain
     }
 
     End
     {
-        $parameters | Update-JobSchedulerJobChain -Action resume
+        if ( $objJobChains )
+        {
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'jobChains' -value $objJobChains -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            {
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                }
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $objJobChain
+            }
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/job_chains/unstop' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }        
+            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChainss.count) job chains resumed"                            
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job chains found"
+        }
+
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

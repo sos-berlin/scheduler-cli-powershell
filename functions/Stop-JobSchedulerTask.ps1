@@ -85,65 +85,177 @@ about_jobscheduler
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Task,
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [ValidateSet("terminate","kill")] [string] $Action = "kill",
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [int] $Timeout = 10
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [PSCustomObject[]] $Tasks,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [ValidateSet('terminate','kill')] [string] $Action = 'kill',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $Timeout = 0,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
-        $killTimeout = ""
-        if ( $Action -ne "kill" )
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
         {
-            if ( $Timeout )
+            if ( !$AuditComment )
             {
-                $killTimeout = " timeout='$($Timeout)'"
-            } else {
-                $killTimeout = " timeout='never'"
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
             }
         }
-    
-        $command = ""
-        $stopTaskCount = 0
+
+        $objJobs = @()
 	}
 
     Process
     {
-        if ( !$Job -or !$Task )
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Job=$Job, Directory=$Directory"
+    
+        if ( !$Job -and !$Tasks )
         {
-            throw "$($MyInvocation.MyCommand.Name): no task and no job specified, use -Task and -Job"
+            throw "$($MyInvocation.MyCommand.Name): no job and no tasks specified, use -Job or -Tasks"
         }
 
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): stopping task with task='$($task)', job='$($Job)' $killTimeout"
+        if ( $Directory -and $Directory -ne '/' )
+        { 
+            if ( $Directory.Substring( 0, 1) -ne '/' ) {
+                $Directory = '/' + $Directory
+            }
+        
+            if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
+            {
+                $Directory = $Directory.Substring( 0, $Directory.Length-1 )
+            }
+        }
+    
+        if ( $Job ) 
+        {
+            if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
+            {
+                $Directory = Get-JobSchedulerObject-Parent $Job
+            } else { # job name includes no directory
+                if ( $Directory -eq '/' )
+                {
+                    $Job = $Directory + $Job
+                } else {
+                    $Job = $Directory + '/' + $Job
+                }
+            }
+        }
 
-        $command += "<kill_task immediately='yes' job='$($Job)' id='$($Task)' $killTimeout/>"
-        $stopTask = Create-TaskObject
-        $stopTask.Task = $Task
-        $stopTask.Job = $Job
-        $stopTask
-        $stopTaskCount++
+
+        $objJob = New-Object PSObject
+
+        if ( $Job )
+        {
+            Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
+            
+            # if a job is specified then select tasks matching the job path
+            if ( $Tasks )
+            {
+                $taskIds = @()
+                foreach( $task in $Tasks )
+                {
+                    if ( $task.path -and $task.path -eq $Job )
+                    {
+                        $objTaskId = New-Object PSObject            
+                        Add-Member -Membertype NoteProperty -Name 'taskId' -value $task.taskId -InputObject $objTaskId
+                        $taskIds += $objTaskId
+                    }
+                }
+
+                if ( $taskIds.count )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'taskIds' -value $taskIds -InputObject $objJob
+                }
+            }
+        } elseif ( $Tasks ) {
+            foreach( $task in $Tasks )
+            {
+                $objTaskId = New-Object PSObject            
+                Add-Member -Membertype NoteProperty -Name 'taskId' -value $task.taskId -InputObject $objTaskId
+
+                Add-Member -Membertype NoteProperty -Name 'job' -value $task.path -InputObject $objJob
+                Add-Member -Membertype NoteProperty -Name 'taskIds' -value @( $objtaskId ) -InputObject $objJob
+            }
+        }
+
+        if ( $objJob )
+        {
+            $objJobs += $objJob
+        }
      }
 
     End
     {
-        if ( $stopTaskCount )
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+        Add-Member -Membertype NoteProperty -Name 'jobs' -value $objJobs -InputObject $body
+
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
         {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($stopTaskCount) tasks are requested to stop"
-			if ( !$SCRIPT:jsWebService )
-			{
-				$command = "<commands>$($command)</commands>"
-			}
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to $($js.Url): $command"
-        
-            $killXml = Send-JobSchedulerXMLCommand $js.Url $command
-        } else {
-            Write-Warning "$($MyInvocation.MyCommand.Name): no task found to stop"
+            $objAuditLog = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+
+            if ( $AuditTimeSpent )
+            {
+                Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+            }
+
+            if ( $AuditTicketLink )
+            {
+                Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
         }
+
+        if ( $Action -eq 'terminate' )
+        {
+            if ( $Timeout )
+            {
+                $url = '/tasks/terminate_within'
+                Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
+            } else {
+                $url = '/tasks/terminate'
+            }
+        } else {
+            $url = '/tasks/kill'
+        }
+        
+        if ( $objJobs.count )
+        {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobs.count) tasks are requested to stop"        
+
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest $url $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }        
+        } else {
+            Write-Warning "$($MyInvocation.MyCommand.Name): no tasks found to stop"
+        }
+        
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch        
     }
 }

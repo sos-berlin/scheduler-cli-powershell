@@ -92,39 +92,63 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory = '/',
+    [string] $OrderId,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Order,
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Compact,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $WithHistory,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $WithLog,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoSubfolders,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoPermanent,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $MaxLastHistoryItems = 1,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Permanent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Temporary,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $FileOrder,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Pending,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Running,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $WaitingForResource,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Suspended,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Setback,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Blacklist
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        $orderCount = 0
+        if ( $Order -and !$JobChain )
+        {
+            throw "Use of -OrderId parameter requires to specify the -JobChain parameter"
+        }
+
+        $volatileOrders = @()
+        $returnOrders = @()
+        $types = @()
+        $states = @()
     }
         
     Process
     {
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain, Order=$Order"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain, OrderId=$OrderId"
     
         if ( !$Directory -and !$JobChain -and !$Order )
         {
-            throw "$($MyInvocation.MyCommand.Name): no directory, no job chain or order specified, use -Directory or -JobChain  or -Order"
+            throw "$($MyInvocation.MyCommand.Name): no directory, no job chain or order specified, use -Directory or -JobChain  or -OrderId"
         }
 
         if ( $Directory -and $Directory -ne '/' )
@@ -154,154 +178,242 @@ param
             }
         }
         
-        if ( $Order )
+        if ( $OrderId )
         {
-            if ( (Get-JobSchedulerObject-Basename $Order) -ne $Order ) # order name includes a directory
+            if ( (Get-JobSchedulerObject-Basename $OrderId) -ne $OrderId ) # order id includes a directory
             {
-                $Directory = Get-JobSchedulerObject-Parent $Order
-            } else { # order name includes no directory
+                $Directory = Get-JobSchedulerObject-Parent $OrderId
+            } else { # order id includes no directory
                 if ( $Directory -eq '/' )
                 {
-                    $Order = $Directory + $Order
+                    $OrderId = $Directory + $OrderId
                 } else {
-                    $Order = $Directory + '/' + $Order
+                    $OrderId = $Directory + '/' + $OrderId
                 }
             }
         }
 
-        $xPath = '//folder'
-        $xPathOrder = ''
-
-        if ( $Directory )
+        if ( $Directory -eq '/' -and !$JobChain -and !$OrderId -and !$Recursive )
         {
-            if ( $NoSubfolders )
-            {
-                $xPath += "[@path='$($Directory)']"
-            } else {
-                $xPath += "[starts-with(@path, '$($Directory)')]"
-            }
-        } else {
-            $Directory = '/'
-        }
-
-        if ( $JobChain )
-        {
-            $xPath += "/job_chains/job_chain[@path = '$($JobChain)']/job_chain_node"
-        } else {
-            $xPath += "/job_chains/job_chain/job_chain_node"
+            $Recursive = $true
         }
         
+        if ( $WithLog )
+        {
+            $WithHistory = $true
+        }
+
+
+        if ( $Permanent )
+        {
+            $types += 'PERMANENT'
+        }
+
+        if ( $Temporary )
+        {
+            $types += 'AD_HOC'
+        }
+
+        if ( $FileOrder )
+        {
+            $types += 'FILE_ORDER'
+        }
+
+
+        if ( $Pending )
+        {
+            $states += 'PENDING'
+        }
+
+        if ( $Running )
+        {
+            $states += 'RUNNING'
+        }
+
+        if ( $WaitingForResource )
+        {
+            $states += 'WAITINGFORRESOURCE'
+        }
+
         if ( $Suspended )
         {
-			if ( $Setback )
-			{
-				$xPathOrder = " and ( @suspended = 'yes' or @setback )"
-			} else {
-				$xPathOrder = " and @suspended = 'yes'"
-			}
-        } elseif ( $Setback ) {
-            $xPathOrder = ' and @setback'
-        }    
-
-        if ( $Order )
-        {
-            if ( $NoPermanent )
-            {
-                if ( $JobChain )
-                {
-                    $xPath += "/order_queue/order[@path = '/'$xPathOrder]"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders for order and job chain: $xPath"
-                } else {
-                    $orderId = Get-JobSchedulerObject-Basename $Order
-                    $xPath += "/order_queue/order[@path = '/' and @order = '$($orderId)'$xPathOrder]"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders for order without job chain: $xPath"
-                }
-            } else {
-                $orderId = Get-JobSchedulerObject-Basename $Order
-                $xPath += "/order_queue/order[@id = '$($OrderId)'$xPathOrder]"
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of orders for order: $xPath"
-            }
-        } elseif ( $JobChain ) {
-            if ( $NoPermanent )
-            {
-                $xPath += "/order_queue/order[@path = '/'$xPathOrder]"
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders by job chain: $xPath"
-            } else {
-                $xPath += "/order_queue/order[@id$xPathOrder]"
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of permanent orders by job chain: $xPath"
-            }
-        } else {
-            if ( $NoPermanent )
-            {
-                $xPath += "/order_queue/order[@path = '/'$xPathOrder]"
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of ad hoc orders: $xPath"
-            } else {
-                $xPath += "/order_queue/order[not(@path = '/')$xPathOrder]"
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): selection of permanent orders: $xPath"
-            }
+            $states += 'SUSPENDED'
         }
 
-        if ( $NoCache -or !$SCRIPT:jsHasCache )
+        if ( $Setback )
         {
-            $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
-            $command = "<show_state subsystems='folder order' what='folders job_chain_orders$($whatNoSubfolders)' path='$($Directory)'/>"
-    
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
-        
-            $orderXml = Send-JobSchedulerXMLCommand $js.Url $command
-            $orderNodes = Select-XML -XML $orderXml -Xpath $xPath                     
-        } else {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache: $xPath"
-            $orderNodes = Select-XML -XML $SCRIPT:jsStateCache -Xpath $xPath
+            $states += 'SETBACK'
         }
-        
-        if ( $orderNodes )
-        {    
-            foreach( $orderNode in $orderNodes )
+
+        if ( $Blacklist )
+        {
+            $states += 'BLACKLIST'
+        }
+
+
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+
+        if ( $Compact )
+        {
+            Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
+        }
+            
+        if ( $OrderId -or $JobChain )
+        {
+            $objOrder = New-Object PSObject
+
+            if ( $JobChain )
             {
-                if ( !$orderNode.Node.name )
-                {
-                    continue
-                }
+                Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
+            }
+
+            if ( $OrderId )
+            {
+                Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'orders' -value @( $objOrder ) -InputObject $body
+        } elseif ( !$JobChain -and !$Order -and $Directory ) {
+            $objFolder = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $objFolder
+            Add-Member -Membertype NoteProperty -Name 'recursive' -value ($Recursive -eq $true) -InputObject $objFolder
+
+            Add-Member -Membertype NoteProperty -Name 'folders' -value @( $objFolder ) -InputObject $body
+        }
+
+        if ( $states.count -gt 0 )
+        {
+            Add-Member -Membertype NoteProperty -Name 'processingStates' -value $states -InputObject $body
+        }
+
+        if ( $types.count -gt 0 )
+        {
+            Add-Member -Membertype NoteProperty -Name 'type' -value $types -InputObject $body
+        }
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/orders' $requestBody
         
-                $o = Create-OrderObject
-                $o.Order = $orderNode.Node.id
-                $o.Name = $orderNode.Node.name
-                $o.Path = $orderNode.Node.path
-                $o.Directory = Get-JobSchedulerObject-Parent $orderNode.Node.path
-                $o.JobChain = $orderNode.Node.SelectSingleNode("../../../@path")."#text"
-                $o.State = $orderNode.Node.state
-                $o.Title = $orderNode.Node.title
-                $o.LogFile = $orderNode.Node.log_file
-                $o.Job = $orderNode.Node.job
-                $o.NextStartTime = $orderNode.Node.next_start_time
-                $o.StartTime = $orderNode.Node.start_time
-                $o.Task = $orderNode.Node.task
-                $o.StateText = $orderNode.Node.state_text
-                
-                if ( $WithLog )
-                {
-                    $command = "<show_order order='$($o.Order)' job_chain='$($o.JobChain)' what='log'/>"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-                    Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
-                    
-                    $orderLogXml = Send-JobSchedulerXMLCommand $js.Url $command
-                    if ( $orderLogXml )
-                    {
-                        $o.Log = (Select-XML -XML $orderLogXml -Xpath '//spooler/answer/order/log').Node."#text"
-                    }
-                }
-                
-                $o
-                $orderCount++
-            }            
+        if ( $response.StatusCode -eq 200 )
+        {
+            $volatileOrders += ( $response.Content | ConvertFrom-JSON ).orders
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
         }
     }
 
     End
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $orderCount orders found"
+        if ( $volatileOrders )
+        {
+            foreach( $volatileOrder in $volatileOrders )
+            {
+                $returnOrder = Create-OrderObject
+                $returnOrder.OrderId = $volatileOrder.orderId
+                $returnOrder.JobChain = $volatileOrder.jobChain
+                $returnOrder.Path = $volatileOrder.path
+                $returnOrder.Directory = Get-JobSchedulerObject-Parent $volatileOrder.path
+                $returnOrder.Volatile = $volatileOrder
+    
+                # ORDER PERMANENT API
+
+                $body = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            
+                if ( $Compact )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
+                }
+            
+                Add-Member -Membertype NoteProperty -Name 'jobChain' -value $volatileOrder.jobChain -InputObject $body
+                Add-Member -Membertype NoteProperty -Name 'orderId' -value $volatileOrder.orderId -InputObject $body
+    
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest '/order/p' $requestBody
+                
+                if ( $response.StatusCode -eq 200 )
+                {
+                    $returnOrder.Permanent = ( $response.Content | ConvertFrom-JSON ).order
+                } else {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+
+                if ( $WithHistory )
+                {
+                    # ORDER HISTORY API
+            
+                    $body = New-Object PSObject
+                    Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+
+                    $objOrder = New-Object PSObject
+                    Add-Member -Membertype NoteProperty -Name 'orderId' -value $volatileOrder.orderId -InputObject $objOrder
+                    Add-Member -Membertype NoteProperty -Name 'jobChain' -value $volatileOrder.jobChain -InputObject $objOrder
+
+                    Add-Member -Membertype NoteProperty -Name 'orders' -value @( $objOrder ) -InputObject $body
+                    Add-Member -Membertype NoteProperty -Name 'limit' -value $MaxLastHistoryItems -InputObject $body
+
+                    if ( $Compact )
+                    {
+                        Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
+                    }
+    
+                    [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                    $response = Invoke-JobSchedulerWebRequest '/orders/history' $requestBody
+            
+                    if ( $response.StatusCode -eq 200 )
+                    {
+                        $requestHistoryEntries = ( $response.Content | ConvertFrom-JSON ).history
+                        $orderHistory = @()                    
+                    } else {
+                        throw ( $response | Format-List -Force | Out-String )
+                    }
+    
+                    foreach( $requestHistoryEntry in $requestHistoryEntries )
+                    {
+                        $order = New-Object PSObject
+                        Add-Member -Membertype NoteProperty -Name 'history' -value $requestHistoryEntry -InputObject $order
+    
+                        if ( $WithLog )
+                        {
+                            # ORDER LOG API
+    
+                            $body = New-Object PSObject
+                            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+                            Add-Member -Membertype NoteProperty -Name 'orderId' -value $requestHistoryEntry.orderId -InputObject $body
+                            Add-Member -Membertype NoteProperty -Name 'jobChain' -value $requestHistoryEntry.jobChain -InputObject $body
+                            Add-Member -Membertype NoteProperty -Name 'historyId' -value $requestHistoryEntry.historyId -InputObject $body
+    
+                            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                            $response = Invoke-JobSchedulerWebRequest '/order/log' $requestBody
+            
+                            if ( $response.StatusCode -eq 200 )
+                            {
+                                Add-Member -Membertype NoteProperty -Name 'log' -value $response.Content -InputObject $order
+                            } else {
+                                throw ( $response | Format-List -Force | Out-String )
+                            }
+                        }
+                        
+                        $orderHistory += $order
+                    }
+    
+                    $returnOrder.OrderHistory = $orderHistory
+                }
+                
+                $returnOrders += $returnOrder
+            }
+        }
+
+        $returnOrders
+
+        if ( $returnOrders.count )
+        {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnOrders.count) orders found"
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"
+        }
+        
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

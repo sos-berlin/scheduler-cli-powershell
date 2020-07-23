@@ -11,18 +11,10 @@ Summary information and statistics information are returned from a JobScheduler 
 * Statistics information includes e.g. the number of running tasks and existing orders.
 
 .PARAMETER Statistics
-Optionally specifies that detailed statistics information about orders and jobs is returned.
+Specifies that detailed statistics information about orders and jobs is returned.
 
-.PARAMETER Display
-Optionally specifies formatted output to be displayed.
-
-.PARAMETER NoOutputs
-Optionally specifies that no output is returned by this cmdlet.
-
-.PARAMETER NoCache
-Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
-retrieved directly from the JobScheduler Master and is not resolved from the cache.
+.PARAMETER NoDisplay
+Specifies that no formatted output will be displayed, instead objects will be returned that contain the respective information.
 
 .EXAMPLE
 Get-JobSchedulerStatus
@@ -30,14 +22,14 @@ Get-JobSchedulerStatus
 Returns summary information about the JobScheduler Master.
 
 .EXAMPLE
-Get-JobSchedulerStatus -Statistics -Display
+Get-JobSchedulerStatus -Statistics
 
-Returns statistics information about jobs, job chains, orders and tasks. Formatted output is displayed.
+Returns status information and statistics information about jobs, job chains, orders and tasks. Formatted output is displayed.
 
 .EXAMPLE
-$status = $Get-JobSchedulerStatus -Statistics
+$status = $Get-JobSchedulerStatus -NoDisplay -Statistics
 
-Returns a status information object including statistics information.
+Returns an object including status information and statistics information.
 
 .LINK
 about_jobscheduler
@@ -49,11 +41,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Statistics,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Display,
-    [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $NoOutputs,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
+    [switch] $NoDisplay
 )
     Begin
     {
@@ -63,77 +51,55 @@ param
 
     Process
     {        
-        if ( !$Statistics )
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/jobscheduler' $requestBody
+    
+        if ( $response.StatusCode -eq 200 )
         {
-            $command = "<show_state subsystems='folder order job' what='folders job_chains job_chain_orders job_chain_jobs job_params job_orders remote_schedulers'/>"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
-            
-            $SCRIPT:jsStateCache = Send-JobSchedulerXMLCommand $js.Url $command    
-            if ( $SCRIPT:jsStateCache )
-            {
-                if ( !$NoCache -and !$SCRIPT:jsNoCache)
-                {
-                    $SCRIPT:jsHasCache = $true
-                }
+            $volatileStatus = ( $response.Content | ConvertFrom-JSON ).jobscheduler
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }    
 
-                $state = Create-StatusObject
-                $state.Id = $SCRIPT:jsStateCache.spooler.answer.state.id
-                $state.Url = $js.Url
-                $state.ProxyUrl = $js.ProxyUrl
-                
-                if ( !$js.Id ) 
-                {
-                    $SCRIPT:js.Id = $state.Id
-                }
-
-                $state.Version = $SCRIPT:jsStateCache.spooler.answer.state.version
-                $state.State = $SCRIPT:jsStateCache.spooler.answer.state.state
-                $state.Pid = $SCRIPT:jsStateCache.spooler.answer.state.pid
-                $state.RunningSince = $SCRIPT:jsStateCache.spooler.answer.state.spooler_running_since
-
-                $stateXmlState = ( Select-XML -XML $SCRIPT:jsStateCache -Xpath '/spooler/answer/state' ).Node
-                $state.JobChainsExist = $stateXmlState.CreateNavigator().Evaluate( 'count(//job_chains/job_chain)' )
-                $state.OrdersExist = $stateXmlState.CreateNavigator().Evaluate( 'sum(//job_chains/job_chain/@orders)' )
-                $state.JobsExist = $stateXmlState.CreateNavigator().Evaluate( 'count(//jobs/job)' )
-                $state.TasksExist = $stateXmlState.CreateNavigator().Evaluate( 'sum(//jobs/job/tasks/@count)' )
-                $state.TasksEnqueued = $stateXmlState.CreateNavigator().Evaluate( 'sum(//jobs/job/queued_tasks/@length)' )
-
-                if ( $Display )
-                {
-                    $output = "
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/jobscheduler/p' $requestBody
+    
+        if ( $response.StatusCode -eq 200 )
+        {
+            $permanentStatus = ( $response.Content | ConvertFrom-JSON ).jobscheduler
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }    
+ 
+        $returnStatus = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'Volatile' -value $volatileStatus -InputObject $returnStatus
+        Add-Member -Membertype NoteProperty -Name 'Permanent' -value $permanentStatus -InputObject $returnStatus
+         
+        if ( !$NoDisplay )
+        {
+            $output = "
 ________________________________________________________________________
-Job Scheduler instance: $($state.Id)
-.............. version: $($state.Version)
-......... operated for: $($state.Url)
-.......... using proxy: $($state.ProxyUrl)
-........ running since: $($state.RunningSince)
-................ state: $($state.State)
-.................. pid: $($state.Pid)
-........... job chains: $($state.JobChainsExist)
-............... orders: $($state.OrdersExist)
-................. jobs: $($state.JobsExist)
-................ tasks: $($state.TasksExist)
-....... enqueued tasks: $($state.TasksEnqueued)
+JobScheduler instance: $($returnStatus.Permanent.jobschedulerId)
+............. version: $($returnStatus.Permanent.version)
+................. url: $($returnStatus.Permanent.url)
+....... running since: $($returnStatus.Permanent.startedAt)
+............ timezone: $($returnStatus.Permanent.timezone)
+............... state: $($returnStatus.Volatile.state._text)
+........ cluster type: $($returnStatus.Permanent.clusterType._type)
+.................. OS: $($returnStatus.Permanent.os.name), $($returnStatus.Permanent.os.architecture), $($returnStatus.Permanent.os.distribution)
 ________________________________________________________________________
-                    "
-                    Write-Output $output
-                }
-
-                if ( !$NoOutputs )
-                {
-                    $state
-                }
-            }
+            "
+            Write-Output $output
         }
-
+        
         if ( $Statistics )
         {
             $command = "<subsystem.show what='statistics'/>"
-            Write-Debug ".. sending command to JobScheduler $($js.Url)"
-            Write-Debug ".. sending command: $command"
+            $statXml = Invoke-JobSchedulerWebRequestXmlCommand -Command $command
             
-            $statXml = Send-JobSchedulerXMLCommand $js.Url $command    
             if ( $statXml )
             {
                 $stat = Create-StatisticsObject
@@ -157,7 +123,7 @@ ________________________________________________________________________
                 $stat.LocksExist = ( Select-XML -XML $statXml -Xpath "//subsystem[@name = 'lock']/file_based.statistics/@count" ).Node."#text"
                 $stat.MonitorsExist = ( Select-XML -XML $statXml -Xpath "//subsystem[@name = 'monitor']/file_based.statistics/@count" ).Node."#text"
                 
-                if ( $Display )
+                if ( !$NoDisplay )
                 {
                     $output = "
 ________________________________________________________________________
@@ -189,12 +155,14 @@ ________________________________________________________________________
                     "
                     Write-Output $output
                 }
-
-                if ( !$NoOutputs )
-                {
-                    $stat
-                }
             }
+            
+            Add-Member -Membertype NoteProperty -Name 'Statistics' -value $stat -InputObject $returnStatus
+        }
+        
+        if ( $NoDisplay )
+        {
+            $returnStatus
         }
     }
 

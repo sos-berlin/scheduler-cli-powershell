@@ -63,27 +63,24 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Job,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $JobChain,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Job,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoRunningTasks,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoEnqueuedTasks,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoSubfolders,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $UseCache
+    [switch] $Running,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Enqueued,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Recursive
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        $runningTaskNodes = @()
-        $runningTaskCount = 0
-        $enqueuedTaskNodes = @()
-        $enqueuedTaskCount = 0
+        $tasks = @()
     }
         
     Process
@@ -122,122 +119,27 @@ param
             }
         }
 
-        $xPath = '//folder'
-
-        if ( $Directory )
+        if ( !$Job -and $Directory -eq '/' )
         {
-            if ( $NoSubfolders )
-            {
-                $xPath += "[@path='$($Directory)']"
-            } else {
-                $xPath += "[starts-with(@path, '$($Directory)')]"
-            }
+            $Recursive = $true
         }
         
-        if ( $Job )
+        if ( !$Runnning -and !$Enqueued )
         {
-            $xPath += "/jobs/job[@path='$($Job)']"
-        } else {
-            $xPath += '/jobs/job'
+            $Running = $true
         }
 
-        $xPathRunningTasks = $xPath + '/tasks/task[@task]'
-        $xPathEnqueuedTasks = $xPath + '/queued_tasks/queued_task[@task]'
-        
-        if ( !$UseCache -or !$SCRIPT:jsHasCache )
-        {                
-            $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
-            $whatTaskQueue = if ( $NoEnqueuedTasks ) { "" } else { " task_queue" }
-            $command = "<show_state subsystems='folder job' what='folders$($whatNoSubfolders)$($whatTaskQueue)' path='$($Directory)'/>"
-    
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
-        
-            $taskXml = Send-JobSchedulerXMLCommand $js.Url $command
-
-            if ( !$NoRunningTasks )
-            {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): selection for running tasks: $xPathRunningTasks"
-                $runningTaskNodes = Select-XML -XML $taskXml -Xpath $xPathRunningTasks
-            }
-
-            if ( !$NoEnqueuedTasks )
-            {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): selection for enqueued tasks: $xPathEnqueuedTasks"
-                $enqueuedTaskNodes = Select-XML -XML $taskXml -Xpath $xPathEnqueuedTasks
-            }
-        } else {
-            if ( !$NoRunningTasks )
-            {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache for running tasks: $xPathRunningTasks"
-                $runningTaskNodes = Select-XML -XML $SCRIPT:jsStateCache -Xpath $xPathRunningTasks
-            }
-
-            if ( !$NoEnqueuedTasks )
-            {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache for enqueued tasks: $xPathEnqueuedTasks"
-                $enqueuedTaskNodes = Select-XML -XML $SCRIPT:jsStateCache -Xpath $xPathEnqueuedTasks
-            }
-        }
-        
-        if ( !$NoRunningTasks )
-        {
-            foreach( $taskNode in $runningTaskNodes )
-            {
-                if ( !$taskNode.Node.task )
-                {
-                    continue
-                }
-        
-                $task = Create-TaskObject
-                $task.Task = $taskNode.Node.id
-                $task.Job = $taskNode.Node.job
-                $task.State = $taskNode.Node.state
-                $task.LogFile = $taskNode.Node.log_file
-                $task.Steps = $taskNode.Node.steps
-                $task.EnqueuedAt = $taskNode.Node.enqueued
-                $task.StartAt = $taskNode.Node.start_at
-                $task.RunningSince = $taskNode.Node.running_since
-                $task.Cause = $taskNode.Node.cause
-                $task
-                $runningTaskCount++
-            }
-        }
-
-        if ( !$NoEnqueuedTasks )
-        {
-            foreach( $taskNode in $enqueuedTaskNodes )
-            {
-                if ( !$taskNode.Node.task )
-                {
-                    continue
-                }
-        
-                $task = Create-TaskObject
-                $task.Task = $taskNode.Node.id
-                $task.Job = ( Select-XML -XML $taskNode.Node -Xpath '../..' ).Node.path
-                $task.EnqueuedAt = $taskNode.Node.enqueued
-                $task.StartAt = $taskNode.Node.start_at
-                $task
-                $enqueuedTaskCount++
-            }
-        }
+        $tasks += ( Get-JobSchedulerJob -Job $Job -Directory $Directory -Recursive:$Recursive -Running:$Running -Enqueued:$Enqueued ).Tasks
     }
 
     End
     {
-        if ( $runningTaskCount )
+        if ( $tasks.count )
         {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $runningTaskCount running tasks found"
-        }
-        
-        if ( $enqueuedTaskCount )
-        {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $enqueuedTaskCount enqueued tasks found"
-        }
-
-        if ( !$runningTaskCount -and !$enqueuedTaskCount )
-        {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($tasks.count) tasks found"
+            $tasks
+            
+        } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no tasks found"
         }
 

@@ -75,12 +75,26 @@ param
     [string] $Id,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [System.Management.Automation.PSCredential] $Credentials,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $UseDefaultCredentials,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [Uri] $ProxyUrl,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [System.Management.Automation.PSCredential] $ProxyCredentials,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $ProxyUseDefaultCredentials,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Base = '/joc/api',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [int] $Timeout = 30,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [string] $SSLProtocol,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Certificate,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AddRootCertificate,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $SkipCertificateCheck,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Disconnect
 )
@@ -91,6 +105,11 @@ param
 
     Process
     {
+        if ( !$jsWebService )
+        {
+            $script:jsWebService = Create-WebServiceObject
+        }
+
         if ( $Url )
         {
             # is protocol provided? e.g. http://localhost:4446
@@ -105,12 +124,7 @@ param
                 throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4446: $($Url.OriginalString)"
             }
 
-            if ( !$jsWebService )
-            {
-                $SCRIPT:jsWebService = Create-WebServiceObject
-            }
-
-            $SCRIPT:jsWebService.Url = $Url
+            $script:jsWebService.Url = $Url
         }
 
         if ( $ProxUrl )
@@ -126,32 +140,34 @@ param
             {
                 throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -ProxyUrl parameter, e.g. -ProxyUrl http://localhost:3128: $($Url.OriginalString)"
             }            
+
+            $script:jsWebService.ProxyUrl = $ProxyUrl
+        }
+
+        if ( $Base )
+        {
+            $script:jsWebService.Base = $Base
         }
 
         if ( $Id )
         {
-            if ( !$SCRIPT:jsWebService )
-            {
-                $SCRIPT:jsWebService = Create-WebServiceObject
-            }
-
-            $SCRIPT:jsWebService.Id = $Id
+            $script:jsWebService.JobSchedulerId = $Id
         }
 
         if ( $Credentials )
         {
-            $SCRIPT:jsWebServiceOptionWebRequestUseDefaultCredentials = $false
-            $SCRIPT:jsWebServiceCredentials = $Credentials
-        } elseif ( $SCRIPT:jsWebService ) {
-            $Credentials = $SCRIPT:jsWebServiceCredentials
+            $script:jsWebServiceOptionWebRequestUseDefaultCredentials = $false
+            $script:jsWebServiceCredential = $Credentials
+        } elseif ( $script:jsWebService ) {
+            $Credentials = $script:jsWebServiceCredential
         }
         
         if ( $ProxyCredentials )
         {
-            $SCRIPT:jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $false
-            $SCRIPT:jsWebServiceProxyCredentials = $ProxyCredentials
-        } elseif ( $SCRIPT:jsWebServiceProxyCredentials ) {
-            $ProxyCredentials = $SCRIPT:jsWebServiceProxyCredentials
+            $script:jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $false
+            $script:jsWebServiceProxyCredential = $ProxyCredentials
+        } elseif ( $script:jsWebServiceProxyCredential ) {
+            $ProxyCredentials = $script:jsWebServiceProxyCredential
         }
 
         if ( $Disconnect )
@@ -168,40 +184,144 @@ param
             $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + $path
         }
 
-        $body  = '{}'
-        $headers = @{}
-        
-        if ( $Disconnect )
+        if ( $AddRootCertificate )
         {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending disconnect request to JobScheduler Web Service $($authenticationUrl)"
-            $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -CheckResponse $false -Headers $headers
+            # add root certificate to truststore
+            #     see https://github.com/PowerShell/PowerShell/issues/1865
+            #     see https://github.com/dotnet/corefx/blob/master/Documentation/architecture/cross-platform-cryptography.md
+            $storeName = [System.Security.Cryptography.X509Certificates.StoreName]
+            $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]
+            $openFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]
+            $store = [System.Security.Cryptography.X509Certificates.X509Store]::new( $storeName::Root, $storeLocation::CurrentUser )
             
-            $SCRIPT:js = Create-JSObject
-            $SCRIPT:jsWebService = Create-WebServiceObject
-        } else {
-            if ( $Credentials )
-            {
-                $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
-                $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
-            } elseif ( $Url.UserInfo ) {
-                $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $url.UserInfo ))
-                $headers = @{ 'Authorization'="Basic $($basicAuthentication)" }
-            }
-        
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending authentication request to JobScheduler Web Service $($authenticationUrl)"
-            $response = Send-JobSchedulerWebServiceRequest -Url $authenticationUrl -Method 'POST' -ContentType 'application/json' -Body $body -Headers $headers
+            $X509Certificate2 = [System.Security.Cryptography.X509Certificates.X509Certificate2]
+            $certPath = ( Resolve-Path $RootCertificate ).Path
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2( $certPath )
+            
+            $store.Open( $openFlags::ReadWrite )
+            $store.Add( $cert )
+            $store.Close()        
         }
+
+        $requestParams = @{}
+        $requestParams.Add( 'Uri', $authenticationUrl )
         
-        if ( $response )
+        if ( $Disconnect -and $script:jsWebService )
         {
-            if ( $ProxyUrl )
-            {
-                $SCRIPT:jsWebService.ProxyUrl = $ProxyUrl
-            }
-        
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($response.accessToken)"
-            $SCRIPT:jsWebService
+            $requestParams.Add( 'Headers', @{ 'Accept' = 'application/json'; 'Content-Type' = 'application/json'; 'X-Access-Token' = $script:jsWebService.AccessToken } )
+        } else {
+            $requestParams.Add( 'Headers', @{ 'Accept' = 'application/json'; 'Content-Type' = 'application/json' } )
         }
+        $requestParams.Add( 'ContentType', 'application/json' )
+        $requestParams.Add( 'Method', 'POST' )
+
+        if ( isPowerShellVersion 6 )
+        {
+            $requestParams.Add( 'AllowUnencryptedAuthentication', $true )
+            $requestParams.Add( 'SkipHttpErrorCheck', $true )
+        }
+
+        if ( $UseDefaultCredentials )
+        {
+            # Windows only
+            $requestParams.Add( 'UseDefaultCredentials', $true )
+        } elseif ( $Credentials ) {
+            if ( isPowerShellVersion 6 )
+            {
+                $requestParams.Add( 'Authentication', 'Basic' )
+            } else {
+                $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
+                $requestParams['Headers'].Add( 'Authorization', "Basic $($basicAuthentication)" )
+            }
+
+            $requestParams.Add( 'Credential', $Credentials )
+        } else {
+            throw "no credentials specified, use -Credential parameter"
+        }
+
+        if ( $ProxyUrl )
+        {
+            $requestParams.Add( 'Proxy', $ProxyUrl )
+            $script:jsWebService.ProxyUrl = $ProxyUrl
+        }
+
+        if ( $ProxyUseDefaultCredentials )
+        {
+            # Windows only
+            $requestParams.Add( 'ProxyUseDefaultCredentials', $true )
+        } elseif ( $ProxyCredentials ) {
+            $requestParams.Add( 'ProxyCredential', $ProxyCredentials )
+        }
+
+        if ( $Timeout )
+        {
+            $requestParams.Add( 'TimeoutSec', $Timeout )
+            $script:jsWebService.Timeout = $Timeout
+        }
+
+        if ( $SkipCertificateCheck )
+        {
+            $requestParams.Add( 'SkipCertificateCheck', $true )
+            $script:jsWebService.SkipCertificateCheck = $true
+        }
+        
+        if ( $SSLProtocol )
+        {
+            # $requestParams.Add( 'SSLProtocol', 'Tls' )
+            # $requestParams.Add( 'SSLProtocol', 'Tls12' )
+            # $requestParams.Add( 'SSLProtocol', 'Tls,Tls11,Tls12' )
+            $requestParams.Add( 'SSLProtocol', $SSLProtocol )
+            $script:jsWebService.SSLProtcol = $SSLProtocol
+        }
+
+        if ( $Certificate )
+        {
+            # Client Certificate
+            $clientCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2( $Certificate )
+            $requestParams.Add( 'Certificate', $clientCert )
+            $script:jsWebService.Certificate = $clientCert
+        }
+
+        try {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service $($authenticationUrl)"
+            Write-Debug ".... Invoke-WebRequest:"
+        
+            $requestParams.Keys | % {
+                if ( $_ -eq 'Headers' )
+                {
+                    $item = $_
+                    $requestParams.Item($_).Keys | % {
+                        Write-Debug "...... Headers $_ : $($requestParams.Item($item).Item($_))"
+                    }
+                } else {
+                    Write-Debug "...... $_  $($requestParams.Item($_))"
+                }
+            }
+
+            $response = Invoke-WebRequest @requestParams
+
+            if ( $response -and $response.StatusCode -eq 200 -and $response.Content )
+            {
+                if ( $Disconnect )
+                {
+                    $script:js = Create-JSObject
+                    $script:jsWebService = Create-WebServiceObject
+                    $script:jsWebServiceCredential = $null
+                } else {
+                    $content = $response.Content | ConvertFrom-JSON
+                    $script:jsWebService.AccessToken = $content.AccessToken
+
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($response.accessToken)"
+                    $script:jsWebService
+                }
+            } else {
+                $message = $response | Format-List -Force | Out-String
+                throw $message
+            }        
+        } catch {
+            $message = $_.Exception | Format-List -Force | Out-String
+            throw $message
+        }        
     }
 
     End

@@ -20,20 +20,66 @@ about_jobscheduler
 [cmdletbinding()]
 param
 (
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
+
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
 	}
 
     Process
     {
-        $command = "<modify_spooler cmd='continue'/>"
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            $objAuditLog = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+
+            if ( $AuditTimeSpent )
+            {
+                Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+            }
+
+            if ( $AuditTicketLink )
+            {
+                Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+        }
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/jobscheduler/continue' $requestBody
         
-        $result = Send-JobSchedulerXMLCommand $js.Url $command
+        if ( $response.StatusCode -eq 200 )
+        {
+            $requestResult = ( $response.Content | ConvertFrom-JSON )
+            
+            if ( !$requestResult.ok )
+            {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }
+
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChainss.count) JobScheduler Master resumed"                                
     }
 }
 

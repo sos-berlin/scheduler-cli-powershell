@@ -54,20 +54,37 @@ about_jobscheduler
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [hashtable] $Parameters,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $At = 'now'
+    [hashtable] $Environment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $At,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink    
 )
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
-        $startJobs = @()
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
+
+        $objJobs = @()
     }
     
     Process
@@ -93,18 +110,90 @@ param
                 $Job = $Directory + '/' + $Job
             }
         }
-    
-        $j = Create-JobObject
-        $j.Job = $Job
-        $j.Path = $Job
-        $j.Directory = Get-JobSchedulerObject-Parent $Job
-		$j.At = $At
-		$j.Parameters = $Parameters
-        $startJobs += $j
+
+        $objJob = New-Object PSObject
+
+        if ( $Job )
+        {
+            Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
+        }
+
+        if ( $At )
+        {
+            Add-Member -Membertype NoteProperty -Name 'at' -value $At -InputObject $objJob
+        }
+
+        if ( $Timezone )
+        {
+            Add-Member -Membertype NoteProperty -Name 'timezone' -value $Timezone -InputObject $objJob
+        }
+
+        if ( $Parameters )
+        {
+            Add-Member -Membertype NoteProperty -Name 'params' -value $Parameters -InputObject $objJob
+        }
+
+        if ( $Environment )
+        {
+            Add-Member -Membertype NoteProperty -Name 'environment' -value $Environment -InputObject $objJob
+        }
+
+        $objJobs += $objJob    
     }
 
     End
     {
-        $startJobs | Update-JobSchedulerJob -Action start
+        if ( $objJobs.count )
+        {
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'jobs' -value $objJobs -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            {
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                }
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+            }
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/jobs/start' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+        
+            $requestResult.tasks
+            
+            if ( $requestResult.tasks.count -ne $objJobs.count )
+            {
+                Write-Error "$($MyInvocation.MyCommand.Name): not all tasks could be started, $($objJobs.count) jobs requested, $($requestResult.tasks.count) tasks started"
+            }
+            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.tasks.count) tasks started"                
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no jobs found"                
+        }
+
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -1,50 +1,35 @@
-function Suspend-JobSchedulerJobChain
+function Resume-JobSchedulerJob
 {
 <#
 .SYNOPSIS
-Suspends a job chain in the JobScheduler Master.
+Unstops a number of jobs in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-JobSchedulerJobChain -Action "suspend"
+This cmdlet is an alias for Update-JobSchedulerJob -Action "stop"
 
-.PARAMETER JobChain
-Specifies the path and name of a job chain that should be suspended.
-
-The parameter -JobChain has to be specified if no pipelined job chain objects are used.
+.PARAMETER Job
+Specifies the full path and name of a job.
 
 .PARAMETER Directory
-Optionally specifies the folder where the job chain is located. The directory is determined
-from the root folder, i.e. the "live" directory.
-
-If the -JobChain parameter specifies the name of job chain then the location specified from the 
--Directory parameter is added to the job chain location.
+Optionally specifies the directory of a job should the -Job parameter
+not be provided with the full path and name of the job.
 
 .INPUTS
-This cmdlet accepts pipelined job chain objects that are e.g. returned from a Get-JobSchedulerJobChain cmdlet.
+This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
 
 .OUTPUTS
-This cmdlet returns an array of job chain objects.
+This cmdlet returns an array of job objects.
 
 .EXAMPLE
-Stop-JobSchedulerJobChain -JobChain /sos/reporting/Reporting
+Stop-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule
 
-Suspends the job chain "Reporting". from the specified folder.
-
-.EXAMPLE
-Get-JobSchedulerJobChain | Stop-JobSchedulerJobChain
-
-Suspends all job chains.
+Stops an individual job.
 
 .EXAMPLE
-Get-JobSchedulerJobChain -Directory / -NoSubfolders | Stop-JobSchedulerJobChain
+Get-JobSchedulerJob -Directory /some_dir -NoSubfolders | Stop-JobSchedulerJob
 
-Suspends job chains that are configured with the root folder ("live" directory)
+Stops all jobs from the specified directory 
 without consideration of subfolders.
-
-.EXAMPLE
-Get-JobSchedulerJobChain -JobChain /test/globals/chain1 | Stop-JobSchedulerJobChain
-
-Suspends the specified job chain.
 
 .LINK
 about_jobscheduler
@@ -53,20 +38,20 @@ about_jobscheduler
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $JobChain,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Job,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $AuditTicketLink
+    [Uri] $AuditTicketLink    
 )
-    Begin
-    {
-        Approve-JobSchedulerCommand $MyInvocation.MyCommand
+	Begin
+	{
+		Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
         if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
@@ -77,7 +62,7 @@ param
             }
         }
 
-        $objJobChains = @()
+        $objJobs = @()
     }
     
     Process
@@ -94,34 +79,38 @@ param
             }
         }
     
-        if ( $JobChain )
+        if ( $Job )
         {
-            if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
+            if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
             {
-                $Directory = Get-JobSchedulerObject-Parent $JobChain
-            } else { # job chain name includes no directory
-                if ( $Directory -eq '/' )
-                {
-                    $JobChain = $Directory + $JobChain
-                } else {
-                    $JobChain = $Directory + '/' + $JobChain
-                }
+                $Directory = Get-JobSchedulerObject-Parent $Job
+            } else { # job name includes no directory
+				if ( $Directory -eq '/' )
+				{
+					$Job = $Directory + $Job
+				} else {
+					$Job = $Directory + '/' + $Job
+				}
             }
         }
+    
+        $objJob = New-Object PSObject
 
-        $objJobChain = New-Object PSObject
-        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objJobChain
+        if ( $Job )
+        {
+            Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
+        }
 
-        $objJobChains += $objJobChain
+        $objJobs += $objJob
     }
 
     End
     {
-        if ( $objJobChains.count )
+        if ( $objJobs.count )
         {
             $body = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-            Add-Member -Membertype NoteProperty -Name 'jobChains' -value $objJobChains -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'jobs' -value $objJobs -InputObject $body
     
             if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
             {
@@ -140,9 +129,9 @@ param
     
                 Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
             }
-            
+    
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest '/job_chains/stop' $requestBody
+            $response = Invoke-JobSchedulerWebRequest '/jobs/unstop' $requestBody
             
             if ( $response.StatusCode -eq 200 )
             {
@@ -155,10 +144,12 @@ param
             } else {
                 throw ( $response | Format-List -Force | Out-String )
             }
-
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChainss.count) job chains suspended"                            
+        
+            $objJobs
+            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobs.count) jobs resumed"                
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job chains found"
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no jobs found"                
         }
 
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch

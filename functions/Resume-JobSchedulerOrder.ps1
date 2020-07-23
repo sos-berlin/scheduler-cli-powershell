@@ -7,7 +7,7 @@ Resumes a number of orders in the JobScheduler Master.
 .DESCRIPTION
 This cmdlet is an alias for Update-JobSchedulerOrder -Action "resume"
 
-.PARAMETER Order
+.PARAMETER OrderId
 Specifies the identifier of an order.
 
 Both parameters -Order and -JobChain have to be specified if no pipelined order objects are used.
@@ -59,17 +59,32 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Order,
+    [string] $OrderId,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory = '/'
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
-        $parameters = @()
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
+
+        $objOrders = @()
     }
     
     Process
@@ -101,19 +116,61 @@ param
             }
         }
 
-        $resumeOrder = Create-OrderObject
-        $resumeOrder.Order = $Order
-        $resumeOrder.JobChain = Get-JobSchedulerObject-Basename $JobChain
-        $resumeOrder.Name = $resumeOrder.JobChain + ',' + $resumeOrder.Order
-        $resumeOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
-        $resumeOrder.Path = $resumeOrder.Directory + '/' + $resumeOrder.Name
-        # output objects are created by Update-JobSchedulerOrder
-        # $resumeOrder
-        $parameters += $resumeOrder
+
+        $objOrder = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
+        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
+
+        $objOrders += $objOrder
     }
 
     End
     {
-        $parameters | Update-JobSchedulerOrder -Action resume
+        if ( $objOrders.count )
+        {
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            {
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                }
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+            }
+    
+            Add-Member -Membertype NoteProperty -Name 'orders' -value $objOrders -InputObject $body
+            
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/orders/resume' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objOrders.count) orders resumed"        
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"
+        }
+    
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

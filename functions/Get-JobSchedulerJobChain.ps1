@@ -58,19 +58,26 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $JobChain,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $JobChain,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoSubfolders,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
+    [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Compact,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Active,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Stopped
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
-        $jobChainCount = 0
+
+        $volatileJobChains = @()
+        $returnJobChains = @()        
+        $states = @()
     }
         
     Process
@@ -94,6 +101,11 @@ param
             }
         }
 
+        if ( $Directory -eq '/' -and !$JobChain -and !$Recursive )
+        {
+            $Recursive = $true
+        }
+        
         if ( $JobChain ) 
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a path
@@ -109,68 +121,102 @@ param
             }
         }
 
-        $xPath = '//folder'
-
-        if ( $Directory )
+        if ( $Active )
         {
-            if ( $NoSubfolders )
-            {
-                $xPath += "[@path='$($Directory)']"
-            } else {
-                $xPath += "[starts-with(@path, '$($Directory)')]"
-            }
+            $states += 'ACTIVE'
+        }
+
+        if ( $Stopped )
+        {
+            $states += 'STOPPED'
+        }
+
+        # JOB CHAINS VOLATILE API
+
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+        
+        if ( $Compact )
+        {
+            Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
         }
 
         if ( $JobChain )
         {
-            $xPath += "/job_chains/job_chain[@path = '$($JobChain)']"
-        } else {
-            $xPath += '/job_chains/job_chain'
-        }
-        
-        if ( $NoCache -or !$SCRIPT:jsHasCache )
-        {
-            $whatNoSubfolders = if ( $NoSubfolders ) { " no_subfolders" } else { "" }
-            $command = "<show_state subsystems='folder order' what='folders job_chain_orders$($whatNoSubfolders)' path='$($Directory)'/>"
-    
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
-        
-            $jobChainXml = Send-JobSchedulerXMLCommand $js.Url $command
+            $objJobChain = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objJobChain
 
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): using xPath: $xPath"
-            $jobChainNodes = Select-XML -XML $jobChainXml -Xpath $xPath
-        } else {
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache: $xPath"
-            $jobChainNodes = Select-XML -XML $SCRIPT:jsStateCache -Xpath $xPath
+            Add-Member -Membertype NoteProperty -Name 'jobChains' -value @( $objJobChain ) -InputObject $body
         }
-        
-        if ( $jobChainNodes )
+
+        if ( $Directory )
         {
-            foreach( $jobChainNode in $jobChainNodes )
-            {
-                if ( !$jobChainNode.Node.name )
-                {
-                    continue
-                }
-        
-                $jc = Create-JobChainObject
-                $jc.JobChain = $jobChainNode.Node.name
-                $jc.Path = $jobChainNode.Node.path
-                $jc.Directory = Get-JobSchedulerObject-Parent $jobChainNode.Node.path
-                $jc.State = $jobChainNode.Node.state
-                $jc.Title = $jobChainNode.Node.title
-                $jc.Orders = $jobChainNode.Node.orders
-                $jc.RunningOrders = $jobChainNode.Node.running_orders
-                $jc
-                $jobChainCount++
-            }            
+            $objFolder = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $objFolder
+            Add-Member -Membertype NoteProperty -Name 'recursive' -value ($Recursive -eq $true) -InputObject $objFolder
+
+            Add-Member -Membertype NoteProperty -Name 'folders' -value @( $objFolder ) -InputObject $body
         }
+
+        if ( $states )
+        {
+            Add-Member -Membertype NoteProperty -Name 'states' -value $states -InputObject $body            
+        }
+        
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/job_chains' $requestBody
+        
+        if ( $response.StatusCode -eq 200 )
+        {
+            $volatileJobChains += ( $response.Content | ConvertFrom-JSON ).jobChains
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }        
     }
     
     End
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $jobChainCount job chains found"
+        if ( $volatileJobChains )
+        {
+            foreach( $volatileJobChain in $volatileJobChains )
+            {
+                $returnJobChain = Create-JobChainObject
+                $returnJobChain.JobChain = $volatileJobChain.jobChain
+                $returnJobChain.Path = $volatileJobChain.path
+                $returnJobChain.Directory = Get-JobSchedulerObject-Parent $volatileJobChain.path
+                $returnJobChain.Volatile = $volatileJobChain
+    
+                # JOB CHAINS PERMANENT API
+    
+                $body = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+                Add-Member -Membertype NoteProperty -Name 'jobChain' -value $volatileJobChain.path -InputObject $body
+            
+                if ( $Compact )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
+                }
+            
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest '/job_chain/p' $requestBody
+                
+                if ( $response.StatusCode -eq 200 )
+                {
+                    $returnJobChain.Permanent = ( $response.Content | ConvertFrom-JSON ).jobChain
+                } else {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+    
+                $returnJobChains += $returnJobChain
+            }
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnJobChains.count) job chains found"
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job chains found"
+        }
+        
+        $returnJobChains
+
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -114,20 +114,18 @@ param
     Begin
     {
         $process = $null
-Write-Verbose "starting cmdlet: begin"
     }
         
     Process
     {
-Write-Verbose "starting cmdlet: Process"
         $tempStdoutFile = [IO.Path]::GetTempFileName()
         $tempStderrFile = [IO.Path]::GetTempFileName()
 
         Write-Debug ".. $($MyInvocation.MyCommand.Name): using temporary file for stdout: $($tempStdoutFile)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): using temporary file for stderr: $($tempStderrFile)"
     
-#       try
-#        {
+        try
+        {
             if ( $TargetName )
             {
                 $systemCredentials = Get-JobSchedulerSystemCredentials -TargetName $TargetName
@@ -160,7 +158,7 @@ Write-Verbose "starting cmdlet: Process"
                 $process.WaitForExit()
 			}
 
-           $process.ExitCode | Out-Null
+            $process.ExitCode | Out-Null
             $process | Add-Member -Membertype NoteProperty -Force -Name ExitCode -Value $process.GetType().GetField("exitCode", "NonPublic,Instance").GetValue($process)
             
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): process terminated with exit code: $($process.ExitCode)"
@@ -180,9 +178,9 @@ Write-Verbose "starting cmdlet: Process"
             }
             
             $process
-#        } catch {
-#            throw $_.Exception
-#        } finally {
+        } catch {
+            throw ( $_.Exception | Format-List -Force | Out-String )
+        } finally {
             if ( !$NoStandardOutput )
             {
                 try
@@ -202,6 +200,6 @@ Write-Verbose "starting cmdlet: Process"
                     Write-Verbose ".. $($MyInvocation.MyCommand.Name): could not remove temporary file for stderr: $tempStderrFile"
                 }
             }
-#       }
+        }
     }
 }

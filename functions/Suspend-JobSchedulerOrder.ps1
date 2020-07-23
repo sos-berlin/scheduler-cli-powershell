@@ -59,17 +59,32 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Order,
+    [string] $OrderId,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory = '/'
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
 
-        $parameters = @()
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        {
+            if ( !$AuditComment )
+            {
+                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            }
+        }
+
+        $objOrders = @()
     }
     
     Process
@@ -101,19 +116,59 @@ param
             }
         }
 
-        $suspendOrder = Create-OrderObject
-        $suspendOrder.Order = $Order
-        $suspendOrder.JobChain = Get-JobSchedulerObject-Basename $JobChain
-        $suspendOrder.Name = $suspendOrder.JobChain + ',' + $suspendOrder.Order
-        $suspendOrder.Directory = Get-JobSchedulerObject-Parent $JobChain
-        $suspendOrder.Path = $suspendOrder.Directory + '/' + $suspendOrder.Name
-        # output objects are created by Update-JobSchedulerOrder
-        # $suspendOrder
-        $parameters += $suspendOrder
+        $objOrder = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
+        Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
+
+        $objOrders += $objOrder
     }
 
     End
     {
-        $parameters | Update-JobSchedulerOrder -Action suspend
+        if ( $objOrders.count )
+        {
+            $body = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'orders' -value $objOrders -InputObject $body
+    
+            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            {
+                $objAuditLog = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
+    
+                if ( $AuditTimeSpent )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
+                }
+    
+                if ( $AuditTicketLink )
+                {
+                    Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+                }
+    
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+            }
+    
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest '/orders/suspend' $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                
+                if ( !$requestResult.ok )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }        
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objOrders.count) orders suspended"                
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"                
+        }
+    
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
