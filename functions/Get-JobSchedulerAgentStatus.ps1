@@ -148,7 +148,9 @@ param
             try
             {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Agent $($agentUrl)"
-                $agentState = Send-JobSchedulerAgentRequest $agentUrl 'GET'
+#               $agentState = Send-JobSchedulerAgentRequest $agentUrl 'GET'
+                Invoke-JobSchedulerWebRequestXmlCommand -Uri $agentUri -Method 'GET'
+
                 $state = Create-AgentStateObject
 				$state.IsTerminating = $agentState.isTerminating
 				$state.system.hostname = $agentState.system.hostname

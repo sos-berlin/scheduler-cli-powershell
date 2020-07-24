@@ -107,13 +107,11 @@ param
     [Parameter(Mandatory=$false,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Id,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Base = '/joc/api',
-    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Method = 'POST',
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [string] $ContentType = 'application/json',
+    [string] $ContentType = 'application/xml',
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [hashtable] $Headers = @{}
+    [hashtable] $Headers = @{'Accept' = 'application/xml'}
 )
 
     Begin
@@ -145,7 +143,7 @@ param
         } else {
             $requestId = $jsWebService.ID
         }
-        
+<#        
         # handle XML and JSON requests
         if ( $Body.startsWith( '<' ) )
         {
@@ -163,8 +161,10 @@ param
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler $($requestUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $body"
-        
-        Send-JobSchedulerWebServiceRequest -Url $requestUrl -Method $Method -ContentType $ContentType -Body $Body -Headers $Headers
+#>
+
+#       Send-JobSchedulerWebServiceRequest -Url $requestUrl -Method $Method -ContentType $ContentType -Body $Body -Headers $Headers
+        Invoke-JobSchedulerWebRequestXmlCommand -Method $Method -ContentType $ContentType -Command $Body -Headers $Headers
     }
 
     End

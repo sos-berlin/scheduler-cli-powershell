@@ -204,6 +204,7 @@ param
         }
 
         $requestParams = @{}
+        $requestParams.Add( 'Verbose', $false )
         $requestParams.Add( 'Uri', $authenticationUrl )
         
         if ( $Disconnect -and $script:jsWebService )
@@ -311,7 +312,7 @@ param
                     $content = $response.Content | ConvertFrom-JSON
                     $script:jsWebService.AccessToken = $content.AccessToken
 
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($response.accessToken)"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($content.accessToken)"
                     $script:jsWebService
                 }
             } else {

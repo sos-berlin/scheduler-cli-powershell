@@ -169,7 +169,8 @@ param
             
             try
             {
-                $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.outerXml
+#               $response = Send-JobSchedulerXMLCommand $SupervisorUrl $commandsNode.outerXml
+                $response = Invoke-JobSchedulerWebRequestXmlCommand -Uri $SupervisorUrl -Command $commandsNode.outerXml -CheckResponse
 
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {

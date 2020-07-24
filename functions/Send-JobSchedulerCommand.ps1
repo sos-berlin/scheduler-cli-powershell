@@ -55,6 +55,8 @@ param
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $Command"
         
-        Send-JobSchedulerXMLCommand -Url $js.Url -Command $Command -Headers $Headers
+#       Send-JobSchedulerXMLCommand -Url $js.Url -Command $Command -Headers $Headers
+        Invoke-JobSchedulerWebRequestXmlCommand -Command $Command -Headers $Headers
+        
     }
 }

@@ -276,7 +276,7 @@ param
         if ( $response.StatusCode -eq 200 )
         {
             $returnPlans = ( $response.Content | ConvertFrom-JSON ).planItems
-            $returnPlans
+            $returnPlans | Sort-Object plannedStartTime
         } else {
             throw ( $response | Format-List -Force | Out-String )
         }

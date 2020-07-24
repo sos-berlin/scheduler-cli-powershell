@@ -136,7 +136,9 @@ param
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.innerXml)"
         
-        $responseXml = Send-JobSchedulerXMLCommand $SupervisorUrl $xmlDoc.innerXml
+#       $responseXml = Send-JobSchedulerXMLCommand $SupervisorUrl $xmlDoc.innerXml
+        $responseXml = Invoke-JobSchedulerWebRequestXmlCommand -Uri $SupervisorUrl -Command $xmlDoc.innerXml -CheckResponse
+        
         $responseNode = Select-XML -XML $responseXml -XPath "//param[@name='JobSchedulerEventJob.events']/@value"
         
         if ( $responseNode )
