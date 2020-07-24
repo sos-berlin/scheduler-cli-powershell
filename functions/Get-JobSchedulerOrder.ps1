@@ -131,7 +131,7 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        if ( $Order -and !$JobChain )
+        if ( $OrderId -and !$JobChain )
         {
             throw "Use of -OrderId parameter requires to specify the -JobChain parameter"
         }
@@ -183,14 +183,7 @@ param
             if ( (Get-JobSchedulerObject-Basename $OrderId) -ne $OrderId ) # order id includes a directory
             {
                 $Directory = Get-JobSchedulerObject-Parent $OrderId
-            } else { # order id includes no directory
-                if ( $Directory -eq '/' )
-                {
-                    $OrderId = $Directory + $OrderId
-                } else {
-                    $OrderId = $Directory + '/' + $OrderId
-                }
-            }
+            } # order id includes no directory
         }
 
         if ( $Directory -eq '/' -and !$JobChain -and !$OrderId -and !$Recursive )
@@ -315,28 +308,31 @@ param
                 $returnOrder.Path = $volatileOrder.path
                 $returnOrder.Directory = Get-JobSchedulerObject-Parent $volatileOrder.path
                 $returnOrder.Volatile = $volatileOrder
-    
-                # ORDER PERMANENT API
 
-                $body = New-Object PSObject
-                Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-            
-                if ( $Compact )
+                if ( $volatileOrder._type -eq 'permanent' )
                 {
-                    Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
-                }
-            
-                Add-Member -Membertype NoteProperty -Name 'jobChain' -value $volatileOrder.jobChain -InputObject $body
-                Add-Member -Membertype NoteProperty -Name 'orderId' -value $volatileOrder.orderId -InputObject $body
+                    # ORDER PERMANENT API
     
-                [string] $requestBody = $body | ConvertTo-Json -Depth 100
-                $response = Invoke-JobSchedulerWebRequest '/order/p' $requestBody
+                    $body = New-Object PSObject
+                    Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
                 
-                if ( $response.StatusCode -eq 200 )
-                {
-                    $returnOrder.Permanent = ( $response.Content | ConvertFrom-JSON ).order
-                } else {
-                    throw ( $response | Format-List -Force | Out-String )
+                    if ( $Compact )
+                    {
+                        Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
+                    }
+                
+                    Add-Member -Membertype NoteProperty -Name 'jobChain' -value $volatileOrder.jobChain -InputObject $body
+                    Add-Member -Membertype NoteProperty -Name 'orderId' -value $volatileOrder.orderId -InputObject $body
+        
+                    [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                    $response = Invoke-JobSchedulerWebRequest '/order/p' $requestBody
+                    
+                    if ( $response.StatusCode -eq 200 )
+                    {
+                        $returnOrder.Permanent = ( $response.Content | ConvertFrom-JSON ).order
+                    } else {
+                        throw ( $response | Format-List -Force | Out-String )
+                    }
                 }
 
                 if ( $WithHistory )

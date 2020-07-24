@@ -69,11 +69,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Running,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Enqueued,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Recursive
+    [switch] $Enqueued
 )
     Begin
     {
@@ -129,7 +129,12 @@ param
             $Running = $true
         }
 
-        $tasks += ( Get-JobSchedulerJob -Job $Job -Directory $Directory -Recursive:$Recursive -Running:$Running -Enqueued:$Enqueued ).Tasks
+        $task = ( Get-JobSchedulerJob -Job $Job -JobChain $JobChain -Directory $Directory -Recursive:$Recursive -Running:$Running -Enqueued:$Enqueued ).Tasks
+        
+        if ( $task )
+        {
+            $tasks += $task
+        }
     }
 
     End
@@ -138,7 +143,6 @@ param
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($tasks.count) tasks found"
             $tasks
-            
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no tasks found"
         }

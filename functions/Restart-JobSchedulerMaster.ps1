@@ -75,7 +75,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Cluster,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [int] $Timeout,
+    [int] $Timeout = 0,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
 	[switch] $Service
 )
@@ -86,9 +86,7 @@ param
 	}
 
     Process
-    {
-		$parameters = @{ "Action"=$Action; "Cluster"=$Cluster; "Timeout"=$Timeout; "Service"=$Service }
-		$arguments = New-Object System.Management.Automation.PSObject -Property $parameters
-		$arguments | Stop-JobSchedulerMaster -Restart
+    {        
+        Stop-JobSchedulerMaster -Action $Action -Cluster:$Cluster -Timeout $Timeout -Service:$Service -Restart
     }
 }

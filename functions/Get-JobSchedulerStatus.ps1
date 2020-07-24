@@ -13,8 +13,8 @@ Summary information and statistics information are returned from a JobScheduler 
 .PARAMETER Statistics
 Specifies that detailed statistics information about orders and jobs is returned.
 
-.PARAMETER NoDisplay
-Specifies that no formatted output will be displayed, instead objects will be returned that contain the respective information.
+.PARAMETER Display
+Specifies that formatted output will be displayed, otherwise a status object will be returned that contain the respective information.
 
 .EXAMPLE
 Get-JobSchedulerStatus
@@ -22,12 +22,12 @@ Get-JobSchedulerStatus
 Returns summary information about the JobScheduler Master.
 
 .EXAMPLE
-Get-JobSchedulerStatus -Statistics
+Get-JobSchedulerStatus -Statistics -Display
 
 Returns status information and statistics information about jobs, job chains, orders and tasks. Formatted output is displayed.
 
 .EXAMPLE
-$status = $Get-JobSchedulerStatus -NoDisplay -Statistics
+$status = $Get-JobSchedulerStatus -Statistics
 
 Returns an object including status information and statistics information.
 
@@ -41,7 +41,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Statistics,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $NoDisplay
+    [switch] $Display
 )
     Begin
     {
@@ -78,7 +78,7 @@ param
         Add-Member -Membertype NoteProperty -Name 'Volatile' -value $volatileStatus -InputObject $returnStatus
         Add-Member -Membertype NoteProperty -Name 'Permanent' -value $permanentStatus -InputObject $returnStatus
          
-        if ( !$NoDisplay )
+        if ( $Display )
         {
             $output = "
 ________________________________________________________________________
@@ -99,7 +99,7 @@ ________________________________________________________________________
         {
             $command = "<subsystem.show what='statistics'/>"
             $statXml = Invoke-JobSchedulerWebRequestXmlCommand -Command $command -CheckResponse
-            
+
             if ( $statXml )
             {
                 $stat = Create-StatisticsObject
@@ -123,7 +123,7 @@ ________________________________________________________________________
                 $stat.LocksExist = ( Select-XML -XML $statXml -Xpath "//subsystem[@name = 'lock']/file_based.statistics/@count" ).Node."#text"
                 $stat.MonitorsExist = ( Select-XML -XML $statXml -Xpath "//subsystem[@name = 'monitor']/file_based.statistics/@count" ).Node."#text"
                 
-                if ( !$NoDisplay )
+                if ( $Display )
                 {
                     $output = "
 ________________________________________________________________________
@@ -160,7 +160,7 @@ ________________________________________________________________________
             Add-Member -Membertype NoteProperty -Name 'Statistics' -value $stat -InputObject $returnStatus
         }
         
-        if ( $NoDisplay )
+        if ( !$Display )
         {
             $returnStatus
         }

@@ -254,7 +254,7 @@ param
                     Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
                 }
     
-                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $objOrder
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
             }
     
             [string] $requestBody = $body | ConvertTo-Json -Depth 100

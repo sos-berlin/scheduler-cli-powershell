@@ -2,64 +2,36 @@ function Get-JobSchedulerAgentStatus
 {
 <#
 .SYNOPSIS
-Return summary information and statistics information from a JobScheduler Agent.
+Return summary information from a JobScheduler Agent.
 
 .DESCRIPTION
-Summary information and statistics information are returned from a JobScheduler Agent.
+Summary information is returned from a JobScheduler Agent.
 
 * Summary information includes e.g. the start date and JobScheduler Agent release.
-* Statistics information includes e.g. the number of running tasks.
 
 This cmdlet can be used to check if an Agent is available.
 
-.PARAMETER Url
-Specifies the URL to access the Agent.
-
-This parameter cannot be specified if the -Agents parameter is used.
-
 .PARAMETER Agents
-Specifies an array of URLs that point to Agents. This is useful if a number of Agents
-should be checked at the same time, e.g. should the Agents from the result of the
-Get-JobSchedulerAgentCluster cmdlet be checked.
-
-This parameter cannot be specified if the -Url parameter is used.
-
-.PARAMETER Path
-Specifies the URL path that is used to retrieve the Agent status.
-
-Default: /jobscheduler/agent/api/overview
-
-.PARAMETER Timeout
-Specifies the number of milliseconds for establishing a connection to the JobScheduler Agent.
-With the timeout being exceeded the Agent is considered being unavailable.
-
-Default: 3000 ms
+Specifies an array of URLs that point to Agents. This is useful if specific Agents
+should be checked. Without this parameter all Agents configured for a Master will be checked.
 
 .PARAMETER Display
 Optionally specifies formatted output to be displayed.
 
-.PARAMETER NoOutputs
-Optionally specifies that no output is returned by this cmdlet.
+.EXAMPLE
+Get-JobSchedulerAgentStatus -Display
+
+Displays summary information about all JobScheduler Agents configured for the current Master.
 
 .EXAMPLE
-Get-JobSchedulerAgentStatus http://localhost:4455
-
-Returns summary information about the JobScheduler Agent.
-
-.EXAMPLE
-Get-JobSchedulerAgentStatus -Url http://localhost:4455 -Display
+Get-JobSchedulerAgentStatus -Agents http://localhost:4445 -Display
 
 Returns summary information about the Agent. Formatted output is displayed.
 
 .EXAMPLE
-$status = Get-JobSchedulerAgentStatus http://localhost:4455
+$status = Get-JobSchedulerAgentStatus -Agents http://localhost:4445
 
 Returns a status information object.
-
-.EXAMPLE
-$status = GetJobScheduler-AgentCluster /agent/fixed_priority_scheduling_agent | Get-JobSchedulerAgentStatus
-
-Returns an array of status information objects each representing the state of an Agent in the cluster.
 
 .LINK
 about_jobscheduler
@@ -69,130 +41,98 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $Url,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [Uri[]] $Agents,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [string] $Path = '/jobscheduler/agent/api/overview',
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [int] $Timeout = 3000,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $Display,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoOutputs
+    [switch] $Display
 )
     Begin
     {
+        Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
-
-        $agentsChecked = @()
+        
+        $allAgents = @()
     }
 
     Process
     {
-        if ( !$Url -and !$Agents )
+        foreach( $agent in $Agents )
         {
-            if ( $SCRIPT:jsAgent.Url )
-            {
-                [Uri] $Url = $SCRIPT:jsAgent.Url
-            } else {
-                throw "$($MyInvocation.MyCommand.Name): one of the parameters -Url or -Agents has to be specified"
-            }
-        } elseif ( $Url -and $Agents )
-        {
-            throw "$($MyInvocation.MyCommand.Name): one of the parameters -Url or -Agents has to be specified"
-        }
-
-        if ( !$Agents )
-        {
-            [Uri[]] $Agents = @( [Uri]$Url )
-        }
-        
-        if ( $Timeout )
-        {
-            $SCRIPT:jsAgentOptionWebRequestTimeout = $Timeout
-        }
-
-        foreach( $agentUrl in $Agents )
-        {
-            # cast is required as for some weird reasons foreach forgets about the object type
-            [Uri] $agentUrl = $agentUrl
-
-            if ( $agentUrl )
-            {
-                # is protocol provided? e.g. http://localhost:4444
-                if ( !$agentUrl.OriginalString.startsWith('http://') -and !$agentUrl.OriginalString.startsWith('https://') )
-                {
-                    $agentUrl = 'http://' + $agentUrl.OriginalString
-                }
-    
-                # is valid hostname specified?
-                if ( [System.Uri]::CheckHostName( $agentUrl.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
-                {
-                    throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4445: $($agentUrl.OriginalString)"
-                }
-                
-                if ( $agentUrl.LocalPath -eq '/' -and $Path )
-                {
-                    $agentUrl = $agentUrl.OriginalString + $Path
-                }
-            }
-
-            if ( $agentsChecked -contains $agentUrl.OriginalString )
-            {
-                continue
-            } else {
-                $agentsChecked += $agentUrl.OriginalString
-            }
-            
-            try
-            {
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Agent $($agentUrl)"
-#               $agentState = Send-JobSchedulerAgentRequest $agentUrl 'GET'
-                Invoke-JobSchedulerWebRequestXmlCommand -Uri $agentUri -Method 'GET'
-
-                $state = Create-AgentStateObject
-				$state.IsTerminating = $agentState.isTerminating
-				$state.system.hostname = $agentState.system.hostname
-				$state.currentTaskCount = $agentState.currentTaskCount
-				$state.startedAt = $agentState.startedAt
-				$state.version = $agentState.version
-				$state.totalTaskCount = $agentState.totalTaskCount
-                $state | Add-Member -Membertype NoteProperty -Name Url -Value "$($agentUrl.Scheme)://$($agentUrl.Authority)"
-            } catch {
-                Write-Warning ".. $($MyInvocation.MyCommand.Name): JobScheduler Agent not available at $($agentUrl)"
-                $state = Create-AgentStateObject
-                $state | Add-Member -Membertype NoteProperty -Name Url -Value "$($agentUrl.Scheme)://$($agentUrl.Authority)"
-            }
-    
-            if ( $state )
-            {
-                if ( $Display )
-                {
-                    $output = "
-________________________________________________________________________
-Job Scheduler Agent URL: $($state.Url)
-............... version: $($state.version)
-.......... operated for: $($state.system.hostname)
-......... running since: $($state.startedAt)
-........ is terminating: $($state.isTerminating)
--..... total task count: $($state.totalTaskCount)
-.... current task count: $($state.currentTaskCount)
-________________________________________________________________________
-                    "
-                    Write-Output $output
-                }
-        
-                if ( !$NoOutputs )
-                {
-                    return $state
-                }
-            }
+            $allAgents += $agent
         }
     }
-
+    
     End
-    {
+    {    
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+        
+        if ( $allAgents )
+        {
+            $objAgents = @()
+            foreach( $agent in ( $allAgents | Sort-Object | Get-Unique ) )
+            {
+                $objAgent = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'agent' -value $agent -InputObject $objAgent
+                $objAgents += $objAgent
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'agents' -value $objAgents -InputObject $body
+        }
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/agents' -Body $requestBody
+    
+        if ( $response.StatusCode -eq 200 )
+        {
+            $volatileStatus = ( $response.Content | ConvertFrom-JSON ).agents
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }    
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/agents/p' -Body $requestBody
+    
+        if ( $response.StatusCode -eq 200 )
+        {
+            $permanentStatus = ( $response.Content | ConvertFrom-JSON ).agents
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }    
+ 
+        $returnAgents = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'Volatile' -value $volatileStatus -InputObject $returnAgents
+        Add-Member -Membertype NoteProperty -Name 'Permanent' -value $permanentStatus -InputObject $returnAgents
+
+        if ( $Display )
+        {
+            for( $i=0; $i -lt $volatileStatus.count; $i++ )
+            {
+                $output = "
+________________________________________________________________________
+JobScheduler Agent URL: $($permanentStatus[$i].url)
+................. host: $($permanentStatus[$i].host)
+................ state: $($volatileStatus[$i].state._text)
+........... started at: $($permanentStatus[$i].startedAt)
+........ running tasks: $($volatileStatus[$i].runningTasks)
+............. clusters: Agent is member in $($permanentStatus[$i].clusters.count) clusters:"
+
+                foreach( $item in $permanentStatus[$i].clusters )
+                {
+                    $output += "
+.......................: $($item)"
+                }
+                
+                $output += "
+.............. version: $($volatileStatus[$i].version)
+................... OS: $($permanentStatus[$i].os.name), $($permanentStatus[$i].os.architecture), $($permanentStatus[$i].os.distribution)
+________________________________________________________________________
+                    "
+                Write-Output $output
+            }
+        } else {
+            return $returnAgents
+        }
+
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

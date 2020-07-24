@@ -29,12 +29,12 @@ from the root folder, i.e. the "live" directory and should start with a "/".
 .PARAMETER Recursive
 When used with the -Directory parameter then any sub-folders of the specified directory will be looked up.
 
-.PARAMETER FromDate
+.PARAMETER DateFrom
 Optionally specifies the date starting from which daily plan items should be returned.
 
 Default: Begin of the current day.
 
-.PARAMETER ToDate
+.PARAMETER DateTo
 Optionally specifies the date until which daily plan items should be returned.
 
 Default: End of the current day.
@@ -63,7 +63,7 @@ $items = Get-JobSchedulerDailyPlan
 Returns daily plan items for the current day.
 
 .EXAMPLE
-$items = Get-JobSchedulerDailyPlan -ToDate (Get-Date).AddDays(3)
+$items = Get-JobSchedulerDailyPlan -DateTo (Get-Date).AddDays(3)
 
 Returns the daily plan items for the next 3 days.
 
@@ -95,9 +95,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Recursive,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [DateTime] $FromDate = (Get-Date -Hour 0 -Minute 00 -Second 00).ToUniversalTime(),
+    [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 00 -Second 00).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [DateTime] $ToDate = (Get-Date -Hour 0 -Minute 00 -Second 00).AddDays(1).ToUniversalTime(),
+    [DateTime] $DateTo = (Get-Date -Hour 0 -Minute 00 -Second 00).AddDays(1).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Late,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -221,14 +221,14 @@ param
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
-        if ( $FromDate )
+        if ( $DateFrom )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $FromDate).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
         }
 
-        if ( $ToDate )
+        if ( $DateTo )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $ToDate).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
         }
 
         if ( $states )
@@ -276,9 +276,17 @@ param
         if ( $response.StatusCode -eq 200 )
         {
             $returnPlans = ( $response.Content | ConvertFrom-JSON ).planItems
-            $returnPlans | Sort-Object plannedStartTime
         } else {
             throw ( $response | Format-List -Force | Out-String )
+        }
+
+        $returnPlans | Sort-Object plannedStartTime
+
+        if ( $returnPlans.count )
+        {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnPlans.count) Daily Plan items found"
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no Daily Plan items found"
         }
         
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch

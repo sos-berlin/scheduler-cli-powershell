@@ -545,11 +545,11 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
     }
 
     $requestParams = @{}
+    $requestParams.Add( 'Verbose', $false )
     $requestParams.Add( 'Uri', $requestUrl )
     $requestParams.Add( 'Method', 'POST' )
     $requestParams.Add( 'ContentType', $ContentType )
 
-#   $requestParams.Add( 'Headers', @{ 'Accept' = 'application/json'; 'Content-Type' = $ContentType; 'X-Access-Token' = $script:jsWebService.AccessToken } )
     $Headers.Add( 'Content-Type', $ContentType )
     $Headers.Add( 'X-Access-Token', $script:jsWebService.AccessToken )
     $requestParams.Add( 'Headers', $Headers )
@@ -587,7 +587,7 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
 
     try 
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service $($requestUrl)"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service $($requestUrl)"
         Write-Debug ".... Invoke-WebRequest:"
         
         $requestParams.Keys | % {
@@ -622,7 +622,7 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
     }
 }
 
-function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $CheckResponse, [string] $Path='/jobscheduler/commands', $ContentType='application/xml', [hashtable] $Headers=@{'Accept' = 'application/xml'} ) 
+function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $CheckResponse, [string] $Path='/jobscheduler/commands', [Uri] $Uri, $Method='POST', $ContentType='application/xml', [hashtable] $Headers=@{'Accept' = 'application/xml'} ) 
 {
     $xmlDoc = [xml] $command
     if ($xmlDoc.commands)
@@ -630,16 +630,30 @@ function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $C
         $command = $xmlDoc.commands.innerXml
     }
 
-    $body = "<jobscheduler_commands jobschedulerId='$($script:jsWebService.JobSchedulerId)'>$($command)</jobscheduler_commands>"
+    # handle XML and JSON requests
+    if ( $Command.startsWith( '<' ) )
+    {
+        if ( $Command -notcontains '<jobscheduler_commands' )
+        {
+            $Command = "<jobscheduler_commands jobschedulerId='$($script:jsWebService.JobSchedulerId)'>$($Command)</jobscheduler_commands>"
+        }
 
-    $response = Invoke-JobSchedulerWebRequest -Path $Path -Body $body -ContentType $ContentType -Headers $Headers
+        $ContentType = 'application/xml'
+    }
+
+    if ( $Uri )
+    {
+        $response = Invoke-JobSchedulerWebRequest -Uri $Uri -Method $Methhod -Body $Command -ContentType $ContentType -Headers $Headers
+    } else {
+        $response = Invoke-JobSchedulerWebRequest -Path $Path -Method $Methhod -Body $Command -ContentType $ContentType -Headers $Headers
+    }
 
     if ( $response.StatusCode -ne 200 )
     {
         throw ( $response | Format-List -Force | Out-String )
     }    
-    
-    if ( $CheckResponse -and $response.ContentType -eq 'application/xml' )
+
+    if ( $CheckResponse -and $response.Headers.'Content-Type' -eq 'application/xml' )
     {
         try
         {
@@ -665,7 +679,7 @@ function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $C
             throw ( $_.Exception | Format-List -Force | Out-String )
         }
     } else {
-        throw "Web Service response received with unsupported content type: $($response.ContentType)"
+        throw "Web Service response received with unsupported content type: $($response.Headers.'Content-Type')"
     }
 }
 

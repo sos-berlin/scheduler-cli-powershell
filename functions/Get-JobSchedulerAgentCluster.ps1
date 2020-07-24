@@ -2,57 +2,50 @@ function Get-JobSchedulerAgentCluster
 {
 <#
 .SYNOPSIS
-Returns a number of Agent clusters from the JobScheduler Master. Agent clusters correspond to process class 
-objects in JobScheduler Master.
+Returns a number of Agent Clusters from the JobScheduler Master.
 
 .DESCRIPTION
-Agent clusters are retrieved from a JobScheduler Master, they correspond to process classes that specify 
-a remote JobScheduler instance.
+Agent Clusters are retrieved from a JobScheduler Master.
 
-Agent clusters can be selected either by the folder of the Agent cluster location including subfolders 
-or by an individual Agent cluster.
+Agent Clusters can be selected either by the folder of the Agent Cluster location including sub-folders 
+or by an individual Agent Cluster.
 
-Resulting Agent clusters can be forwarded to cmdlets, such as Get-JobSchedulerAgentStatus, for pipelined bulk operations.
+Resulting Agent Clusters can be forwarded to cmdlets, such as Get-JobSchedulerAgentStatus, for pipelined bulk operations.
 
 .PARAMETER Directory
-Optionally specifies the folder for which Agent clusters should be returned. The directory is determined
+Optionally specifies the folder for which Agent Clusters should be returned. The directory is determined
 from the root folder, i.e. the "live" directory.
 
 One of the parameters -Directory and -AgentCluster has to be specified.
 
 .PARAMETER AgentCluster
-Optionally specifies the path and name of an Agent cluster that should be returned.
-If the name of an Agent cluster is specified then the -Directory parameter is used to determine the folder.
-Otherwise the -AgentCluster parameter is assumed to include the full path and name of the Agent cluster.
+Optionally specifies the path and name of an Agent Cluster that should be returned.
+If the name of an Agent Cluster is specified then the -Directory parameter is used to determine the folder.
+Otherwise the -AgentCluster parameter is assumed to include the full path and name of the Agent Cluster.
 
 One of the parameters -Directory or -AgentCluster has to be specified.
 
-.PARAMETER NoSubfolders
-Specifies that no subfolders should be looked up. By default any subfolders will be searched for Agent clusters.
-
-.PARAMETER NoCache
-Specifies that the cache for JobScheduler Agent objects is ignored.
-This results in the fact that for each Get-Agent* cmdlet execution the response is 
-retrieved directly from the JobScheduler Master and is not resolved from the cache.
+.PARAMETER Recursive
+Specifies that any sub-folders should be looked up. By default no sub-folders will be searched for Agent Clusters.
 
 .OUTPUTS
-This cmdlet returns an array of Agent cluster objects.
+This cmdlet returns an array of Agent Cluster objects.
 
 .EXAMPLE
 $agentClusters = Get-JobSchedulerAgentCluster
 
-Returns all Agent clusters.
+Returns all Agent Clusters.
 
 .EXAMPLE
-$agentClusters = Get-JobSchedulerAgentCluster -Directory / -NoSubfolders
+$agentClusters = Get-JobSchedulerAgentCluster -Directory /some_folder -Recursive
 
-Returns all Agent clusters that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+Returns all Agent Clusters that are configured with the folder "some_folder" (starting from the "live" directory)
+and any sub-folders.
 
 .EXAMPLE
 $agentClusters = Get-JobSchedulerAgentCluster -AgentCluster /test/globals/Agent_01
 
-Returns the Agent cluster "Agent_01" from the folder "/test/globals".
+Returns the Agent Cluster "Agent_01" from the folder "/test/globals".
 
 .LINK
 about_jobscheduler
@@ -62,29 +55,28 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AgentCluster,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $AgentCluster,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoSubfolders,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
+    [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Compact,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [ValidateSet(0,1,2)] [int] $State = 0
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
-        $agentClusterCount = 0
+
+        $objAgentClusters = @()
+        $objFolders = @()
     }
         
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, AgentCluster=$AgentCluster"
-
-        if ( !$Directory -and !$AgentCluster )
-        {
-            throw "$($MyInvocation.MyCommand.Name): no directory and no Agent cluster specified, use -Directory or -AgentCluster"
-        }
 
         if ( $Directory -and $Directory -ne '/' )
         { 
@@ -98,12 +90,17 @@ param
             }
         }
 
+        if ( $Directory -eq '/' -and !$Recursive )
+        {
+            $Recursive = $true
+        }
+
         if ( $AgentCluster ) 
         {
-            if ( (Get-JobSchedulerObject-Basename $AgentCluster) -ne $AgentCluster ) # Agent cluster name includes a path
+            if ( (Get-JobSchedulerObject-Basename $AgentCluster) -ne $AgentCluster ) # Agent Cluster name includes a path
             {
                 $Directory = Get-JobSchedulerObject-Parent $AgentCluster
-            } else { # Agent cluster name includes no directory
+            } else { # Agent Cluster name includes no directory
                 if ( $Directory -eq '/' )
                 {
                     $AgentCluster = $Directory + $AgentCluster
@@ -113,82 +110,83 @@ param
             }
         }
 
-        $xPath = '//folder'
-
-        if ( $Directory )
-        {
-            if ( $NoSubfolders )
-            {
-                $xPath += "[@path='$($Directory)']"
-            } else {
-                $xPath += "[starts-with(@path, '$($Directory)')]"
-            }
-        }
-
         if ( $AgentCluster )
         {
-            $xPath += "/process_classes/process_class[@path = '$($AgentCluster)' and "
-        } else {
-            $xPath += '/process_classes/process_class['
-        }
-        
-        $xPath += 'source/process_class[@remote_scheduler] or source/process_class/remote_schedulers/remote_scheduler[@remote_scheduler]]'
-        
-        if ( $NoCache -or !$SCRIPT:jsHasAgentCache )
-        {
-            $whatNoSubfolders = if ( $NoSubfolders ) { ' no_subfolders' } else { '' }
-            $command = "<show_state subsystems='folder process_class' what='source folders$($whatNoSubfolders)' path='$($Directory)'/>"
-    
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-            Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $command"
-        
-            $SCRIPT:jsAgentCache = Send-JobSchedulerXMLCommand $js.Url $command
-
-            if ( !$NoCache -and !$SCRIPT:jsNoAgentCache)
-            {
-                $SCRIPT:jsHasAgentCache = $true
-            }
-            
-        }
-
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): using cache: $xPath"
-        $agentClusterNodes = Select-XML -XML $SCRIPT:jsAgentCache -Xpath $xPath
-        
-        if ( $agentClusterNodes )
-        {
-            foreach( $agentClusterNode in $agentClusterNodes )
-            {
-                if ( !$agentClusterNode.Node.name )
-                {
-                    continue
-                }
-        
-                $ac = Create-AgentClusterObject
-                $ac.AgentCluster = $agentClusterNode.Node.name
-                $ac.Path = $agentClusterNode.Node.path
-                $ac.Directory = Get-JobSchedulerObject-Parent $agentClusterNode.Node.path
-                $ac.MaxProcesses = $agentClusterNode.Node.max_processes
-                
-                if ( $agentClusterNode.Node.remote_scheduler )
-                {
-                    $ac.ClusterType = 'none'
-                    $ac.Agents += [URI] $agentClusterNode.Node.remote_scheduler
-                } else {
-                    $ac.ClusterType = if ( $agentClusterNode.Node.remote_schedulers.select -eq 'next' ) { 'active' } else { 'passive' }
-                    foreach( $agentNode in $agentClusterNode.Node.SelectNodes( 'source/process_class/remote_schedulers/remote_scheduler' ) ) {
-                        $ac.Agents += [URI] $agentNode.GetAttribute( 'remote_scheduler' )
-                    }
-                }
-                
-                $ac
-                $agentClusterCount++
-            }            
+            $objAgentCluster = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'agentCluster' -value $AgentCluster -InputObject $objAgentCluster
+            $objAgentClusters += $objAgentCluster
+        } elseif ( $Directory ) {
+            $objFolder = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $objFolder
+            Add-Member -Membertype NoteProperty -Name 'recursive' -value ( $Recursive -eq $true ) -InputObject $objFolder
+            $objFolders += $objFolder
         }
     }
     
     End
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $agentClusterCount Agent clusters found"
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+        
+        if ( $Compact )
+        {
+            Add-Member -Membertype NoteProperty -Name 'compact' -value ( $Compact -eq $true ) -InputObject $body
+        }
+        
+        if ( $objAgentClusters )
+        {
+            Add-Member -Membertype NoteProperty -Name 'agentClusters' -value $objAgentClusters -InputObject $body
+        }
+        
+        if ( $State )
+        {
+            Add-Member -Membertype NoteProperty -Name 'state' -value $State -InputObject $body
+        }
+        
+        if ( $objFolders )
+        {
+            Add-Member -Membertype NoteProperty -Name 'folders' -value $objFolders -InputObject $body
+        }
+
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/agent_clusters' -Body $requestBody
+    
+        if ( $response.StatusCode -eq 200 )
+        {
+            $volatileAgentClusters = ( $response.Content | ConvertFrom-JSON ).agentClusters
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }    
+
+        $returnAgentClusters = @()
+        
+        foreach( $volatileAgentCluster in $volatileAgentClusters )
+        {
+            $returnAgentCluster = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'AgentCluster' -value $volatileAgentCluster.path -InputObject $returnAgentCluster
+            Add-Member -Membertype NoteProperty -Name 'Directory' -value $volatileAgentCluster.path -InputObject $returnAgentCluster
+            $agents = @()
+            
+            foreach( $agent in $volatileAgentCluster.Agents )
+            {
+                $agents += $agent.url
+            }
+            
+            Add-Member -Membertype NoteProperty -Name 'Agents' -value $agents -InputObject $returnAgentCluster
+            Add-Member -Membertype NoteProperty -Name 'Volatile' -value $volatileAgentCluster -InputObject $returnAgentCluster
+            
+            $returnAgentClusters += $returnAgentCluster
+        }
+
+        $returnAgentClusters
+
+        if ( $returnAgentClusters.count )
+        {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnAgentClusters.count) Agent Clusters found"
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no Agent Clusters found"
+        }
+        
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -82,7 +82,7 @@ This cmdlet returns an array of job objects.
 .EXAMPLE
 $jobs = Get-JobSchedulerJob
 
-Returns all jobs.
+Returns all jobs from all directories recursively.
 
 .EXAMPLE
 $jobs = Get-JobSchedulerJob -Directory /test
@@ -115,11 +115,6 @@ Returns any stopped jobs.
 $jobs = Get-JobSchedulerJob -Directory /test -Pending -Running
 
 Returns any pending or running jobs from the "/test" directory.
-
-.EXAMPLE
-$jobs = Get-JobSchedulerJob
-
-Returns all jobs.
 
 .LINK
 about_jobscheduler

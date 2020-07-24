@@ -106,8 +106,8 @@ param
         
         if ( $Credentials )
         {
-            $SCRIPT:jsCredentials = $Credentials
-            $SCRIPT:jsWebServiceCredentials = $Credentials
+            $SCRIPT:jsCredential = $Credentials
+            $SCRIPT:jsWebServiceCredential = $Credentials
         }
     
         if ( $AskForCredentials )
@@ -121,8 +121,8 @@ param
             if ( $account )
             {
                 $password = Read-Host 'Enter password for JobScheduler web access: ' -AsSecureString
-                $SCRIPT:jsCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $account, $password
-                $SCRIPT:jsWebServiceCredentials = $SCRIPT:jsCredentials
+                $SCRIPT:jsCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $account, $password
+                $SCRIPT:jsWebServiceCredential = $SCRIPT:jsCredential
             }
         }
 
@@ -137,8 +137,8 @@ param
         
         if ( $ProxyCredentials )
         {
-            $SCRIPT:jsProxyCredentials = $ProxyCredentials
-            $SCRIPT:jsWebServiceProxyCredentials = $ProxyCredentials
+            $SCRIPT:jsProxyCredential = $ProxyCredentials
+            $SCRIPT:jsWebServiceProxyCredential = $ProxyCredentials
         }
 
         if ( $ProxyAskForCredentials )
@@ -152,8 +152,8 @@ param
             if ( $proxyAccount )
             {
                 $proxyPassword = Read-Host 'Enter password for JobScheduler proxy access: ' -AsSecureString
-                $SCRIPT:jsProxyCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $proxyAccount, $proxyPassword
-                $SCRIPT:jsWebServiceProxyCredentials = $SCRIPT:jsProxyCredentials
+                $SCRIPT:jsProxyCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $proxyAccount, $proxyPassword
+                $SCRIPT:jsWebServiceProxyCredential = $SCRIPT:jsProxyCredentials
             }
         }
     }
