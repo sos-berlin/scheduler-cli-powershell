@@ -112,11 +112,7 @@ param
         }
 
         $objJob = New-Object PSObject
-
-        if ( $Job )
-        {
-            Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
-        }
+        Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
 
         if ( $At )
         {

@@ -34,12 +34,12 @@ param
     {
 		if ( $DebugMaxOutputSize )
 		{
-			$SCRIPT:jsOptionDebugMaxOutputSize = $DebugMaxOutputSize
+			$script:jsOptionDebugMaxOutputSize = $DebugMaxOutputSize
 		}
 
 		if ( $WebRequestTimeout )
 		{
-			$SCRIPT:jsOptionWebRequestTimeout = $WebRequestTimeout
+			$script:jsOptionWebRequestTimeout = $WebRequestTimeout
 		}
 	}
 }

@@ -186,11 +186,8 @@ public static extern bool CredFree([In] IntPtr cred);
         try
         {
             Add-Type -MemberDefinition $sig -Namespace "ADVAPI32" -Name 'Util' -ErrorAction Stop
-        }
-        catch
-        {
+        } catch {
             Write-Error "$($MyInvocation.MyCommand.Name): Could not load custom type. $($_.Exception.Message)"
         }
-    
     }
 }

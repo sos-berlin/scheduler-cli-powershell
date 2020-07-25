@@ -20,7 +20,7 @@ The Path is prefixed by the Base parameter.
 
 * Example: http://localhost:4446/joc/api/tasks/history
 * The URL scheme (http) and authority (localhost:4446) are used from the connection
-that is specified to the Web Service by the Use-JobSchedulerWebService cmdlet.
+that is specified to the Web Service by the Connect-JobScheduler cmdlet.
 * The Base (/joc/api) is used for all web service requests.
 * The Path (/tasks/history) is used to query the JobScheduler history.
 
@@ -51,14 +51,14 @@ Specifies the JSON elements or XML command to be executed.
 ** XML Body
 <jobscheduler_commands jobschedulerId="jobscheduler_prod"><show_state/></jobscheduler_commands>
 ** The XML body can use the <jobscheduler_commands> element to specify the JobScheduler ID,
-otherwise the JobScheduler ID is used from the Use-JobSchedulerWebService cmdlet or from the Id parameter.
+otherwise the JobScheduler ID is used from the Connect-JobScheduler cmdlet or from the -Id parameter.
 
 .PARAMETER Id
 The Id specifies the JobScheduler ID that identifies an individual JobScheduler Master.
 
 This Id is used to addresse the JobScheduler Master that should execute the request.
 
-If no Id is specified then the JobScheduler ID is used from the Use-JobSchedulerWebService cmdlet. 
+If no Id is specified then the JobScheduler ID is used from the Connect-JobScheduler cmdlet. 
 
 .PARAMETER Method
 This parameter specifies the HTTP method in use.
@@ -143,27 +143,7 @@ param
         } else {
             $requestId = $jsWebService.ID
         }
-<#        
-        # handle XML and JSON requests
-        if ( $Body.startsWith( '<' ) )
-        {
-            if ( $Body -contains '<jobscheduler_commands' )
-            {
-                # leave body untouched
-            } else {
-                $Body = "<jobscheduler_commands jobschedulerId='$($requestId)'>$($Body)</jobscheduler_commands>"
-            }
 
-            $ContentType = 'application/xml'
-        }
-        
-        $requestUrl = $jsWebService.Url.scheme + '://' + $jsWebService.Url.Authority + $Base + $Path
-        
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler $($requestUrl)"
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request: $body"
-#>
-
-#       Send-JobSchedulerWebServiceRequest -Url $requestUrl -Method $Method -ContentType $ContentType -Body $Body -Headers $Headers
         Invoke-JobSchedulerWebRequestXmlCommand -Method $Method -ContentType $ContentType -Command $Body -Headers $Headers
     }
 
@@ -171,5 +151,4 @@ param
     {
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
-
 }

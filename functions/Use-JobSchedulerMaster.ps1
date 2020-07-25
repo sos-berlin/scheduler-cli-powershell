@@ -188,10 +188,6 @@ param
         }
         
         $SCRIPT:jsEnv = @{}
-
-        $SCRIPT:jsNoCache = $NoCache
-        $SCRIPT:jsHasCache = $false
-        $SCRIPT:jsHasAgentCache = $false
         
         $SCRIPT:js = Create-JSObject
         $SCRIPT:js.Url = $Url

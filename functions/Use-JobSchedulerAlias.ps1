@@ -146,6 +146,9 @@ param
                                     }
             }
         }
+
+        Set-Alias -Name Use-JobSchedulerWebService -Value Connect-JobScheduler
+        Set-Alias -Name Use-JSWebService -Value Connect-JobScheduler
         
         Export-ModuleMember -Alias "*"
     }    
