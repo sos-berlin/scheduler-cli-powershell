@@ -363,9 +363,7 @@ param
             {
                 $content = $response.Content | ConvertFrom-JSON
                 $script:jsWebService.AccessToken = $content.AccessToken
-
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($content.accessToken)"
-                $script:jsWebService
             } else {
                 $message = $response | Format-List -Force | Out-String
                 throw $message
@@ -385,6 +383,8 @@ param
                     throw ( $response | Format-List -Force | Out-String )
                 }
             }
+
+            $script:jsWebService
         } catch {
             $message = $_.Exception | Format-List -Force | Out-String
             throw $message
