@@ -2,34 +2,34 @@ function Suspend-JobSchedulerJob
 {
 <#
 .SYNOPSIS
-Stops a number of jobs in the JobScheduler Master.
+Suspends ("stops") jobs in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-JobSchedulerJob -Action "stop"
+This cmdlet is used to suspend ("stop") jobs in the JobScheduler Master.
 
 .PARAMETER Job
 Specifies the full path and name of a job.
 
 .PARAMETER Directory
 Optionally specifies the directory of a job should the -Job parameter
-not be provided with the full path and name of the job.
+not be provided with the full path but only the name of the job.
 
 .INPUTS
-This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
+This cmdlet accepts pipelined job objects that are e.g. returned from the Get-JobSchedulerJob cmdlet.
 
 .OUTPUTS
 This cmdlet returns an array of job objects.
 
 .EXAMPLE
-Stop-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule
+Suspend-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule
 
-Stops an individual job.
+Suspends an individual job.
 
 .EXAMPLE
-Get-JobSchedulerJob -Directory /some_dir -NoSubfolders | Stop-JobSchedulerJob
+Get-JobSchedulerJob -Directory /some_dir -Recursive | Suspend-JobSchedulerJob
 
-Stops all jobs from the specified directory 
-without consideration of subfolders.
+Suspends all jobs from the specified directory 
+and any sub-folders.
 
 .LINK
 about_jobscheduler
@@ -95,12 +95,7 @@ param
         }
     
         $objJob = New-Object PSObject
-
-        if ( $Job )
-        {
-            Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
-        }
-
+        Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
         $objJobs += $objJob
     }
 

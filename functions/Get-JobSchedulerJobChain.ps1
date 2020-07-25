@@ -5,8 +5,8 @@ function Get-JobSchedulerJobChain
 Returns a number of job chains from the JobScheduler Master.
 
 .DESCRIPTION
-Job chains are retrieved from a JobScheduler Master.
-Job chains can be selected either by the folder of the job chain location including subfolders or by an individual job chain.
+Job chains are returned from a JobScheduler Master.
+Job chains can be selected either by the folder of the job chain location including sub-folders or by an individual job chain.
 
 Resulting job chains can be forwarded to other cmdlets for pipelined bulk operations.
 
@@ -23,13 +23,17 @@ Otherwise the -JobChain parameter is assumed to include the full path and name o
 
 One of the parameters -Directory or -JobChain has to be specified.
 
-.PARAMETER NoSubfolders
-Specifies that no subfolders should be looked up. By default any subfolders will be searched for job chains.
+.PARAMETER Recursive
+Specifies that any sub-folders should be looked up. By default no subfolders will be searched for job chains.
 
-.PARAMETER NoCache
-Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
-retrieved directly from the JobScheduler Master and is not resolved from the cache.
+.PARAMETER Compact
+Specifies that fewer attributes of a job chain are returned.
+
+.PARAMETER Active
+Specifies that only active ("unstopped") job chains are returned.
+
+.PARAMETER Stopped
+Specifies that only suspended ("stopped") job chains are returned.
 
 .OUTPUTS
 This cmdlet returns an array of job chain objects.
@@ -40,15 +44,20 @@ $jobChains = Get-JobSchedulerJobChain
 Returns all job chains.
 
 .EXAMPLE
-$jobChains = Get-JobSchedulerJobChain -Directory / -NoSubfolders
+$jobChains = Get-JobSchedulerJobChain -Directory /some_path -Recursive
 
-Returns all job chains that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+Returns all job chains that are configured with the specified path
+including any sub-folders.
 
 .EXAMPLE
 $jobChains = Get-JobSchedulerJobChain -JobChain /test/globals/job_chain1
 
 Returns the job chain "job_chain1" from the folder "/test/globals".
+
+.EXAMPLE
+$jobChains = Get-JobSchedulerJobChain -Stopped
+
+Returns all suspended ("stopped") job chains.
 
 .LINK
 about_jobscheduler
@@ -181,7 +190,7 @@ param
             foreach( $volatileJobChain in $volatileJobChains )
             {
                 $returnJobChain = Create-JobChainObject
-                $returnJobChain.JobChain = $volatileJobChain.jobChain
+                $returnJobChain.JobChain = $volatileJobChain.path
                 $returnJobChain.Path = $volatileJobChain.path
                 $returnJobChain.Directory = Get-JobSchedulerObject-Parent $volatileJobChain.path
                 $returnJobChain.Volatile = $volatileJobChain

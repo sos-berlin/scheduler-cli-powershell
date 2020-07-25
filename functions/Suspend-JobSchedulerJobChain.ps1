@@ -5,7 +5,8 @@ function Suspend-JobSchedulerJobChain
 Suspends a job chain in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-JobSchedulerJobChain -Action "suspend"
+This cmdlet suspends ("stops") a job chian in a JobScheduler Master. 
+Any orders added to the job chain further on will wait until the job chain is resumed ("unstopped").
 
 .PARAMETER JobChain
 Specifies the path and name of a job chain that should be suspended.
@@ -26,23 +27,23 @@ This cmdlet accepts pipelined job chain objects that are e.g. returned from a Ge
 This cmdlet returns an array of job chain objects.
 
 .EXAMPLE
-Stop-JobSchedulerJobChain -JobChain /sos/reporting/Reporting
+Suspend-JobSchedulerJobChain -JobChain /sos/reporting/Reporting
 
 Suspends the job chain "Reporting". from the specified folder.
 
 .EXAMPLE
-Get-JobSchedulerJobChain | Stop-JobSchedulerJobChain
+Get-JobSchedulerJobChain | Suspend-JobSchedulerJobChain
 
 Suspends all job chains.
 
 .EXAMPLE
-Get-JobSchedulerJobChain -Directory / -NoSubfolders | Stop-JobSchedulerJobChain
+Get-JobSchedulerJobChain -Directory /some_path -Recursive | Suspend-JobSchedulerJobChain
 
-Suspends job chains that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+Suspends job chains that are configured with the folder "some_path"
+and any sub-folders recursively.
 
 .EXAMPLE
-Get-JobSchedulerJobChain -JobChain /test/globals/chain1 | Stop-JobSchedulerJobChain
+Get-JobSchedulerJobChain -JobChain /test/globals/chain1 | Suspend-JobSchedulerJobChain
 
 Suspends the specified job chain.
 
@@ -109,6 +110,7 @@ param
             }
         }
 
+
         $objJobChain = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objJobChain
 
@@ -156,7 +158,7 @@ param
                 throw ( $response | Format-List -Force | Out-String )
             }
 
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChainss.count) job chains suspended"                            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChains.count) job chains suspended"                            
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job chains found"
         }

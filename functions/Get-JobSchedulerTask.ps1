@@ -2,13 +2,23 @@ function Get-JobSchedulerTask
 {
 <#
 .SYNOPSIS
-Retrieves a number of tasks from the JobScheduler Master.
+Return information about tasks from the JobScheduler Master.
 
 .DESCRIPTION
-Running and enqueued tasks are retrieved from a JobScheduler Master.
+Running and enqueued tasks are returned from a JobScheduler Master.
 Tasks can be selected either by the folder of the job location including subfolders or by an individual job.
 
 Resulting tasks can be forwarded to the Stop-JobSchedulerTask cmdlet in a bulk operation.
+
+.PARAMETER Job
+Optionally specifies the path and name of a job for which tasks should be returned.
+If the name of a job is specified then the -Directory parameter is used to determine the job folder.
+Otherwise the job is assumed to include the full path and name of the job.
+
+.PARAMETER JobChain
+Optionally specifies the path and name of a job chain for which tasks should be returned.
+If the name of a job chain is specified then the -Directory parameter is used to determine the job chain folder.
+Otherwise the job chain is assumed to include the full path and name of the job chain.
 
 .PARAMETER Directory
 Optionally specifies the folder with jobs for which tasks should be returned. The directory is determined
@@ -16,25 +26,14 @@ from the root folder, i.e. the "live" directory.
 
 One of the parameters -Directory and -Job has to be specified.
 
-.PARAMETER Job
-Optionally specifies the path and name of a job for which tasks should be returned.
-If the name of a job is specified then the -Directory parameter is used to determine the job folder.
-Otherwise the job is assumed to include the full path and name of the job.
-
-One of the parameters -Directory and -Job has to be specified.
-
-.PARAMETER NoRunningTasks
-Specifies that no running tasks should be stopped. By default running tasks will be stopped.
-
-.PARAMETER NoEnqueuedTasks
-Specifies that no enqueued tasks should be stopped. By default enqueued tasks will be stopped.
-
-.PARAMETER NoSubfolders
+.PARAMETER Recursive
 Specifies that no subfolders should be looked up for jobs. By default any subfolders will be searched for jobs with tasks.
 
-.PARAMETER UseCache
-Specifies that the cache for JobScheduler objects is used. By default the chache is not used
-as in most use cases the current information about running tasks is required from the JobScheduler Master.
+.PARAMETER Running
+Specifies that running tasks should be returned.
+
+.PARAMETER Enqueued
+Specifies that enqueued tasks should be returned. By default no enqueued tasks arre returned.
 
 .OUTPUTS
 This cmdlet returns an array of task objects.
@@ -42,13 +41,12 @@ This cmdlet returns an array of task objects.
 .EXAMPLE
 $tasks = Get-JobSchedulerTask
 
-Returns all running and enqueued tasks for all jobs.
+Returns all running and enqueued tasks for jobs from any folders recursively.
 
 .EXAMPLE
-$tasks = Get-JobSchedulerTask -Directory / -NoSubfolders
+$tasks = Get-JobSchedulerTask -Directory /my_jobs -Recursive
 
-Returns all running and enqueued tasks that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+Returns all running and enqueued tasks that are configured with the folder "my_jobs" recursively.
 
 .EXAMPLE
 $tasks = Get-JobSchedulerTask -Job /test/globals/job1

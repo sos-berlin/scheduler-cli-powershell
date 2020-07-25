@@ -2,10 +2,10 @@ function Stop-JobSchedulerMaster
 { 
 <#
 .SYNOPSIS
-Stops a JobScheduler Master
+Stops a JobScheduler Master or a Master Cluster
 
 .DESCRIPTION
-The stopping of a Master can be performed in a graceful manner leaving some time to 
+The stop of a Master or Master Cluster can be performed in a graceful manner leaving some time to 
 running tasks for completion. In addition more immediate operations for aborting
 or killing a Master are available and Master instances can be restarted.
 
@@ -32,17 +32,23 @@ Stopping includes the following actions:
 ** the process of the JobScheduler Master is killed including any tasks running.
 ** no cleanup is performed, e.g. database connections are not closed.
 ** this action might require elevated privileges of an administrator.
+** this operation works on a single Master that is available from a local Master installation and requires prior use of the -UseJobSchedulerMaster cmdlet.
+
+* Action "reactivate"
+** performs a fail-back operation in a Master Cluster.
+** the currently passive Master becomes active
+** the currently active Master is restarted to become a passive cluster member.
 
 .PARAMETER Restart
 When used with the operations -Action "terminate" and "abort" then the
-JobScheduler instance will shut down and restart.
+JobScheduler Maser instance(s) will shut down and restart.
 
-This switch can be used with the -Cluster swith to restart a JobScheduler Cluster.
+This switch can be used with the -Cluster switch to restart a JobScheduler Master Cluster.
 
 .PARAMETER Cluster
-Carries out the operation -Action "terminate" for a JobScheduler Cluster:
+Carries out the operation -Action "terminate" for a JobScheduler Master Cluster:
 
-* All instances are terminated and optionally restarted.
+* All instances are terminated and optionally are restarted.
 * Optional -Timeout settings apply to this operation.
 
 .PARAMETER Timeout
@@ -62,10 +68,10 @@ The timeout is applied when shutting down or restarting (-Restart switch) invidu
 When carrying out the operation -Action "kill" then
 
 * with the PID being specified the given process will be killed
-* with no PID being specified the PID is used from the PID file that is created on JobScheduler start.
+* with no PID being specified the PID is used from the PID file that is created on JobScheduler Master start.
 
 .PARAMETER Service
-Stops the JobScheduler Windows Service
+Stops the JobScheduler Master Windows Service
 
 Use of this parameter ignores any other parameters.
 The Windows service is stopped as specified with -Action "terminate".
@@ -74,41 +80,41 @@ No timeout and no cluster operations are applied.
 .EXAMPLE
 Stop-JobSchedulerMaster
 
-Stops the JobScheduler instance with normal termination.
-This is the same as the operation: Stop-Instance -Action "terminate"
+Stops the JobScheduler Master instance with normal termination.
+This is the same as the operation: Stop-JobSchedulerMaster -Action "terminate"
 
 .EXAMPLE
 Stop-JobSchedulerMaster -Service
 
-Stops the JobScheduler Windows service with normal termination,
+Stops the JobScheduler Master Windows Service with normal termination,
 i.e. with -Action "terminate" without any timeouts and cluster options being applied.
 
 .EXAMPLE
 Stop-JobSchedulerMaster -Action abort -Restart
 
-Stops the JobScheduler instance by immediately killing any tasks and aborting the JobScheduler Master.
-After shutdown the JobScheduler instance is restarted.
+Stops the JobScheduler Master instance by immediately killing any tasks and aborting the JobScheduler Master.
+After shutdown the JobScheduler Master instance is restarted.
 
 .EXAMPLE
 Stop-JobSchedulerMaster -Action kill
 
-Kills the JobScheduler process and any tasks without proper cleanup.
+Kills the JobScheduler Master process and any tasks without proper cleanup.
 
 .EXAMPLE
 Stop-JobSchedulerMaster -Cluster -Timeout 30
 
-Carries out the -Action "terminate" operation for all members of a JobScheduler Cluster.
+Carries out the -Action "terminate" operation for all members of a JobScheduler Master Cluster.
 All running tasks are sent a SIGTERM signal and after expiration of the timeout
 any running tasks will be sent a SIGKILL signal.
 
 .EXAMPLE
 Stop-JobSchedulerMaster -Restart -Cluster -Timeout 30
 
-Carries out the -Action "terminate" operation for all members of a JobScheduler Cluster.
+Carries out the -Action "terminate" operation for all members of a JobScheduler Master Cluster.
 All running tasks are sent a SIGTERM signal and after expiration of the timeout
 any running tasks will be sent a SIGKILL signal.
 
-After termination all cluster members willl be restarted.
+After termination all cluster members will be restarted.
 
 .LINK
 about_jobscheduler
@@ -238,12 +244,17 @@ param
                 }
                 'kill' 
                 {
+                    if ( !$js.Install )
+                    {
+                        throw "$($MyInvocation.MyCommand.Name): kill operation is available for local Master installation only, use -UseJobSchedulerMaster cmdlet"
+                    }
+                
                     if ( $Pid )
                     {
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): killing JobScheduler from process list with PID $Pid"
+                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): killing JobScheduler Master from process list with PID $Pid"
                         $arguments = "-kill=$($Pid)"
                     } else {
-                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): killing JobScheduler from process list with PID file"
+                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): killing JobScheduler Master from process list with PID file"
                         $arguments = "-kill -pid-file=$($js.Install.PidFile)"
                     }
                     

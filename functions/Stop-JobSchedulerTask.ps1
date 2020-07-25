@@ -5,7 +5,7 @@ function Stop-JobSchedulerTask
 Stops a number of tasks in the JobScheduler Master.
 
 .DESCRIPTION
-Stopping tasks includes operations to terminate tasks, e.g. by a SIGTERM signal, and to kill tasks immediately.
+Stopping tasks includes operations to terminate tasks, e.g. by a SIGTERM signal, and to kill tasks immediately with a SIGKILL signal.
 
 Tasks to be stopped are selected
 
@@ -92,9 +92,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [PSCustomObject[]] $Tasks,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [ValidateSet('terminate','kill')] [string] $Action = 'kill',
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $Timeout = 0,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $Kill,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -221,8 +221,10 @@ param
             Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
         }
 
-        if ( $Action -eq 'terminate' )
+        if ( $Kill )
         {
+            $url = '/tasks/kill'
+        } else {
             if ( $Timeout )
             {
                 $url = '/tasks/terminate_within'
@@ -230,8 +232,6 @@ param
             } else {
                 $url = '/tasks/terminate'
             }
-        } else {
-            $url = '/tasks/kill'
         }
         
         if ( $objJobs.count )

@@ -2,13 +2,13 @@ function Resume-JobSchedulerJobChain
 {
 <#
 .SYNOPSIS
-Resumes a number of job chains in the JobScheduler Master.
+Resumes job chains in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-JobSchedulerJobChain -Action "resume"
+This cmdlet is used to resume ("unstop") previously suspended ("stopped") job chains in a JobScheduler Master.
 
 .PARAMETER JobChain
-Specifies the path and name of a job chain that should be suspended.
+Specifies the path and name of a job chain that should be resumed.
 
 The parameter -JobChain has to be specified if no pipelined job chain objects are used.
 
@@ -31,15 +31,15 @@ Resume-JobSchedulerJobChain -JobChain /sos/reporting/Reporting
 Resumes the job chain "Reporting" from the specified folder.
 
 .EXAMPLE
-Get-JobSchedulerJobChain | Resume-JobSchedulerJobChain
+Get-JobSchedulerJobChain -Stopped | Resume-JobSchedulerJobChain
 
-Resumes all job chains.
+Resumes all job chains that were previously suspended ("stopped").
 
 .EXAMPLE
-Get-JobSchedulerJobChain -Directory / -NoSubfolders | Resume-JobSchedulerJobChain
+Get-JobSchedulerJobChain -Directory /some_path -Recursive | Resume-JobSchedulerJobChain
 
-Resumes job chains that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+Resumes job chains that are configured with the "some_path" 
+and any sub-folders.
 
 .EXAMPLE
 Get-JobSchedulerJobChain -JobChain /test/globals/chain1 | Resume-JobSchedulerJobChain
@@ -139,7 +139,7 @@ param
                     Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
                 }
     
-                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $objJobChain
+                Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
             }
     
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
@@ -157,7 +157,7 @@ param
                 throw ( $response | Format-List -Force | Out-String )
             }        
             
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChainss.count) job chains resumed"                            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChains.count) job chains resumed"                            
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job chains found"
         }
