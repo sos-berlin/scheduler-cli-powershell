@@ -2,16 +2,16 @@ function Start-JobSchedulerOrder
 {
 <#
 .SYNOPSIS
-Starts an order for a job chain in the JobScheduler Master.
+Starts orders for a job chain in the JobScheduler Master.
 
 .DESCRIPTION
-Start an existing order for a job chain.
+Start existing orders for a job chain.
+
+.PARAMETER OrderId
+Optionally specifies the identifier of an order.
 
 .PARAMETER JobChain
 Specifies the path and name of a job chain for which orders should be started.
-
-.PARAMETER Order
-Optionally specifies the identifier of an order.
 
 .PARAMETER Directory
 Optionally specifies the folder where the job chain is located. The directory is determined
@@ -47,6 +47,25 @@ is assigend the specified state.
 Specifies that the order should leave the job chain at the job chain node that
 is assigend the specified state.
 
+
+.PARAMETER AuditComment
+Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+
+The Audit Comment is visible from the Audit Log view of JOC Cockpit.
+This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+
+.PARAMETER AuditTimeSpent
+Specifies the duration in minutes that the current intervention required.
+
+This information is visible with the Audit Log view. It can be useful when integrated
+with a ticket system that logs the time spent on interventions with JobScheduler.
+
+.PARAMETER AuditTicketLink
+Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
+
+This information is visible with the Audit Log view of JOC Cockpit. 
+It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
+
 .INPUTS
 This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
@@ -69,7 +88,7 @@ Start-JobSchedulerOrder -Order 123 -JobChain /sos/reporting/Reporting -At "now+1
 Starts the specified order.
 
 .EXAMPLE
-Start-JobSchedulerOrder -JobChain /sos/reporting/Reporting -Order 548 -At "now+3600" -Parameters @{'param1'='value1'; 'param2'='value2'}
+Start-JobSchedulerOrder -JobChain /sos/reporting/Reporting -Order 548 -At "now+3600" -Parameters @{'param1' = 'value1'; 'param2' = 'value2'}
 
 Starts an order of the specified job chain. The order will start one hour later and will use the
 parameters from the specified hashmap.
@@ -102,7 +121,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $AuditTimeSpent,
+    [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $AuditTicketLink
 )
@@ -111,12 +130,9 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
         
-        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
-            if ( !$AuditComment )
-            {
-                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
-            }
+            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
 
         $objOrders = @()
@@ -167,11 +183,7 @@ param
         }
 
         $objOrder = New-Object PSObject
-
-        if ( $OrderId )
-        {
-            Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
-        }
+        Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
 
         Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
 

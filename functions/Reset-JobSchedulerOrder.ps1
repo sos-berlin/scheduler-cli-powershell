@@ -2,20 +2,20 @@ function Reset-JobSchedulerOrder
 {
 <#
 .SYNOPSIS
-Resets a number of orders in the JobScheduler Master.
+Resets orders in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-JobSchedulerOrder -Action reset
+Orders can be reset in a job chain, i.e. they are moved to the begin of a job chain.
 
-.PARAMETER Order
+.PARAMETER OrderId
 Specifies the identifier of an order.
 
-Both parameters -Order and -JobChain have to be specified if no pipelined order objects are used.
+Both parameters -OrderId and -JobChain have to be specified if no pipelined order objects are used.
 
 .PARAMETER JobChain
 Specifies the path and name of a job chain for which orders should be reset.
 
-Both parameters -Order and -JobChain have to be specified if no pipelined order objects are used.
+Both parameters -OrderId and -JobChain have to be specified if no pipelined order objects are used.
 
 .PARAMETER Directory
 Optionally specifies the folder where the job chain is located. The directory is determined
@@ -24,6 +24,24 @@ from the root folder, i.e. the "live" directory.
 If the -JobChain parameter specifies the name of job chain then the location specified from the 
 -Directory parameter is added to the job chain location.
 
+.PARAMETER AuditComment
+Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+
+The Audit Comment is visible from the Audit Log view of JOC Cockpit.
+This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+
+.PARAMETER AuditTimeSpent
+Specifies the duration in minutes that the current intervention required.
+
+This information is visible with the Audit Log view. It can be useful when integrated
+with a ticket system that logs the time spent on interventions with JobScheduler.
+
+.PARAMETER AuditTicketLink
+Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
+
+This information is visible with the Audit Log view of JOC Cockpit. 
+It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
+
 .INPUTS
 This cmdlet accepts pipelined order objects that are e.g. returned from a Get-JobSchedulerOrder cmdlet.
 
@@ -31,7 +49,7 @@ This cmdlet accepts pipelined order objects that are e.g. returned from a Get-Jo
 This cmdlet returns an array of order objects.
 
 .EXAMPLE
-Reset-JobSchedulerOrder -Order Reporting -JobChain /sos/reporting/Reporting
+Reset-JobSchedulerOrder -OrderId Reporting -JobChain /sos/reporting/Reporting
 
 Resets the order "Reporting" from the specified job chain.
 
@@ -41,10 +59,10 @@ Get-JobSchedulerOrder | Reset-JobSchedulerOrder
 Resets all orders for all job chains.
 
 .EXAMPLE
-Get-JobSchedulerOrder -Directory / -NoSubfolders | Reset-JobSchedulerOrder
+Get-JobSchedulerOrder -Directory /some_path -Recursive | Reset-JobSchedulerOrder
 
-Resets orders that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+Resets orders that are configured with the "/some:path" directory
+and any sub-folders.
 
 .EXAMPLE
 Get-JobSchedulerOrder -JobChain /test/globals/chain1 | Reset-JobSchedulerOrder
@@ -59,7 +77,7 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Order,
+    [string] $OrderId,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -67,7 +85,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $AuditTimeSpent,
+    [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $AuditTicketLink
 )
@@ -76,12 +94,9 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
-            if ( !$AuditComment )
-            {
-                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
-            }
+            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
 
         $objOrders = @()

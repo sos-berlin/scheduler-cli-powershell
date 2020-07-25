@@ -5,7 +5,7 @@ function Restart-JobSchedulerMaster
 Restarts the JobScheduler Master
 
 .DESCRIPTION
-JobScheduler is restarted. Depending on its current operating mode JobScheduler
+JobScheduler Master is restarted. Depending on its current operating mode the Master
 is restarted in service mode or in dialog mode:
 
 * Service Mode: the Windows service of the JobScheduler Master is restarted.
@@ -49,10 +49,29 @@ Retarts the JobScheduler Windows service.
 Without this parameter being specified JobScheduler will be started in 
 its respective operating mode, i.e. service mode or dialog mode.
 
+.PARAMETER AuditComment
+Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+
+The Audit Comment is visible from the Audit Log view of JOC Cockpit.
+This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+
+.PARAMETER AuditTimeSpent
+Specifies the duration in minutes that the current intervention required.
+
+This information is visible with the Audit Log view. It can be useful when integrated
+with a ticket system that logs the time spent on interventions with JobScheduler.
+
+.PARAMETER AuditTicketLink
+Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
+
+This information is visible with the Audit Log view of JOC Cockpit. 
+It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
+
 .EXAMPLE
 Restart-JobSchedulerMaster
 
-Restarts the JobScheduler Master.
+Terminates and restarts the JobScheduler Master. Any running tasks can complete before 
+the Master will restart.
 
 .EXAMPLE
 Restart-JobSchedulerMaster -Service
@@ -77,16 +96,27 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [int] $Timeout = 0,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-	[switch] $Service
+	[switch] $Service,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $AuditComment,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $AuditTimeSpent,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Uri] $AuditTicketLink
 )
 
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
+
+        if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
+        {
+            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+        }        
 	}
 
     Process
     {        
-        Stop-JobSchedulerMaster -Action $Action -Cluster:$Cluster -Timeout $Timeout -Service:$Service -Restart
+        Stop-JobSchedulerMaster -Action $Action -Cluster:$Cluster -Timeout $Timeout -Service:$Service -Restart -AuditComment $AuditComment -AuditTimeSpent $AuditTimeSpent -AuditTicketLink $AuditTicketLink
     }
 }

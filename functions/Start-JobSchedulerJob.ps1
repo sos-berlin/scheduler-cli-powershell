@@ -2,10 +2,10 @@ function Start-JobSchedulerJob
 {
 <#
 .SYNOPSIS
-Starts a number of jobs in the JobScheduler Master.
+Starts jobs in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet is an alias for Update-JobSchedulerJob -Action "start"
+This cmdlet start standalone jobs with the JobScheduler Master.
 
 .PARAMETER Job
 Specifies the full path and name of a job.
@@ -28,7 +28,23 @@ Specifies the point in time when the job should start:
 * yyyy-mm-dd HH:MM[:SS]
 ** specifies that the job should start at the specified point in time.
 
-Default: now
+.PARAMETER AuditComment
+Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+
+The Audit Comment is visible from the Audit Log view of JOC Cockpit.
+This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+
+.PARAMETER AuditTimeSpent
+Specifies the duration in minutes that the current intervention required.
+
+This information is visible with the Audit Log view. It can be useful when integrated
+with a ticket system that logs the time spent on interventions with JobScheduler.
+
+.PARAMETER AuditTicketLink
+Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
+
+This information is visible with the Audit Log view of JOC Cockpit. 
+It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
 This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
@@ -39,13 +55,12 @@ This cmdlet returns an array of job objects.
 .EXAMPLE
 Start-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule
 
-Starts an individual job.
+Starts the indicated job.
 
 .EXAMPLE
-Get-JobSchedulerJob -Directory /some_dir -NoSubfolders | Start-JobSchedulerJob
+Get-JobSchedulerJob -Directory /some_path -Recursive | Start-JobSchedulerJob
 
-Starts all jobs from the specified directory
-without consideration of subfolders.
+Starts all jobs from the specified directory and sub-folders.
 
 .LINK
 about_jobscheduler
@@ -67,7 +82,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $AuditTimeSpent,
+    [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $AuditTicketLink    
 )
@@ -76,12 +91,9 @@ param
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
-            if ( !$AuditComment )
-            {
-                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
-            }
+            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
 
         $objJobs = @()

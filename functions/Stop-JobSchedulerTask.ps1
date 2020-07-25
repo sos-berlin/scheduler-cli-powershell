@@ -2,7 +2,7 @@ function Stop-JobSchedulerTask
 {
 <#
 .SYNOPSIS
-Stops a number of tasks in the JobScheduler Master.
+Stops tasks in the JobScheduler Master.
 
 .DESCRIPTION
 Stopping tasks includes operations to terminate tasks, e.g. by a SIGTERM signal, and to kill tasks immediately with a SIGKILL signal.
@@ -48,6 +48,24 @@ Specifies a timeout to be applied when stopping a task by use of the parameter -
 * For API jobs
 ** the method spooler_process() of the respective job will not be called by JobScheduler any more.
 ** should the job not complete its spooler_process() method within the timeout then the task will be killed.
+
+.PARAMETER AuditComment
+Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+
+The Audit Comment is visible from the Audit Log view of JOC Cockpit.
+This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+
+.PARAMETER AuditTimeSpent
+Specifies the duration in minutes that the current intervention required.
+
+This information is visible with the Audit Log view. It can be useful when integrated
+with a ticket system that logs the time spent on interventions with JobScheduler.
+
+.PARAMETER AuditTicketLink
+Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
+
+This information is visible with the Audit Log view of JOC Cockpit. 
+It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
 This cmdlet accepts pipelined task objects that are e.g. returned from a Get-JobSchedulerTask cmdlet.
@@ -98,7 +116,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $AuditTimeSpent,
+    [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $AuditTicketLink
 )
@@ -107,12 +125,9 @@ param
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
-            if ( !$AuditComment )
-            {
-                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
-            }
+            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
 
         $objJobs = @()

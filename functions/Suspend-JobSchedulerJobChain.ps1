@@ -2,10 +2,10 @@ function Suspend-JobSchedulerJobChain
 {
 <#
 .SYNOPSIS
-Suspends a job chain in the JobScheduler Master.
+Suspends job chains in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet suspends ("stops") a job chian in a JobScheduler Master. 
+This cmdlet suspends ("stops") job chians in a JobScheduler Master. 
 Any orders added to the job chain further on will wait until the job chain is resumed ("unstopped").
 
 .PARAMETER JobChain
@@ -19,6 +19,24 @@ from the root folder, i.e. the "live" directory.
 
 If the -JobChain parameter specifies the name of job chain then the location specified from the 
 -Directory parameter is added to the job chain location.
+
+.PARAMETER AuditComment
+Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+
+The Audit Comment is visible from the Audit Log view of JOC Cockpit.
+This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+
+.PARAMETER AuditTimeSpent
+Specifies the duration in minutes that the current intervention required.
+
+This information is visible with the Audit Log view. It can be useful when integrated
+with a ticket system that logs the time spent on interventions with JobScheduler.
+
+.PARAMETER AuditTicketLink
+Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
+
+This information is visible with the Audit Log view of JOC Cockpit. 
+It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
 This cmdlet accepts pipelined job chain objects that are e.g. returned from a Get-JobSchedulerJobChain cmdlet.
@@ -61,7 +79,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $AuditTimeSpent,
+    [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $AuditTicketLink
 )
@@ -70,12 +88,9 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
-        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+        if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
-            if ( !$AuditComment )
-            {
-                throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
-            }
+            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
 
         $objJobChains = @()
@@ -109,7 +124,6 @@ param
                 }
             }
         }
-
 
         $objJobChain = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objJobChain
