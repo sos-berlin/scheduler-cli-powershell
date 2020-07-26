@@ -27,6 +27,8 @@ PowerShellVersion = '5.1'
 # Functions to export from this module
 FunctionsToExport = @( 
     'Add-JobSchedulerEvent',
+    'Connect-JobScheduler',
+    'Disconnect-JobScheduler',
     'Add-JobSchedulerOrder',
     'Get-JobSchedulerAgentCluster',
     'Get-JobSchedulerAgentReport',
