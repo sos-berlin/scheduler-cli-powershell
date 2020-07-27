@@ -24,7 +24,7 @@ Otherwise the job chain is assumed to include the full path and name of the job 
 Optionally specifies the folder with jobs for which tasks should be returned. The directory is determined
 from the root folder, i.e. the "live" directory.
 
-One of the parameters -Directory and -Job has to be specified.
+One of the parameters -Directory or -Job has to be specified.
 
 .PARAMETER Recursive
 Specifies that no sub-folders should be looked up for jobs. By default any sub-folders will be searched for jobs with tasks.

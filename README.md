@@ -11,12 +11,6 @@ The JobScheduler CLI module supports Windows PowerShell FullCLR 5.1 and PowerShe
 The JobScheduler Command Line Interface is used for the following 
 areas of operation:
 
-* work as a replacement for existing Windows command scripts:
-    * JobScheduler start script `.\bin\jobscheduler.cmd`:
-        * provide operations for installing and removing the JobScheduler Windows service
-        * starting and stopping JobScheduler instances including active and passive clusters
-    * Job Editor (JOE) start script `.\bin\jobeditor.cmd`
-    * JobScheduler Event script `.\bin\jobscheduler_event.cmd`
 * provide bulk operations:
     * select jobs, job chains, orders and tasks
     * manage orders with operations for start, stop and removal
@@ -28,8 +22,13 @@ areas of operation:
 * manage Agents:
     * retrieve Agent clusters
     * check Agent status
+* work as a replacement for existing Windows command scripts:
+    * JobScheduler start script `.\bin\jobscheduler.cmd`:
+        * provide operations for installing and removing the JobScheduler Windows service
+        * starting and stopping JobScheduler instances including active and passive clusters
+    * JobScheduler Event script `.\bin\jobscheduler_event.cmd`
  
-Find more information and documentation of cmdlets at [PowerShell Command Line Interface](https://kb.sos-berlin.com/x/cID4)
+Find more information and documentation of cmdlets at [PowerShell Command Line Interface](https://kb.sos-berlin.com/x/0wX3Ag)
 
 # Getting Started
 
@@ -37,10 +36,10 @@ Find more information and documentation of cmdlets at [PowerShell Command Line I
 
 ### Check Execution Policy
 
-* `PS C:\> Get-ExecutionPolicy`
+* `PS > Get-ExecutionPolicy`
  * shows the current execution policy, see e.g. [Microsoft Technet about_Execution_Policies](https://technet.microsoft.com/en-us/library/hh847748.aspx)
  * The required PowerShell execution policy for the JobScheduler CLI module is *RemoteSigned* or *Unrestricted*
-* `PS C:\> Set-ExecutionPolicy RemoteSigned`
+* `PS > Set-ExecutionPolicy RemoteSigned`
  * Modifying the execution policy might require administrative privileges
 
 ### Check Module Location
@@ -55,20 +54,20 @@ Find more information and documentation of cmdlets at [PowerShell Command Line I
 
 ## Import Module
 
-* `PS C:\> Import-Module JobScheduler`
+* `PS > Import-Module JobScheduler`
   * loads the module from a location that is available with the PowerShell module path, see $env:PSModulePath for predefined module locations.
-* `PS C:\> Import-Module C:\some_path\JobScheduler`
+* `PS > Import-Module C:\some_path\JobScheduler`
   * loads the module from a specific location.
 
 Hint: you can add the `Import-Module` command to your PowerShell user profile to have the module imported on start up of a PowerShell session.
 
-## Use a JobScheduler Master
+## Use Web Service
 
 As a first operation after importing the module it is recommended to execute the Connect-JS cmdlet:
 
-* `PS C:\> Connect-JS <Url> -AskForCredentials`
+* `PS \> Connect-JS <Url> -AskForCredentials`
  * specifies the URL of JOC Cockpit, e.g. http://localhost:4446, and aks interactively for credentials. The default acount is `root` with the password `root`.
-* `PS C:\> Connect-JS <Url> <Credentials> <JobSchedulerId>`  or  `PS C:\> Connect-JS -Url <Url> -Credentials <Credentials> -Id <JobSchedulerId>`
+* `PS C:\> Connect-JS <Url> <Credentials> <JobSchedulerId>`  or  `PS > Connect-JS -Url <Url> -Credentials <Credentials> -Id <JobSchedulerId>`
  * specifies the URL for which the JobScheduler JOC Cockpit is available. This is the same URL that you would use when opening the JOC Cockpit GUI in your browser, e.g. `http://localhost:4446`. When omitting the protocol (http/https) for the URL then http is assumed.
  * specifies the ID that a JobScheduler Master has been installed with. As JOC Cockpit can manage a number of Master instances the `-Id` parameter can be used to select the respective Master.
  * specifies the credentials (user account and password) that are used to connect to the Web Service.
@@ -82,46 +81,49 @@ As a first operation after importing the module it is recommended to execute the
      * Specifying account and password with a URL is considered insecure.
  * allows to execute cmdlets for the specified JobScheduler Master independently from the server and operating system that the  Master is operated for, i.e. you can use PowerShell cmdlets on Windows to manage a JobScheduler Master running e.g. on a Linux box and vice versa.
  * specifying the URL is not sufficient to connect to the Windows Web Service of a Master, see below.
-* `PS C:\> Use-JSMaster -Id <JobSchedulerID>`
+* `PS > Use-JSMaster -Id <JobSchedulerID>`
  * references the JobScheduler ID that has been assigned during installation of a JobScheduler Master. 
  * adds the JobScheduler ID to the assumed installation base path. A typical installation path would be `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10` with `scheduler1.10` being the JobScheduler ID.
-* `PS C:\> Use-JSMaster -InstallPath <InstallationPath>`
+* `PS > Use-JSMaster -InstallPath <InstallationPath>`
  * specifies the full installation path, e.g. `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10`, for a locally available JobScheduler Master.
-* `PS C:\> Use-JSMaster <Url> <JobSchedulerID>` or `PS C:\> Use-JSMaster -Url <Url> -Id <JobSchedulerID>`
+* `PS > Use-JSMaster <Url> <JobSchedulerID>` or `PS C:\> Use-JSMaster -Url <Url> -Id <JobSchedulerID>`
  * specifies both URL and JobScheduler ID.
  * determines if the JobScheduler Master with the specified *JobSchedulerID* is locally available.
 
 ## Run Commands
 
-* `PS C:\> Get-JobSchedulerStatus`
+* `PS > Get-JobSchedulerStatus`
     * Cmdlets come with a full name that includes the term JobScheduler.
-* `PS C:\> Get-JSStatus`
+* `PS > Get-JSStatus`
     * The term JobScheduler can be abbreviated to JS.
-* `PS C:\> Get-Status`
+* `PS > Get-Status`
     * The term JobScheduler can further be omitted if the resulting alias does not conflict with existing cmdlets.
     * To prevent conflicts with existing cmdlets from other modules no conflicting aliases are created. This includes aliases for cmdlets from the PowerShell Core as e.g. Get-Job, Start-Job, Stop-Job etc. and cmdlets from other modules loaded prior to the JobScheduler CLI.
-* `PS C:\> Get-Command -Module JobScheduler`
+* `PS > Get-Command -Module JobScheduler`
   * provides the complete list of cmdlets.
-* `PS C:\> Get-Help Get-JSStatus -detailed`
+* `PS > Get-Help Get-JSStatus -detailed`
   * displays help information for the given cmdlet.
 
-## Command Samples
+# Examples
 
-* `PS C:\> Get-JSStatus -Display`
+* `PS > Get-JSStatus -Display`
   * shows the summary information for a JobScheduler Master.
-* `PS C:\> ( Get-JSJobChain ).count`
+* `PS > (Get-JSJobChain).count`
   * shows the number of job chains that are available.
-* `PS C:\> ( Get-JSJob ).count`
+* `PS > (Get-JSJob).count`
   * shows the number of jobs that are available.
-* `PS C:\> ( Get-JSTask ).count`
+* `PS > (Get-JSTask).count`
   * shows the number of tasks that are currently running.
-* `PS C:\> Get-JSJob -Directory /sos | Get-JSTask | Stop-JSTask`
+* `PS > Get-JSJob -Directory /sos -Running | Stop-JSTask`
   * stops all running tasks from the specified folder.
-* `PS C:\> $orders = Get-JSOrder -Directory /sos`
-  * collects the list of orders from a directory and stores it in a variable.
-* `PS C:\> $orders = ( Get-JSOrder -Directory /my_jobs -Recursive -Temporary | Suspend-JSOrder )`
-  * retrieves temporary ad hoc orders from the *my_jobs* directory and any subfolders.
-  * all temporary orders are suspended and the list of order objects is stored in a variable.
+* `PS > Get-JSJob -Running -Enqueued | Stop-JSTask`
+  * performs and emergency stop and kills all running and eqneueud tasks.
+* `PS > Get-JSTask -Enqueued | Stop-JSTask`
+  * retrieves the list of scheduled tasks, i.e. tasks that are scheduled for later start.
+* `PS > $orders = ( Get-JSOrder -Directory /my_jobs -Recursive -Temporary | Suspend-JSOrder )`
+  * retrieves temporary ad hoc orders from the *my_jobs* directory and any subfolders with orders found being suspended. The list of affected orders is returned.
+* `PS > $orders | Remove-JSOrder`
+  * remove orders based on a list that has previously been retrieved.
  
 # Further Reading
 

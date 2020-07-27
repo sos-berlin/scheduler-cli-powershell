@@ -2,7 +2,7 @@ function Get-JobSchedulerJobChain
 {
 <#
 .SYNOPSIS
-Returns a number of job chains from the JobScheduler Master.
+Returns job chains from the JobScheduler Master.
 
 .DESCRIPTION
 Job chains are returned from a JobScheduler Master.

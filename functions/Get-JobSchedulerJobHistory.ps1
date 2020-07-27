@@ -34,12 +34,8 @@ from the root folder, i.e. the "live" directory.
 .PARAMETER Recursive
 Specifies that sub-folders should be looked up if the -Directory parameter is used and no job or job chain is specified.
 
-This operation is time-consuming and should be restricted to selecting individual jobs.
-
 .PARAMETER Compact
 Specifies a more compact response with fewer job history attributes.
-
-This operation is time-consuming and should be restricted to selecting individual jobs.
 
 .PARAMETER WithLog
 Specifies the task log to be returned. 

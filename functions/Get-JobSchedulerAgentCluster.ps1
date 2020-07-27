@@ -2,7 +2,7 @@ function Get-JobSchedulerAgentCluster
 {
 <#
 .SYNOPSIS
-Returns a number of Agent Clusters from the JobScheduler Master.
+Returns Agent Clusters from the JobScheduler Master.
 
 .DESCRIPTION
 Agent Clusters are retrieved from a JobScheduler Master.

@@ -5,7 +5,9 @@ function Start-JobSchedulerJob
 Starts jobs in the JobScheduler Master.
 
 .DESCRIPTION
-This cmdlet start standalone jobs with the JobScheduler Master.
+This cmdlet starts standalone jobs with the JobScheduler Master.
+Jobs are started independent from the fact if they are stopped
+or if they will be started due to calendar events.
 
 .PARAMETER Job
 Specifies the full path and name of a job.
@@ -61,6 +63,12 @@ Starts the indicated job.
 Get-JobSchedulerJob -Directory /some_path -Recursive | Start-JobSchedulerJob
 
 Starts all jobs from the specified directory and sub-folders.
+
+.EXAMPLE
+$params = ${ 'par1' = 'val1'; 'par2' = 'val2' }
+Start-JobSchedulerJob -Job /some_path/some_job -Parameters $params
+
+Starts the job with parameter 'par1' and 'par2' and respective values.
 
 .LINK
 about_jobscheduler

@@ -12,9 +12,10 @@ The cmdlet optionally returns the task history and logs of recent task execution
 
 Resulting jobs can be forwarded to other cmdlets for pipelined bulk operations.
 
-.PARAMETER Directory
-Optionally specifies the folder for which jobs should be returned. The directory is determined
-from the root folder, i.e. the "live" directory.
+.PARAMETER Job
+Optionally specifies the path and name of a job.
+If the name of a job is specified then the -Directory parameter is used to determine the folder.
+Otherwise the -Job parameter is assumed to include the full path and name of the job.
 
 One of the parameters -Directory, -JobChain or -Job has to be specified.
 
@@ -25,24 +26,21 @@ Otherwise the -JobChain parameter is assumed to include the full path and name o
 
 One of the parameters -Directory, -JobChain or -Job has to be specified.
 
-.PARAMETER Job
-Optionally specifies the path and name of a job.
-If the name of a job is specified then the -Directory parameter is used to determine the folder.
-Otherwise the -Job parameter is assumed to include the full path and name of the job.
-
-One of the parameters -Directory, -JobChain or -Job has to be specified.
+.PARAMETER Directory
+Optionally specifies the folder for which jobs should be returned. The directory is determined
+from the root folder, i.e. the "live" directory.
 
 .PARAMETER Recursive
 Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
 By default no sub-folders will be looked up for jobs.
 
 .PARAMETER Compact
-Specifies that a smaller subset of information is provided, e.g. no task qqueues for jobs.
+Specifies that a smaller subset of information is provided, e.g. no task queues for jobs.
 By default all information available for jobs is returned.
 
 .PARAMETER WithHistory
 Specifies the task history to be returned. 
-The parameter -MaxLastHstoryitems specifies the number of history items returne.d
+The parameter -MaxLastHstoryitems specifies the number of history items returned.
 
 This operation is time-consuming and should be restricted to selecting individual jobs.
 
@@ -59,16 +57,16 @@ Specifies the number of the most recent history items of task executions to be r
 Default: 1
 
 .PARAMETER IsOrderJob
-Specifies to exlucisively return jobs that can be used in job chains.
+Specifies to exclusively return jobs that can be used in job chains.
 
 .PARAMETER IsStandaloneJob
-Specifies to exlucisively return jobs that can be used standalone (without job chains).
+Specifies to exclucively return jobs that can be used standalone (without job chains).
 
 .PARAMETER Pending
 Returns jobs in a pending state, i.e. jobs that are ready to be executed at a later date.
 
 .PARAMETER Stopped
-Returns stopped jobs.
+Returns stopped jobs. Such jobs would not restart automatically.
 
 .PARAMETER Running
 Specifies that jobs with running tasks should be returned.

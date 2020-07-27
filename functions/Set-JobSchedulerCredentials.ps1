@@ -2,7 +2,12 @@ function Set-JobSchedulerCredentials
 {
 <#
 .SYNOPSIS
-When sending requests to a JobScheduler Master then authentication might be required.
+Sets credentials that are used to authenticate with requests to the JobScheduler Web Services.
+
+.DESCRIPTION
+Credentials are required to authenticate with the JobScheduler Web Service.
+Such credentials can be specified on-the-fly with the Connect-JobScheduler cmdlet or 
+they can be specified with this cmdlet.
 
 .PARAMETER UseDefaultCredentials
 Specifies that the implicit Windows credentials of the current user are applied for authentication challenges.

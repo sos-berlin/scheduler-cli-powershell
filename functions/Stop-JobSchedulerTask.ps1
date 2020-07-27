@@ -5,42 +5,29 @@ function Stop-JobSchedulerTask
 Stops tasks in the JobScheduler Master.
 
 .DESCRIPTION
-Stopping tasks includes operations to terminate tasks, e.g. by a SIGTERM signal, and to kill tasks immediately with a SIGKILL signal.
+Stopping tasks includes operations to terminate tasks by use of a SIGTERM signal, and to kill tasks immediately with a SIGKILL signal.
 
 Tasks to be stopped are selected
 
-* by a pipelined object, e.g. the output of the Get-JobSchedulerTask cmdlet
+* by a pipelined object, e.g. the output of the Get-JobSchedulerTask or Get-JobSchedulerJob cmdlets.
 * by specifying an individual task with the -Task and -Job parameters.
-
-.PARAMETER Task
-Optionally specifies the identifier of a task.
-
-Both parameters -Task and -Job have to be specified if no pipelined task objects are used.
 
 .PARAMETER Job
 Optionally specifies the path and name of a job for which tasks should be terminated.
 
 Both parameters -Task and -Job have to be specified if no pipelined task objects are used.
 
-.PARAMETER Action
-Specifies the action to be applied to stop a task:
+.PARAMETER Directory
+Optionally specifies the folder for which jobs should be stopped. The directory is determined
+from the root folder, i.e. the "live" directory.
 
-* Action "terminate"
-** For shell jobs
-*** in a Unix environment the task is sent a SIGTERM signal and - in case of the timeout parameter being used - 
-after expiration of the timeout a SIGKILL signal is sent.
-*** in a Windows environment the task is killed immediately.
-** For API jobs
-*** the method spooler_process() of the respective job will not be called by JobScheduler any more. 
-*** the task is expected to terminate normally after completion of its spooler_process() method.
-
-* Action "kill"
-** tasks are killed immediately.
-
-Default: "kill"
+.PARAMETER Tasks
+Optionally specifies the identifier of a task that includes the properties "path" and "taskId". 
+Task information as returned by the Get-JobSchedulerJob and Get-JobSchedulerTask cmdlets can
+be used for pipelined input into this cmdlet.
 
 .PARAMETER Timeout
-Specifies a timeout to be applied when stopping a task by use of the parameter -Action with the value "terminate".
+Specifies a timeout to be applied when stopping a task without using the parameter -Kill.
 
 * For shell jobs
 ** in Unix environments the task is sent a SIGTERM signal and after expiration of the timeout a SIGKILL signal is sent.
@@ -49,11 +36,17 @@ Specifies a timeout to be applied when stopping a task by use of the parameter -
 ** the method spooler_process() of the respective job will not be called by JobScheduler any more.
 ** should the job not complete its spooler_process() method within the timeout then the task will be killed.
 
+.PARAMETER Kill
+Specifies that tasks are killed immediately, i.e. a SIGKILL signal is sent.
+Without this switch tasks are terminated, i.e. they are sent a SIGTERM signal.
+
 .PARAMETER AuditComment
-Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+Specifies a free text that indicates the reason for the current intervention, 
+e.g. "business requirement", "maintenance window" etc.
 
 The Audit Comment is visible from the Audit Log view of JOC Cockpit.
-This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+This parameter is not mandatory, however, JOC Cockpit can be configured 
+to enforece Audit Log comments for any interventions.
 
 .PARAMETER AuditTimeSpent
 Specifies the duration in minutes that the current intervention required.
@@ -68,33 +61,28 @@ This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
-This cmdlet accepts pipelined task objects that are e.g. returned from a Get-JobSchedulerTask cmdlet.
+This cmdlet accepts pipelined task objects that are e.g. returned from the Get-JobSchedulerTask 
+and Get-JobSchedlerJob cmdlets.
 
 .OUTPUTS
-This cmdlet returns an array of task objects.
+This cmdlet returns an array of task objects. Task objects include as a minimum the properties
+"path" and "taskId".
 
 .EXAMPLE
-Stop-JobSchedulerTask -Task 81073 -Job /sos/dailyschedule/CheckDaysSchedule
-
-Terminates an individual task.
-
-.EXAMPLE
-Get-JobSchedulerTask | Stop-JobSchedulerTask
+Get-JobSchedulerTask -Running -Enqueued | Stop-JobSchedulerTask
 
 Terminates all running and enqueued tasks for all jobs.
 
 .EXAMPLE
-Get-JobSchedulerTask -Directory / -Nosub-folders | Stop-JobSchedulerTask -Action terminate -Timeout 30
+Get-JobSchedulerTask -Directory /some_path -Recursive -Running -Enqueued | Stop-JobSchedulerTask -Action terminate -Timeout 30
 
-Terminates all running and enqueued tasks that are configured with the root folder ("live" directory)
-without consideration of sub-folders.
-
-For Unix environments tasks are sent a SIGTERM signal and after expiration of 30s a SIGKILL signal.
+Terminates all running and enqueued tasks that are configured with the folder "some_path" and any sub-folders. 
+For Unix environments tasks are sent a SIGTERM signal and after expiration of 30s a SIGKILL signal is sent.
 
 .EXAMPLE
 Get-JobSchedulerTask -Job /test/globals/job1 | Stop-JobSchedulerTask
 
-Terminates all tasks for job "job1" from the folder "/test/globals".
+Terminates all running tasks for job "job1" from the folder "/test/globals".
 
 .LINK
 about_jobscheduler

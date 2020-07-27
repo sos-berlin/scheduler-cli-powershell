@@ -6,6 +6,9 @@ Suspends ("stops") jobs in the JobScheduler Master.
 
 .DESCRIPTION
 This cmdlet is used to suspend ("stop") jobs in the JobScheduler Master.
+Suspended jobs will not restart automatically but will require either a
+forced task start, e.g. with the Start-JobschedulerJob cmdlet, or a resume
+operation, e.g. with the Resume-JoSchedulerJob cmdlet.
 
 .PARAMETER Job
 Specifies the full path and name of a job.
@@ -15,10 +18,12 @@ Optionally specifies the directory of a job should the -Job parameter
 not be provided with the full path but only the name of the job.
 
 .PARAMETER AuditComment
-Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+Specifies a free text that indicates the reason for the current intervention, 
+e.g. "business requirement", "maintenance window" etc.
 
 The Audit Comment is visible from the Audit Log view of JOC Cockpit.
-This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+This parameter is not mandatory, however, JOC Cockpit can be configured 
+to enforece Audit Log comments for any interventions.
 
 .PARAMETER AuditTimeSpent
 Specifies the duration in minutes that the current intervention required.

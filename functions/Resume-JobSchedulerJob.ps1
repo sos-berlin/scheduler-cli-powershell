@@ -15,10 +15,12 @@ Optionally specifies the directory of a job should the -Job parameter
 not be provided with the full path but only the name of the job.
 
 .PARAMETER AuditComment
-Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+Specifies a free text that indicates the reason for the current intervention, 
+e.g. "business requirement", "maintenance window" etc.
 
 The Audit Comment is visible from the Audit Log view of JOC Cockpit.
-This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+This parameter is not mandatory, however, JOC Cockpit can be configured 
+to enforece Audit Log comments for any interventions.
 
 .PARAMETER AuditTimeSpent
 Specifies the duration in minutes that the current intervention required.

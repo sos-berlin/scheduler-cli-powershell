@@ -2,26 +2,21 @@ function Get-JobSchedulerOrder
 {
 <#
 .SYNOPSIS
-Returns a number of active orders from the JobScheduler Master.
+Returns orders from the JobScheduler Master.
 
 .DESCRIPTION
-Orders are returned if they are present in the JobScheduler Master.
-No ad hoc orders are returned that are completed and not active
-with a Master. For information on such orders consider the Get-JobSchedulerOrderHistory cmdlet.
+Orders are selected from the JobScheduler Master
 
-Orders are selected from a JobScheduler Master
-
-* by the folder of the order location including sub-folders
-* by the job chain that is assigned to an order
+* by the folder of the order location including sub-folders,
+* by the job chain that is assigned to an order,
 * by an individual order.
 
 Resulting orders can be forwarded to other cmdlets for pipelined bulk operations.
 
-.PARAMETER Directory
-Optionally specifies the folder for which orders should be returned. The directory is determined
-from the root folder, i.e. the "live" directory.
-
-One of the parameters -Directory, -JobChain or -Order has to be specified if no pipelined order objects are provided.
+.PARAMETER OrderId
+Optionally specifies the path and name of an order that should be returned.
+If the name of an order is specified then the -Directory parameter is used to determine the folder.
+Otherwise the -Order parameter is assumed to include the full path and name of the order.
 
 .PARAMETER JobChain
 Optionally specifies the path and name of a job chain for which orders should be returned.
@@ -30,35 +25,72 @@ Otherwise the -JobChain parameter is assumed to include the full path and name o
 
 One of the parameters -Directory, -JobChain or -Order has to be specified if no pipelined order objects are provided.
 
-.PARAMETER Order
-Optionally specifies the path and name of an order that should be returned.
-If the name of an order is specified then the -Directory parameter is used to determine the folder.
-Otherwise the -Order parameter is assumed to include the full path and name of the order.
+.PARAMETER Directory
+Optionally specifies the folder for which orders should be returned. The directory is determined
+from the root folder, i.e. the "live" directory.
 
 One of the parameters -Directory, -JobChain or -Order has to be specified if no pipelined order objects are provided.
 
+.PARAMETER Recursive
+Specifies that any sub-folders should be looked up if the -Directory parameter is used.
+By default no sub-folders will be searched for orders.
+
+.PARAMETER Compact
+Specifies that fewer attributes of orders are returned.
+
+.PARAMETER WithHistory
+Specifies the order history to be returned, i.e. the history of previous executions of orders.
+The parameter -MaxLastHstoryitems specifies the number of history items to be returned.
+
 .PARAMETER WithLog
-Specifies the order log to be returned. 
+Specifies the order log to be returned. This implicitely includes to return the order history.
+For each history item - up to the number speicifed with the -MaxLastHistoryItems parameter -
+the order log is returned.
 
-This operation is time-consuming and should be restricted to selecting individual orders.
+This operation can be time-consuming.
 
-.PARAMETER Nosub-folders
-Specifies that no sub-folders should be looked up. By default any sub-folders will be searched for orders.
+.PARAMETER MaxLastHistoryItems
+Specifies the number of the most recent history items of order executions to be returned.
 
-.PARAMETER NoPermanent
+Default: 1
+
+.PARAMETER Permanent
+Specifies that orders of the permanent type are returned, i.e. orders that have been pre-configured and
+that optionally include run-time settings for an automated start.
+
+.PARAMETER Temporary
 Specifies that no permanent orders should be looked up but instead ad hoc orders only. 
+Such orders are added on-the-fly to existing job chains. 
 By default only permanent orders will be looked up.
 
+.PARAMETER FileOrder
+Specifies that file orders should be returned, i.e. orders that are represented by files
+arriving in directories that are configured for file watching.
+
+.PARAMETER Pending
+Specifies that orders in a pending state should be returned. Such orders are scheduled
+for a later start. This state can apply to permanent orders and to ad hoc orders.
+
+.PARAMETER Running
+Specifies that orders in a running state should be returned, i.e. orders for which a job is
+executed in a job chain.
+
+.PARAMETER WaitingForResource
+Specifies that orders should be returned that are waiting e.g. for an Agent or for a task 
+to become available for the underlying job that is executed for the order.
+
 .PARAMETER Suspended
-Specifies that only suspended orders should be returned.
+Specifies that orders in suspended state should be returned. An order can be suspended
+e.g. in case of failure of the underlying job or when being affected by the
+Suspend-JobSchedulerOrder cmdlet or the respective manual operation from the GUI.
 
 .PARAMETER Setback
-Specifies that only setback orders should be returned.
+Specifies that orders in a setback state should be returned. Such orders make use of an interval
+- specified by the underlying job - for which they are repeated in case that the job fails.
 
-.PARAMETER NoCache
-Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
-retrieved directly from the JobScheduler Master and is not resolved from the cache.
+.PARAMETER Blacklist
+Specifies that orders should be returned that represent incoming files that a Master or Agent
+is watching for and for which errors occurred when moving the incoming file from its location.
 
 .OUTPUTS
 This cmdlet returns an array of order objects.
@@ -66,13 +98,13 @@ This cmdlet returns an array of order objects.
 .EXAMPLE
 $orders = Get-JobSchedulerOrder
 
-Returns all orders.
+Returns all permanent orders.
 
 .EXAMPLE
-$orders = Get-JobSchedulerOrder -Directory / -Nosub-folders
+$orders = Get-JobSchedulerOrder -Directory /some_path -Recursive
 
-Returns all orders that are configured with the root folder ("live" directory)
-without consideration of sub-folders.
+Returns all orders that are configured with the folder "some_path"
+inclluding any sub-folders.
 
 .EXAMPLE
 $orders = Get-JobSchedulerOrder -JobChain /test/globals/chain1
@@ -83,6 +115,18 @@ Returns the orders for job chain "chain1" from the folder "/test/globals".
 $orders = Get-JobSchedulerOrder -Order /test/globals/order1
 
 Returns the order "order1" from the folder "/test/globals".
+
+.EXAMPLE
+$orders = Get-JobSchedulerOrder -Suspended -WaitingForResource
+
+Returns any orders that have been suspended, e.g. due to job failures, or
+that are waiting for Agents or tasks to become available for the underlying job.
+
+.EXAMPLE
+$orders = Get-JobSchedulerOrder -Setback
+
+Returns any orders that are waiting for a time interval to be repeated
+after failure of the underlying job.
 
 .LINK
 about_jobscheduler
