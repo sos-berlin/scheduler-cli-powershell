@@ -5,7 +5,7 @@ function Get-JobSchedulerJob
 Returns job information from the JobScheduler Master.
 
 .DESCRIPTION
-Jobs are returned from a JobScheduler Master. Jobs can be selected by name, folder, status etc. including subfolders.
+Jobs are returned from a JobScheduler Master. Jobs can be selected by name, folder, status etc. including sub-folders.
 
 The job information retured includes volatile status information and the permanent configuration.
 The cmdlet optionally returns the task history and logs of recent task executions.
@@ -33,8 +33,8 @@ Otherwise the -Job parameter is assumed to include the full path and name of the
 One of the parameters -Directory, -JobChain or -Job has to be specified.
 
 .PARAMETER Recursive
-Specifies that any subfolders should be looked up when used with the -Directory parameter. 
-By default no subfolders will be looked up for jobs.
+Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
+By default no sub-folders will be looked up for jobs.
 
 .PARAMETER Compact
 Specifies that a smaller subset of information is provided, e.g. no task qqueues for jobs.
@@ -88,13 +88,13 @@ Returns all jobs from all directories recursively.
 $jobs = Get-JobSchedulerJob -Directory /test
 
 Returns all jobs that are configured with the folder "test"
-without consideration of subfolders.
+without consideration of sub-folders.
 
 .EXAMPLE
 $jobs = Get-JobSchedulerJob -Directory /test -Recursive
 
 Returns all jobs that are configured with the folder "test"
-include jobs from any subfolders.
+include jobs from any sub-folders.
 
 .EXAMPLE
 $jobs = Get-JobSchedulerJob -JobChain /test/globals/job_chain1

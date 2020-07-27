@@ -12,8 +12,6 @@ If the documentation is not available for your language then consider to use
     
 #>
 
-#Requires -Version 5.0
-
 # --------------------------------
 # Globals with JobScheduler Master
 # --------------------------------
@@ -24,26 +22,8 @@ If the documentation is not available for your language then consider to use
 # CLI operated for a JobScheduler job or monitor
 [bool] $jsOperations = ( $spooler -and $spooler.id() )
 
-# JobScheduler Master State Cache
-#    State
-[xml] $jsStateCache = $null
-#    Has Cache
-[bool] $jsHasCache = $false
-#    Use Cache
-[bool] $jsNoCache = $false
-
 # JobScheduler Master environment
 [hashtable] $jsEnv = @{}
-
-# JobScheduler Master Web Request 
-#     Credentials
-[System.Management.Automation.PSCredential] $jsCredential = $null
-#    Use default credentials of the current user?
-[bool] $jsOptionWebRequestUseDefaultCredentials = $true
-#     Proxy Credentials
-[System.Management.Automation.PSCredential] $jsProxyCredential = $null
-#    Use default credentials of the current user?
-[bool] $jsOptionWebRequestProxyUseDefaultCredentials = $true
 
 # Commands that require a local Master instance (Management of Windows Service)
 [string[]] $jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
@@ -54,24 +34,6 @@ If the documentation is not available for your language then consider to use
 
 # JobScheduler Agent Object
 [PSObject] $jsAgent = $null
-
-# JobScheduler Agent Cluster Cache
-#    State
-[xml] $jsAgentCache = $null
-#    Has Cache
-[bool] $jsHasAgentCache = $false
-#    Use Cache
-[bool] $jsNoAgentCache = $false
-
-# JobScheduler Agent Web Request 
-#     Credentials
-[System.Management.Automation.PSCredential] $jsAgentCredential = $null
-#    Use default credentials of the current user?
-[bool] $jsAgentOptionWebRequestUseDefaultCredentials = $true
-#     Proxy Credentials
-[System.Management.Automation.PSCredential] $jsAgentProxyCredential = $null
-#    Use default credentials of the current user?
-[bool] $jsAgentOptionWebRequestProxyUseDefaultCredentials = $true
 
 # Commands that require a local Agent instance (Management of Windows Service)
 [string[]] $jsAgentLocalCommands = @( 'Install-JobSchedulerAgentService', 'Remove-JobSchedulerAgentService', 'Start-JobSchedulerAgent' )
@@ -123,6 +85,11 @@ Export-ModuleMember -Function "*"
 
 function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo] $command )
 {
+    if ( !$jsWebServiceCredential )
+    {
+        throw "$($command.Name): no valid session, login to the JobScheduler Web Service with the Connect-JobScheduler cmdlet"
+    }
+
     if ( !$SCRIPT:js.Local )
     {
         if ( $SCRIPT:jsLocalCommands -contains $command.Name )
@@ -135,7 +102,7 @@ function Approve-JobSchedulerCommand( [System.Management.Automation.CommandInfo]
     {
         if ( $SCRIPT:jsLocalCommands -notcontains $command.Name )
         {
-            throw "$($command.Name): cmdlet requires a JobScheduler URL. Switch instance with the Use-JobSchedulerWebService cmdlet and specify the -Url parameter"
+            throw "$($command.Name): cmdlet requires a JobScheduler URL. Switch instance with the Connect-JobScheduler cmdlet and specify the -Url parameter"
         }
     }
 }
@@ -385,11 +352,6 @@ function Create-TaskObject()
     $task | Add-Member -Membertype NoteProperty -Name StartAt -Value ''
     $task | Add-Member -Membertype NoteProperty -Name RunningSince -Value ''
     $task | Add-Member -Membertype NoteProperty -Name Cause -Value ''
-
-    # $taskDefaultProperties = @("Task", "Job")
-    # $taskDefaultDisplayPropertySet = New-Object System.Management.Automation.PSPropertySet( "DefaultDisplayPropertySet", [string[]] $taskDefaultProperties )
-    # $taskPSStandardMembers = [System.Management.Automation.PSMemberInfo[]] @( $taskDefaultDisplayPropertySet )
-    # $task | Add-Member MemberSet PSStandardMembers $taskPSStandardMembers
     
     $task
 }
@@ -1058,11 +1020,13 @@ ENDLOCAL
 $js = Create-JSObject
 $jsWebService = Create-WebServiceObject
 
+<#
 if ( $jsOperations )
 {
     # no addtional connection to Master required
-#    $js.Url = "http://$($spooler.hostname()):$($spooler.tcp_port())"
-#    $js.Id = $spooler.id()
-#    $js.Local = $false
-#    $jsWebService.Id = $js.Id
+    $js.Url = "http://$($spooler.hostname()):$($spooler.tcp_port())"
+    $js.Id = $spooler.id()
+    $js.Local = $false
+    $jsWebService.Id = $js.Id
 }
+#>

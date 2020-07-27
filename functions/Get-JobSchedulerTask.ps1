@@ -6,7 +6,7 @@ Return information about tasks from the JobScheduler Master.
 
 .DESCRIPTION
 Running and enqueued tasks are returned from a JobScheduler Master.
-Tasks can be selected either by the folder of the job location including subfolders or by an individual job.
+Tasks can be selected either by the folder of the job location including sub-folders or by an individual job.
 
 Resulting tasks can be forwarded to the Stop-JobSchedulerTask cmdlet in a bulk operation.
 
@@ -27,7 +27,7 @@ from the root folder, i.e. the "live" directory.
 One of the parameters -Directory and -Job has to be specified.
 
 .PARAMETER Recursive
-Specifies that no subfolders should be looked up for jobs. By default any subfolders will be searched for jobs with tasks.
+Specifies that no sub-folders should be looked up for jobs. By default any sub-folders will be searched for jobs with tasks.
 
 .PARAMETER Running
 Specifies that running tasks should be returned.

@@ -24,7 +24,7 @@ Otherwise the -JobChain parameter is assumed to include the full path and name o
 One of the parameters -Directory or -JobChain has to be specified.
 
 .PARAMETER Recursive
-Specifies that any sub-folders should be looked up. By default no subfolders will be searched for job chains.
+Specifies that any sub-folders should be looked up. By default no sub-folders will be searched for job chains.
 
 .PARAMETER Compact
 Specifies that fewer attributes of a job chain are returned.

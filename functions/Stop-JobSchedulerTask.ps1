@@ -84,10 +84,10 @@ Get-JobSchedulerTask | Stop-JobSchedulerTask
 Terminates all running and enqueued tasks for all jobs.
 
 .EXAMPLE
-Get-JobSchedulerTask -Directory / -NoSubfolders | Stop-JobSchedulerTask -Action terminate -Timeout 30
+Get-JobSchedulerTask -Directory / -Nosub-folders | Stop-JobSchedulerTask -Action terminate -Timeout 30
 
 Terminates all running and enqueued tasks that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+without consideration of sub-folders.
 
 For Unix environments tasks are sent a SIGTERM signal and after expiration of 30s a SIGKILL signal.
 

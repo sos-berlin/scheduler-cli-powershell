@@ -11,7 +11,7 @@ with a Master. For information on such orders consider the Get-JobSchedulerOrder
 
 Orders are selected from a JobScheduler Master
 
-* by the folder of the order location including subfolders
+* by the folder of the order location including sub-folders
 * by the job chain that is assigned to an order
 * by an individual order.
 
@@ -42,8 +42,8 @@ Specifies the order log to be returned.
 
 This operation is time-consuming and should be restricted to selecting individual orders.
 
-.PARAMETER NoSubfolders
-Specifies that no subfolders should be looked up. By default any subfolders will be searched for orders.
+.PARAMETER Nosub-folders
+Specifies that no sub-folders should be looked up. By default any sub-folders will be searched for orders.
 
 .PARAMETER NoPermanent
 Specifies that no permanent orders should be looked up but instead ad hoc orders only. 
@@ -69,10 +69,10 @@ $orders = Get-JobSchedulerOrder
 Returns all orders.
 
 .EXAMPLE
-$orders = Get-JobSchedulerOrder -Directory / -NoSubfolders
+$orders = Get-JobSchedulerOrder -Directory / -Nosub-folders
 
 Returns all orders that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+without consideration of sub-folders.
 
 .EXAMPLE
 $orders = Get-JobSchedulerOrder -JobChain /test/globals/chain1

@@ -59,10 +59,10 @@ Get-JobSchedulerOrder | Resume-JobSchedulerOrder
 Resumes all orders for all job chains.
 
 .EXAMPLE
-Get-JobSchedulerOrder -Directory / -NoSubfolders | Resume-JobSchedulerOrder
+Get-JobSchedulerOrder -Directory / -Nosub-folders | Resume-JobSchedulerOrder
 
 Resumes orders that are configured with the root folder ("live" directory)
-without consideration of subfolders.
+without consideration of sub-folders.
 
 .EXAMPLE
 Get-JobSchedulerOrder -JobChain /test/globals/chain1 | Resume-JobSchedulerOrder
