@@ -127,6 +127,6 @@ As a first operation after importing the module it is recommended to execute the
  
 # Further Reading
 
-* [PowerShell Command Line Interface - Introduction](https://kb.sos-berlin.com/x/cID4)
-* [PowerShell Command Line Interface - Use Cases](https://kb.sos-berlin.com/x/4oL4)
-* [PowerShell Command Line Interface - Cmdlets](https://kb.sos-berlin.com/x/aID4)
+* [PowerShell Command Line Interface - Introduction](https://kb.sos-berlin.com/x/0wX3Ag)
+* [PowerShell Command Line Interface - Use Cases](https://kb.sos-berlin.com/x/Wwf3Ag)
+* [PowerShell Command Line Interface - Cmdlets](https://kb.sos-berlin.com/x/1QX3Ag)
