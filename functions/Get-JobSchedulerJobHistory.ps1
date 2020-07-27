@@ -2,9 +2,13 @@ function Get-JobSchedulerJobHistory
 {
 <#
 .SYNOPSIS
-Returns a number of JobScheduler history items for jobs.
+Returns JobScheduler history items for jobs.
 
 .DESCRIPTION
+This cmdlet is deprecated as it is an alias for the Get-JobSchedulerJob cmdlet that
+offers the same functionality when used with the -WithHistory switch. Therefore the 
+same functionality applies to both cmdlets.
+
 Job history items are returned independently from the fact that the job is present in the JobScheduler Master.
 
 Jobs are selected from a JobScheduler Master

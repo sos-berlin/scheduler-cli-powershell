@@ -2,9 +2,13 @@ function Get-JobSchedulerOrderHistory
 {
 <#
 .SYNOPSIS
-Returns a number of JobScheduler history items for orders.
+ReturnsJobScheduler history items for orders.
 
 .DESCRIPTION
+This cmdlet is deprecated as it is an alias for the Get-JobSchedulerOrder cmdlet that
+offers the same functionality when used with the -WithHistory switch. Therefore the 
+same functionality applies to both cmdlets.
+
 Order history items are returned independently from the fact that the order is present in the JobScheduler Master.
 This includes temporary ad hoc orders to be returned that are completed and not active
 with a Master.
