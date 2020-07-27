@@ -99,7 +99,7 @@ Use of this parameter is strongly discouraged with secure environments as it tru
 .EXAMPLE
 Connect-JobScheduler http://localhost4446 -AskForCredentials
 
-Connects to the JobScheduler Web Service at the indicated address and aks the user interactively to enter credentials.
+Connects to the JobScheduler Web Service at the indicated address and asks the user interactively to enter credentials.
 .EXAMPLE
 $credential = ( New-Object -typename System.Management.Automation.PSCredential -ArgumentList 'root', ( 'root' | ConvertTo-SecureString -AsPlainText -Force) )
 Connect-JobScheduler http://localhost:4446 $credential scheduler
