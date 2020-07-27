@@ -73,8 +73,7 @@ FunctionsToExport = @(
     'Suspend-JobSchedulerMaster',
     'Suspend-JobSchedulerOrder',
     'Use-JobSchedulerAlias',
-    'Use-JobSchedulerMaster',
-    'Use-JobSchedulerWebService'
+    'Use-JobSchedulerMaster'
 )
 
 # # Cmdlets to export from this module
