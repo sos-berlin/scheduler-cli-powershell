@@ -77,8 +77,6 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $MasterUrl,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $SupervisorUrl,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $SupervisorJobChain = '/sos/events/scheduler_event_service'
 )
 
@@ -109,6 +107,7 @@ param
             $MasterUrl = $SCRIPT:js.Url
         }
             
+<#        
         if ( $SCRIPT:jsOperations )
         {
             if ( !$SupervisorUrl )
@@ -126,6 +125,7 @@ param
                 $SupervisorUrl = $MasterUrl
             }
         }
+#>            
 
         $orderNode = $xmlDoc.CreateElement( 'add_order' )
         $orderNode.SetAttribute( 'job_chain', $SupervisorJobChain )
@@ -164,12 +164,13 @@ param
 
         if ( $eventCount )
         {
+<#
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.outerXml)"
-            
+  #>
             try
             {
-                $response = Invoke-JobSchedulerWebRequestXmlCommand -Uri $SupervisorUrl -Command $commandsNode.outerXml
+                $response = Invoke-JobSchedulerWebRequestXmlCommand -Command $commandsNode.outerXml
 
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {

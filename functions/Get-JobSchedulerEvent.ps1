@@ -87,8 +87,6 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $MasterUrl,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $SupervisorUrl,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $SupervisorJobChain = '/sos/events/scheduler_event_service',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $XPath
@@ -112,7 +110,7 @@ param
         {
             $MasterUrl = $SCRIPT:js.Url
         }
-            
+<#            
         if ( $SCRIPT:jsOperations )
         {
             if ( !$SupervisorUrl )
@@ -130,13 +128,13 @@ param
                 $SupervisorUrl = $MasterUrl
             }
         }
-    
+#>
         [xml] $xmlDoc  = "<params.get name='JobSchedulerEventJob.events'/>"
         
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.innerXml)"
         
-        $responseXml = Invoke-JobSchedulerWebRequestXmlCommand -Uri $SupervisorUrl -Command $xmlDoc.innerXml
+        $responseXml = Invoke-JobSchedulerWebRequestXmlCommand -Command $xmlDoc.innerXml
         
         $responseNode = Select-XML -XML $responseXml -XPath "//param[@name='JobSchedulerEventJob.events']/@value"
         

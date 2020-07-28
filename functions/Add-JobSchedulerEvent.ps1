@@ -131,7 +131,7 @@ Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678
 Creates an event with the specified event class and event id.
 
 .EXAMPLE
-Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678 -AllowedExitCodes 1..4
+Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678 -AllowedExitCodes @(1..4)
 
 Creates an event with the specified event class and event id. The exit code is implicitely added
 from the global $LastExitCode value. Should the exit code be contained in the list of 
@@ -180,8 +180,6 @@ param
     [string] $Order,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $MasterUrl,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $SupervisorUrl,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $SupervisorJobChain = '/sos/events/scheduler_event_service',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -247,7 +245,7 @@ param
     {
         if ( !$MasterUrl )
         {
-            $MasterUrl = $SCRIPT:js.Url
+            $MasterUrl = $script:js.Url
         }
 
         # exit code was not assigned
@@ -276,7 +274,7 @@ param
             }
         }
         
-        if ( $SCRIPT:jsOperations )
+        if ( $script:jsOperations )
         {
             if ( !$Job )
             {
@@ -295,7 +293,7 @@ param
                     $Order = $spooler_task.order().id()
                 }
             }
-
+<#
             if ( !$SupervisorUrl )
             {
                 if ( $spooler.supervisor_client() )
@@ -305,6 +303,7 @@ param
                     $SupervisorUrl = $MasterUrl
                 }
             }
+#>            
         } else {
             if ( !$Job )
             {
@@ -323,11 +322,12 @@ param
                     $Order = $env:SCHEDULER_ORDER_ID
                 }
             }
-            
+<#            
             if ( !$SupervisorUrl )
             {
                 $SupervisorUrl = $MasterUrl
             }
+#>
         }
         
         $currentDate = Get-Date
@@ -398,6 +398,7 @@ param
 
         if ( $eventCount )
         {
+<#        
             if ( $SupervisorUrl )
             {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
@@ -405,10 +406,11 @@ param
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JOC Cockpit Web Service"
             }
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.outerXml)"
-
+#>
             try 
             {
-                $response = Invoke-JobSchedulerWebRequestXmlCommand -Uri $SupervisorUrl -Command $commandsNode.outerXml
+                $response = Invoke-JobSchedulerWebRequestXmlCommand -Command $commandsNode.outerXml
+                $response
                 
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {
