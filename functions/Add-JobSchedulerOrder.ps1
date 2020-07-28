@@ -27,7 +27,7 @@ Specifies the parameters for the order. Parameters are created from a hashmap,
 i.e. a list of names and values.
 
 Example:
-$orderParams = @{ 'param1' = 'value1'; 'param2' = 'value2' } 
+$orderParams = @{ 'param1' = 'value1'; 'param2' = 'value2' }
 
 .PARAMETER Title
 Specifies the title of the order.
@@ -237,7 +237,16 @@ param
 
         if ( $Parameters )
         {
-            Add-Member -Membertype NoteProperty -Name 'params' -value $Parameters -InputObject $objOrder
+            $objParams = @()
+            foreach( $parameter in $Parameters.GetEnumerator() )
+            {
+                $objParam = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'name' -value $parameter.key -InputObject $objParam
+                Add-Member -Membertype NoteProperty -Name 'value' -value $parameter.value -InputObject $objParam
+                $objParams += $objParam
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'params' -value $objParams -InputObject $objOrder
         }
 
         if ( $Title )

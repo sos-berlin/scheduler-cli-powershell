@@ -4,7 +4,7 @@
 ModuleToProcess = 'JobScheduler.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.0'
+ModuleVersion = '1.2.0'
 
 # ID used to uniquely identify this module
 GUID = 'fcc31359-6e84-425a-9338-49ed7a807bf9'
@@ -72,7 +72,6 @@ FunctionsToExport = @(
     'Suspend-JobSchedulerJobChain',
     'Suspend-JobSchedulerMaster',
     'Suspend-JobSchedulerOrder',
-    'Use-JobSchedulerAlias',
     'Use-JobSchedulerMaster'
 )
 

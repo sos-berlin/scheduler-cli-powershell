@@ -15,10 +15,12 @@ Specifies the XML command to be executed, e.g. <show_state/>
 A hashmap can be specified with name/value pairs for HTTP headers.
 
 .PARAMETER AuditComment
-Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
+Specifies a free text that indicates the reason for the current intervention, 
+e.g. "business requirement", "maintenance window" etc.
 
 The Audit Comment is visible from the Audit Log view of JOC Cockpit.
-This parameter is not mandatory, however, JOC Cockpit can be configured to enforece Audit Log comments for any interventions.
+This parameter is not mandatory, however, JOC Cockpit can be configured 
+to enforece Audit Log comments for any interventions.
 
 .PARAMETER AuditTimeSpent
 Specifies the duration in minutes that the current intervention required.
@@ -41,7 +43,7 @@ $stateXml = Send-JobSchedulerCommand '<show_state/>'
 Returns summary information and inventory of jobs and job chains.
 
 .EXAMPLE
-$stateXml = Send-JobSchedulerCommand '<show_state/>' @{'Cache-Control'='no-cache'}
+$stateXml = Send-JobSchedulerCommand '<show_state/>' @{'Accept'='application/xml'}
 
 Returns summary information including the inventory while using individual HTTP headers.
 
@@ -55,7 +57,7 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Command,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [hashtable] $Headers = @{},
+    [hashtable] $Headers = @{'Accept' = 'application/xml'},
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -67,6 +69,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
         
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
@@ -76,15 +79,11 @@ param
 
     Process
     {
-        if ( !$Command )
-        {
-            throw "$($MyInvocation.MyCommand.Name): no XML command specified, use -Command"
-        }
-        
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $Command"
-        
-#       Send-JobSchedulerXMLCommand -Url $js.Url -Command $Command -Headers $Headers
         Invoke-JobSchedulerWebRequestXmlCommand -Command $Command -Headers $Headers
+    }
+    
+    End
+    {
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

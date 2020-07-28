@@ -36,9 +36,11 @@ Specifies a timeout to be applied when stopping a task without using the paramet
 ** the method spooler_process() of the respective job will not be called by JobScheduler any more.
 ** should the job not complete its spooler_process() method within the timeout then the task will be killed.
 
-.PARAMETER Kill
-Specifies that tasks are killed immediately, i.e. a SIGKILL signal is sent.
-Without this switch tasks are terminated, i.e. they are sent a SIGTERM signal.
+.PARAMETER Terminate
+Specifies that tasks should not be killed immediately. Instead a SIGTERM signal is sent
+and optionally the -Timeout parameter is considered.
+
+This parameter is applicable for jobs running on Unix environments only.
 
 .PARAMETER AuditComment
 Specifies a free text that indicates the reason for the current intervention, 
@@ -71,10 +73,10 @@ This cmdlet returns an array of task objects. Task objects include as a minimum 
 .EXAMPLE
 Get-JobSchedulerTask -Running -Enqueued | Stop-JobSchedulerTask
 
-Terminates all running and enqueued tasks for all jobs.
+Kills all running and enqueued tasks for all jobs.
 
 .EXAMPLE
-Get-JobSchedulerTask -Directory /some_path -Recursive -Running -Enqueued | Stop-JobSchedulerTask -Action terminate -Timeout 30
+Get-JobSchedulerTask -Directory /some_path -Recursive -Running -Enqueued | Stop-JobSchedulerTask -Terminate -Timeout 30
 
 Terminates all running and enqueued tasks that are configured with the folder "some_path" and any sub-folders. 
 For Unix environments tasks are sent a SIGTERM signal and after expiration of 30s a SIGKILL signal is sent.
@@ -82,7 +84,7 @@ For Unix environments tasks are sent a SIGTERM signal and after expiration of 30
 .EXAMPLE
 Get-JobSchedulerTask -Job /test/globals/job1 | Stop-JobSchedulerTask
 
-Terminates all running tasks for job "job1" from the folder "/test/globals".
+Kills all running tasks for job "job1" from the folder "/test/globals".
 
 .LINK
 about_jobscheduler
@@ -100,7 +102,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $Timeout = 0,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Kill,
+    [switch] $Terminate,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -224,10 +226,8 @@ param
             Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
         }
 
-        if ( $Kill )
+        if ( $Terminate )
         {
-            $url = '/tasks/kill'
-        } else {
             if ( $Timeout )
             {
                 $url = '/tasks/terminate_within'
@@ -235,6 +235,8 @@ param
             } else {
                 $url = '/tasks/terminate'
             }
+        } else {
+            $url = '/tasks/kill'
         }
         
         if ( $objJobs.count )

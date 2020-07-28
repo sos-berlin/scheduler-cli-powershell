@@ -73,18 +73,10 @@ param
     {    
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-        
+
         if ( $allAgents )
         {
-            $objAgents = @()
-            foreach( $agent in ( $allAgents | Sort-Object | Get-Unique ) )
-            {
-                $objAgent = New-Object PSObject
-                Add-Member -Membertype NoteProperty -Name 'agent' -value $agent -InputObject $objAgent
-                $objAgents += $objAgent
-            }
-
-            Add-Member -Membertype NoteProperty -Name 'agents' -value $objAgents -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'agents' -value $allAgents -InputObject $body
         }
 
         if ( $DateFrom )

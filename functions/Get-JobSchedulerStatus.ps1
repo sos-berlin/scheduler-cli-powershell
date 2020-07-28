@@ -98,7 +98,7 @@ ________________________________________________________________________
         if ( $Statistics )
         {
             $command = "<subsystem.show what='statistics'/>"
-            $statXml = Invoke-JobSchedulerWebRequestXmlCommand -Command $command -CheckResponse
+            $statXml = Invoke-JobSchedulerWebRequestXmlCommand -Command $command
 
             if ( $statXml )
             {

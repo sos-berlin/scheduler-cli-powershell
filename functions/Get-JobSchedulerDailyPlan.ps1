@@ -275,6 +275,7 @@ param
         
         if ( $response.StatusCode -eq 200 )
         {
+
             $returnPlans = ( $response.Content | ConvertFrom-JSON ).planItems
         } else {
             throw ( $response | Format-List -Force | Out-String )
