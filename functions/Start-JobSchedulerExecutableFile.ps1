@@ -2,13 +2,13 @@ function Start-JobSchedulerExecutableFile
 {
 <#
 .SYNOPSIS
-Starts the specified executable file with parameters optionally for a different user account.
+Starts an executable file with parameters optionally for a different user account.
 
 .DESCRIPTION
 Runs the specified executable file in the context of a different user account.
 The cmdlet reads credentials from the Windows Credential Manager, i.e. credentials
 that have previously been added by the Windows command "cmdkey" or any other credential management tools.
-Credentials are indicated by their "target name" which represents the identifier by which
+Credentials are indicated by their "target" name which represents the identifier by which
 credentials are retrieved.
 
 By default a user profile is considered. The -NoLoadUserProfile parameter prevents using a profile.
@@ -23,9 +23,12 @@ The cmdlet returns a [System.Diagnostics.Process] object that includes additiona
 ** output to stdout is available from a temporary file that is indicated with the "StandardOutputFile" property.
 ** output to stderr is available from a temporary file that is indicated with the "StandardErrorFile" property.
 
+* An exit code is not reliably reported if the cmdlet is used from an unprivileged account
+  to start a process for a different user 
+
 .PARAMETER Path
 Specifies the full path and name of the executable file to be started. Executable files includes binary files (.com, .exe) 
-and command scripts (.cmd, .bat).
+and command scripts (.cmd, .bat) etc..
 
 .PARAMETER Argumentlist
 Specifies the arguments for starting the executable file.
@@ -71,7 +74,7 @@ The cmdlet returns a [System.Diagnostics.Process] object that includes additiona
 ** output to stderr is available from a temporary file that is indicated with the "StandardErrorFile" property.
 
 .EXAMPLE
-$process = Start-JobSchedulerExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'localhost'
+$process = Start-JobSchedulerExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'run_as_ap'
 
 Runs the command script for the account that is specified with the credentials identified by the target name.
 
@@ -83,7 +86,7 @@ The resulting process object includes the properties
 that contain the output that is created to stdout and stderr.
 
 .EXAMPLE
-$process = Start-JobSchedulerExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'localhost' -NoStandardOutput -NoStandardError
+$process = Start-JobSchedulerExecutableFile -Path 'c:/tmp/powershell/sample_script.cmd' -TargetName 'run_as_ap' -NoStandardOutput -NoStandardError
 
 Runs the command script for the account that is specified with the credentials identified by the target name.
 
@@ -98,17 +101,17 @@ that indicate temporary files that contain the output that is created to stdout 
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Path,
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Argumentlist,
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $TargetName,
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $NoStandardOutput,
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $NoStandardError,
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $NoLoadUserProfile
 )
     Begin
@@ -134,7 +137,7 @@ param
                     throw "$($MyInvocation.MyCommand.Name): no credentials found for target name: $($TargetName)"
                 }
     
-                $credentials = ( New-Object -typename System.Management.Automation.PSCredential -Argumentlist $systemCredentials.UserName, $systemCredentials.Password )
+                $credentials = ( New-Object -TypeName System.Management.Automation.PSCredential -Argumentlist $systemCredentials.UserName, $systemCredentials.Password )
                 if ( !$credentials )
                 {
                     throw "$($MyInvocation.MyCommand.Name): could not use credentials for target name: $($TargetName)"
@@ -142,39 +145,48 @@ param
     
                 if ( $NoLoadUserProfile )
                 {
+#                   -Wait has to be dropped as it throws "access denied" when used with credentials, dropping -Wait prevents the exit code from being provided, we have to live with that
+#                   $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Wait -Credential $credentials -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
                     Write-Verbose ".. $($MyInvocation.MyCommand.Name): running executable file without profile for user account '$($systemCredentials.UserName)': cmd.exe /c `"$Path`" $Argumentlist"
                     $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Credential $credentials -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
                 } else {
+#                   -Wait has to be dropped as it throws "access denied" when used with credentials, dropping -Wait prevents the exit code from being provided, we have to live with that
+#                   $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Wait -Credential $credentials  -LoadUserProfile -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
                     Write-Verbose ".. $($MyInvocation.MyCommand.Name): running executable file with profile for user account '$($systemCredentials.UserName)': cmd.exe /c `"$Path`" $Argumentlist"
                     $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Credential $credentials  -LoadUserProfile -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
                 }
             } else {
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): running executable file for current user account: cmd.exe /c `"$Path`" $Argumentlist"
-                $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
+                $process = Start-Process -FilePath 'cmd.exe' "/c ""`"$Path`" $Argumentlist"" " -NoNewWindow -PassThru -Wait -RedirectStandardOutput $tempStdoutFile -RedirectStandardError $tempStderrFile
             }
 
-			if ( !$process.HasExited )
-			{
-                $process.WaitForExit()
-			}
+            if ( $process )
+            {
+                $processHandle = $process.Handle
 
-            $process.ExitCode | Out-Null
-            $process | Add-Member -Membertype NoteProperty -Force -Name ExitCode -Value $process.GetType().GetField("exitCode", "NonPublic,Instance").GetValue($process)
-            
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): process terminated with exit code: $($process.ExitCode)"
+                if ( !$process.HasExited )
+                {
+                    $process.WaitForExit()
+                }
     
-            if ( $NoStandardOutput )
-            {
-                $process | Add-Member -Membertype NoteProperty -Name StandardOutputFile -Value $tempStdoutFile
-            } else {
-                $process | Add-Member -Membertype NoteProperty -Name StandardOutputContent -Value (Get-Content -Path $tempStdoutFile)
-            }
-                        
-            if ( $NoStandardError )
-            {
-                $process | Add-Member -Membertype NoteProperty -Name StandardErrorFile -Value $tempStderrFile
-            } else {
-                $process | Add-Member -Membertype NoteProperty -Name StandardErrorContent -Value $(Get-Content -Path $tempStderrFile)
+                # not applicable in newer PowerShell versions >= 6
+                # $process | Add-Member -Membertype NoteProperty -Force -Name ExitCode -Value $process.GetType().GetField("exitCode", "NonPublic,Instance").GetValue($process)
+                
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): process terminated with exit code: $($process.ExitCode)"
+        
+                if ( $NoStandardOutput )
+                {
+                    $process | Add-Member -Membertype NoteProperty -Name StandardOutputFile -Value $tempStdoutFile
+                } else {
+                    $process | Add-Member -Membertype NoteProperty -Name StandardOutputContent -Value (Get-Content -Path $tempStdoutFile)
+                }
+                            
+                if ( $NoStandardError )
+                {
+                    $process | Add-Member -Membertype NoteProperty -Name StandardErrorFile -Value $tempStderrFile
+                } else {
+                    $process | Add-Member -Membertype NoteProperty -Name StandardErrorContent -Value $(Get-Content -Path $tempStderrFile)
+                }
             }
             
             $process

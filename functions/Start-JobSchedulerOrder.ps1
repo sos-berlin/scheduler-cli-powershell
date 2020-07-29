@@ -209,7 +209,16 @@ param
 
         if ( $Parameters )
         {
-            Add-Member -Membertype NoteProperty -Name 'params' -value $Parameters -InputObject $objOrder
+            $objParams = @()
+            foreach( $parameter in $Parameters.GetEnumerator() )
+            {
+                $objParam = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'name' -value $parameter.key -InputObject $objParam
+                Add-Member -Membertype NoteProperty -Name 'value' -value $parameter.value -InputObject $objParam
+                $objParams += $objParam
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'params' -value $objParams -InputObject $objOrder
         }
 
         $objOrders += $objOrder
@@ -256,14 +265,9 @@ param
                 throw ( $response | Format-List -Force | Out-String )
             }
         
-            $requestResult.orders
-            
-            if ( $requestResult.orders.count -ne $objOrders.count )
-            {
-                Write-Error "$($MyInvocation.MyCommand.Name): not all orders could be started, $($objOrders.count) orders requested, $($requestResult.orders.count) orders started"
-            }
-            
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.orders.count) orders started"                
+            $requestResult
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objOrders.count) orders started"                
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"                
         }

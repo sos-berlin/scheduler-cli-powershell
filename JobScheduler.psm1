@@ -4,11 +4,11 @@ JobScheduler command line interface
 
 For further information see
 
-    PS C:\> about_JobScheduler
+    PS > about_JobScheduler
 
 If the documentation is not available for your language then consider to use
 
-    PS C:\> [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
+    PS > [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
     
 #>
 
@@ -63,9 +63,7 @@ If the documentation is not available for your language then consider to use
 #     Debug Message: responses exceeding the max. output size are stored in temporary files
 [int] $jsOptionDebugMaxOutputSize = 1000
 #    Master Web Request: timeout for establishing the connection in ms
-[int] $jsOptionWebRequestTimeout = 15000
-#    Agent Web Request: timeout for establishing the connection in ms
-[int] $jsAgentOptionWebRequestTimeout = 5000
+[int] $jsOptionWebRequestTimeout = 30
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -76,7 +74,7 @@ $moduleRoot = Split-Path -Path $MyInvocation.MyCommand.Path
 Export-ModuleMember -Function "*"
 
 # ----------------------------------------------------------------------
-# Public Function Alias Names
+# Public Function Alias Management
 # ----------------------------------------------------------------------
 
 function Use-JobSchedulerAlias
@@ -340,28 +338,6 @@ function Create-JSObject()
     $js
 }
 
-function Create-StatusObject()
-{
-    $state = New-Object PSObject
-
-    $state | Add-Member -Membertype NoteProperty -Name Id -Value ''
-    $state | Add-Member -Membertype NoteProperty -Name Url -Value ''
-    $state | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
-
-    $state | Add-Member -Membertype NoteProperty -Name Version -Value ''
-    $state | Add-Member -Membertype NoteProperty -Name State -Value ''
-    $state | Add-Member -Membertype NoteProperty -Name Pid -Value 0
-    $state | Add-Member -Membertype NoteProperty -Name RunningSince -Value ''
-
-    $state | Add-Member -Membertype NoteProperty -Name JobChainsExist -Value 0
-    $state | Add-Member -Membertype NoteProperty -Name OrdersExist -Value 0
-    $state | Add-Member -Membertype NoteProperty -Name JobsExist -Value 0
-    $state | Add-Member -Membertype NoteProperty -Name TasksExist -Value 0
-    $state | Add-Member -Membertype NoteProperty -Name TasksEnqueued -Value 0
-
-    $state
-}
-
 function Create-StatisticsObject()
 {
     $stat = New-Object PSObject
@@ -387,55 +363,6 @@ function Create-StatisticsObject()
     $stat | Add-Member -Membertype NoteProperty -Name MonitorsExist -Value 0
     
     $stat
-}
-
-function Create-CalendarObject()
-{
-    $cal = New-Object PSObject
-
-    $cal | Add-Member -Membertype NoteProperty -Name AtOrder -Value @()
-    $cal | Add-Member -Membertype NoteProperty -Name PeriodOrder -Value @()
-    $cal | Add-Member -Membertype NoteProperty -Name PeriodJob -Value @()
-    
-    $cal
-}
-
-function Create-CalendarAtOrderObject()
-{
-    $calAtOrder = New-Object PSObject
-
-    $calAtOrder | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
-    $calAtOrder | Add-Member -Membertype NoteProperty -Name OrderId -Value ''
-    $calAtOrder | Add-Member -Membertype NoteProperty -Name StartAt -Value ''
-    
-    $calAtOrder
-}
-
-function Create-CalendarPeriodOrderObject()
-{
-    $calPeriodOrder = New-Object PSObject
-
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name OrderId -Value ''
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name BeginAt -Value ''
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name EndAt -Value ''
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name Repeat -Value ''
-    $calPeriodOrder | Add-Member -Membertype NoteProperty -Name AbsoluteRepeat -Value ''
-    
-    $calPeriodOrder
-}
-
-function Create-CalendarPeriodJobObject()
-{
-    $calPeriodJob = New-Object PSObject
-
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name Job -Value ''
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name BeginAt -Value ''
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name EndAt -Value ''
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name Repeat -Value ''
-    $calPeriodJob | Add-Member -Membertype NoteProperty -Name AbsoluteRepeat -Value ''
-    
-    $calPeriodJob
 }
 
 function Create-JobChainObject()
@@ -466,14 +393,6 @@ function Create-OrderObject()
     $order
 }
 
-function Create-OrderHistoryObject()
-{
-    $orderHistory = Create-OrderObject
-    $orderHistory | Add-Member -Membertype NoteProperty -Name HistoryId -Value ''
-
-    $orderHistory
-}
-
 function Create-JobObject()
 {
     $job = New-Object PSObject
@@ -487,39 +406,6 @@ function Create-JobObject()
     $job | Add-Member -Membertype NoteProperty -Name TaskHistory -Value @()
 
     $job
-}
-
-function Create-JobHistoryObject()
-{
-    $jobHistory = Create-JobObject
-
-    $jobHistory | Add-Member -Membertype NoteProperty -Name HistoryId -Value ''
-    $jobHistory | Add-Member -Membertype NoteProperty -Name AgentUrl -Value ''
-    $jobHistory | Add-Member -Membertype NoteProperty -Name Cause -Value ''
-    $jobHistory | Add-Member -Membertype NoteProperty -Name StartTime -Value ''
-    $jobHistory | Add-Member -Membertype NoteProperty -Name EndTime -Value ''
-    $jobHistory | Add-Member -Membertype NoteProperty -Name ExitCode -Value ''
-    $jobHistory | Add-Member -Membertype NoteProperty -Name Task -Value ''
-    $jobHistory | Add-Member -Membertype NoteProperty -Name Steps -Value ''
-
-    $jobHistory
-}
-
-function Create-TaskObject()
-{
-    $task = New-Object PSObject
-
-    $task | Add-Member -Membertype NoteProperty -Name Task -Value 0
-    $task | Add-Member -Membertype NoteProperty -Name Job -Value ''
-    $task | Add-Member -Membertype NoteProperty -Name State -Value ''
-    $task | Add-Member -Membertype NoteProperty -Name LogFile -Value ''
-    $task | Add-Member -Membertype NoteProperty -Name Steps -Value ''
-    $task | Add-Member -Membertype NoteProperty -Name EnqueuedAt -Value ''
-    $task | Add-Member -Membertype NoteProperty -Name StartAt -Value ''
-    $task | Add-Member -Membertype NoteProperty -Name RunningSince -Value ''
-    $task | Add-Member -Membertype NoteProperty -Name Cause -Value ''
-    
-    $task
 }
 
 function Create-EventObject()
@@ -577,38 +463,6 @@ function Create-JSAgentObject()
     $jsAgent
 }
 
-function Create-AgentClusterObject()
-{
-    $jsAgentCluster = New-Object PSObject
-
-    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name AgentCluster -Value ''
-    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name Path -Value ''
-    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name Directory -Value ''
-    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name MaxProcesses -Value 0
-    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name ClusterType -Value ''
-    $jsAgentCluster | Add-Member -Membertype NoteProperty -Name Agents -Value @()
-
-    $jsAgentCluster
-}
-
-function Create-AgentStateObject()
-{
-    $jsAgentState = New-Object PSObject
-
-    $jsAgentstate | Add-Member -Membertype NoteProperty -Name isTerminating -Value ''
-
-    $jsAgentStateSystem = New-Object PSObject
-    $jsAgentStateSystem | Add-Member -Membertype NoteProperty -Name hostname -Value ''
-    $jsAgentState | Add-Member -Membertype NoteProperty -Name system -Value $jsAgentStateSystem
-    
-    $jsAgentState | Add-Member -Membertype NoteProperty -Name currentTaskCount -Value ''
-    $jsAgentState | Add-Member -Membertype NoteProperty -Name startedAt -Value ''
-    $jsAgentState | Add-Member -Membertype NoteProperty -Name version -Value ''
-    $jsAgentState | Add-Member -Membertype NoteProperty -Name totalTaskCount -Value ''
-    
-    $jsAgentState
-}
-
 function Create-WebServiceObject()
 {
     $jsWebService = New-Object PSObject
@@ -616,7 +470,7 @@ function Create-WebServiceObject()
     $jsWebService | Add-Member -Membertype NoteProperty -Name Url -Value ''
     $jsWebService | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
     $jsWebService | Add-Member -Membertype NoteProperty -Name Base -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name Timeout -Value 0
+    $jsWebService | Add-Member -Membertype NoteProperty -Name Timeout -Value $script:jsOptionWebRequestTimeout
     $jsWebService | Add-Member -Membertype NoteProperty -Name SkipCertificateCheck -Value $false
     $jsWebService | Add-Member -Membertype NoteProperty -Name SSLProtocol -Value ''
     $jsWebService | Add-Member -Membertype NoteProperty -Name Certificate -Value ''
@@ -688,7 +542,7 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
         $requestParams.Add( 'SkipHttpErrorCheck', $true )
     }
         
-    if ( $script:jsWebServiceTimeout )
+    if ( $script:jsWebService.Timeout )
     {
         $requestParams.Add( 'TimeoutSec', $script:jsWebService.Timeout )
     }

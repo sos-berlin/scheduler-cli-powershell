@@ -2,7 +2,7 @@ function Start-JobSchedulerMaster
 {
 <#
 .SYNOPSIS
-Starts the JobScheduler Master
+Starts the JobScheduler Master from a local Windows installation.
 
 .DESCRIPTION
 JobScheduler can be started in service mode and in dialog mode:
@@ -61,7 +61,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Service,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [ValidateSet("active","passive")] [string] $Cluster,
+    [ValidateSet('active','passive')] [string] $Cluster,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Backup,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -72,6 +72,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
+        $stopWatch = Start-StopWatch
     }
 
     Process
@@ -139,8 +140,14 @@ param
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
         
-                $result = Send-JobSchedulerXMLCommand $js.Url $command
+                # $result = Send-JobSchedulerXMLCommand $js.Url $command
+                Invoke-JobSchedulerWebRequestXmlCommand -Command $command -Headers @{'Accept' = 'application/xml'}
             }
         }
+    }
+
+    End
+    {
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

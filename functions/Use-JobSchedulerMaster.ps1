@@ -2,8 +2,8 @@ function Use-JobSchedulerMaster
 {
 <#
 .SYNOPSIS
-This cmdlet has to be used as the first operation with JobScheduler Master cmdlets
-and identifies the JobScheduler Master that should be used.
+This cmdlet can be used to import settings from a local JobScheduler Master installation for Windows.
+The cmdlet is not related to the JobScheduler REST Web Service.
 
 Optionally applies settings from a JobScheduler Master location. A Master is identified
 by its JobScheduler ID and URL for which it is operated.
@@ -12,7 +12,7 @@ by its JobScheduler ID and URL for which it is operated.
 During installation of a JobScheduler Master a number of settings are specified. 
 Such settings are imported for use with subsequent cmdlets.
 
-* For a local Master that is installed on the local computer the cmdlet reads
+* For a Master that is installed on the local Windows computer the cmdlet reads
 settings from the installation path.
 * For a remote Master operations for management of the
 Windows service are not available.
@@ -76,22 +76,10 @@ The URL includes one of the protocols HTTP or HTTPS and optionally the port that
 .PARAMETER ProxyCredentials
 Specifies a credentials object that is used for authentication with a proxy. See parameter -Credentials how to create a credentials object.
 
-.PARAMETER NoCache
-Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
-retrieved directly from the JobScheduler Master and is not resolved from the cache.
-
 .EXAMPLE
-Use-JobSchedulerMaster http://somehost:4444
+Use-JobSchedulerMaster -Url http://localhost:40444 -Id scheduler
 
-Allows to manage a JobScheduler Master that is operated on the same or on a remote host. 
-This includes to manage Master instances that are running e.g. in a Linux box.
-
-.EXAMPLE
-Use-JobSchedulerMaster http://localhost:4444 scheduler110
-Use-JobSchedulerMaster -Url http://localhost:4444 -Id scheduler110
-
-Specifies the URL for a local master and imports settings from the the JobScheduler Master with ID *scheduler110*.
+Specifies the URL for a local Master and imports settings from the the JobScheduler Master with ID *scheduler*.
 The installation path is determined from the default value of the -BasePath parameter.
 
 Cmdlets that require a local Master can be used, e.g. Install-JobSchedulerService, Remove-JobSchedulerService, Start-JobSchedulerMaster.
@@ -128,9 +116,7 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [Uri] $ProxyUrl,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [System.Management.Automation.PSCredential] $ProxyCredentials,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
-    [switch] $NoCache
+    [System.Management.Automation.PSCredential] $ProxyCredentials
 )
     Process
     {
@@ -177,28 +163,28 @@ param
 
         if ( $Credentials )
         {
-            $SCRIPT:jsOptionWebRequestUseDefaultCredentials = $false
-            $SCRIPT:jsCredentials = $Credentials
+            $script:jsOptionWebRequestUseDefaultCredentials = $false
+            $script:jsCredentials = $Credentials
         }
         
         if ( $ProxyCredentials )
         {
-            $SCRIPT:jsOptionWebRequestProxyUseDefaultCredentials = $false
-            $SCRIPT:jsProxyCredentials = $ProxyCredentials
+            $script:jsOptionWebRequestProxyUseDefaultCredentials = $false
+            $script:jsProxyCredentials = $ProxyCredentials
         }
         
-        $SCRIPT:jsEnv = @{}
+        $script:jsEnv = @{}
         
-        $SCRIPT:js = Create-JSObject
-        $SCRIPT:js.Url = $Url
-        $SCRIPT:js.Id = $Id
-        $SCRIPT:js.Local = $false
+        $script:js = Create-JSObject
+        $script:js.Url = $Url
+        $script:js.Id = $Id
+        $script:js.Local = $false
 
-		$SCRIPT:jsWebService = $null
+		$script:jsWebService = $null
 		
         if ( $ProxyUrl )
         {
-            $SCRIPT:js.ProxyUrl = $ProxyUrl
+            $script:js.ProxyUrl = $ProxyUrl
         }        
         
         if ( $InstallPath )
@@ -215,26 +201,26 @@ param
             
             if ( !$Id )
             {
-                $SCRIPT:js.Id = Get-DirectoryName $InstallPath
+                $script:js.Id = Get-DirectoryName $InstallPath
             }
         
-            $SCRIPT:js.Local = $true
+            $script:js.Local = $true
         } elseif ( $Id ) {
             try 
             {
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): checking implicit installation path: $($BasePath)\$($Id)"
-                $SCRIPT:js.Local = Test-Path "$($BasePath)\$($Id)" -PathType Container
+                $script:js.Local = Test-Path "$($BasePath)\$($Id)" -PathType Container
             } catch {
                 throw "$($MyInvocation.MyCommand.Name): error occurred checking installation path '$($BasePath)\$($Id)' from JobScheduler ID. Maybe parameter -Id '$($Id)' was mismatched: $($_.Exception.Message)"
             }
 
-            if ( $SCRIPT:js.Local )
+            if ( $script:js.Local )
             {
                 $InstallPath = "$($BasePath)\$($Id)"
             }
         }
             
-        if ( $SCRIPT:js.Local )
+        if ( $script:js.Local )
         {            
             $environmentVariablesScriptPath = $InstallPath + '/bin/' + $EnvironmentVariablesScript
             if ( Test-Path $environmentVariablesScriptPath -PathType Leaf )
@@ -252,77 +238,77 @@ param
                 Invoke-CommandScript $environmentVariablesScriptPath
             }    
         
-            $SCRIPT:js.Install.Directory = $InstallPath
+            $script:js.Install.Directory = $InstallPath
             
-            if ( $SCRIPT:jsEnv['SCHEDULER_ID'] )
+            if ( $script:jsEnv['SCHEDULER_ID'] )
             {            
-                $SCRIPT:js.Id = $SCRIPT:jsEnv['SCHEDULER_ID']
+                $script:js.Id = $script:jsEnv['SCHEDULER_ID']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_HOME'] )
+            if ( $script:jsEnv['SCHEDULER_HOME'] )
             {
-                $SCRIPT:js.Install.Directory = $SCRIPT:jsEnv['SCHEDULER_HOME']
+                $script:js.Install.Directory = $script:jsEnv['SCHEDULER_HOME']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_DATA'] )
+            if ( $script:jsEnv['SCHEDULER_DATA'] )
             {
-                $SCRIPT:js.Config.Directory = $SCRIPT:jsEnv['SCHEDULER_DATA']
+                $script:js.Config.Directory = $script:jsEnv['SCHEDULER_DATA']
             }
         
-            if ( $SCRIPT:jsEnv['SOS_INI'] )
+            if ( $script:jsEnv['SOS_INI'] )
             {
-                $SCRIPT:js.Config.SosIni = $SCRIPT:jsEnv['SOS_INI']
+                $script:js.Config.SosIni = $script:jsEnv['SOS_INI']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_INI'] )
+            if ( $script:jsEnv['SCHEDULER_INI'] )
             {
-                $SCRIPT:js.Config.FactoryIni = $SCRIPT:jsEnv['SCHEDULER_INI']
+                $script:js.Config.FactoryIni = $script:jsEnv['SCHEDULER_INI']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_PID'] )
+            if ( $script:jsEnv['SCHEDULER_PID'] )
             {
-                $SCRIPT:js.Install.PidFile = $SCRIPT:jsEnv['SCHEDULER_PID']
+                $script:js.Install.PidFile = $script:jsEnv['SCHEDULER_PID']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_CLUSTER_OPTIONS'] )
+            if ( $script:jsEnv['SCHEDULER_CLUSTER_OPTIONS'] )
             {
-                $SCRIPT:js.Install.ClusterOptions = $SCRIPT:jsEnv['SCHEDULER_CLUSTER_OPTIONS']
+                $script:js.Install.ClusterOptions = $script:jsEnv['SCHEDULER_CLUSTER_OPTIONS']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_PARAMS'] )
+            if ( $script:jsEnv['SCHEDULER_PARAMS'] )
             {
-                $SCRIPT:js.Install.Params = $SCRIPT:jsEnv['SCHEDULER_PARAMS']
+                $script:js.Install.Params = $script:jsEnv['SCHEDULER_PARAMS']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_START_PARAMS'] )
+            if ( $script:jsEnv['SCHEDULER_START_PARAMS'] )
             {
-                $SCRIPT:js.Install.StartParams = $SCRIPT:jsEnv['SCHEDULER_START_PARAMS']
+                $script:js.Install.StartParams = $script:jsEnv['SCHEDULER_START_PARAMS']
             }
         
-            if ( $SCRIPT:jsEnv['SCHEDULER_BIN'] )
+            if ( $script:jsEnv['SCHEDULER_BIN'] )
             {
-                $SCRIPT:js.Install.ExecutableFile = $SCRIPT:jsEnv['SCHEDULER_BIN']
+                $script:js.Install.ExecutableFile = $script:jsEnv['SCHEDULER_BIN']
             }
 
-            $schedulerXmlPath = $SCRIPT:jsEnv['SCHEDULER_DATA'] + '/config/scheduler.xml'
+            $schedulerXmlPath = $script:jsEnv['SCHEDULER_DATA'] + '/config/scheduler.xml'
             if ( Test-Path $schedulerXmlPath -PathType Leaf )
             {
                 $configResponse = ( Select-XML -Path $schedulerXmlPath -Xpath '/spooler/config' ).Node
         
-                $SCRIPT:js.Config.SchedulerXml = $schedulerXmlPath
-                if ( !$SCRIPT:js.Url )
+                $script:js.Config.SchedulerXml = $schedulerXmlPath
+                if ( !$script:js.Url )
                 {
-                    $SCRIPT:js.Url = "http://localhost:$($configResponse.port)"
+                    $script:js.Url = "http://localhost:$($configResponse.port)"
                 }
             } else {
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler configuration file not found: $($schedulerXmlPath)"
             }
             
-            $SCRIPT:js.Service.ServiceName = "sos_scheduler_$($SCRIPT:js.Id)"
-            $SCRIPT:js.Service.ServiceDisplayName = "SOS JobScheduler -id=$($SCRIPT:js.Id)"
-            $SCRIPT:js.Service.ServiceDescription = 'JobScheduler'
+            $script:js.Service.ServiceName = "sos_scheduler_$($script:js.Id)"
+            $script:js.Service.ServiceDisplayName = "SOS JobScheduler -id=$($script:js.Id)"
+            $script:js.Service.ServiceDescription = 'JobScheduler'
         }
         
-        $SCRIPT:js
+        $script:js
     }
 }

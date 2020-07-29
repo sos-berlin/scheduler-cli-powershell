@@ -231,12 +231,10 @@ SEE ALSO
     •	Send-JobSchedulerCommand
     •	Set-JobSchedulerCredentials 
     •	Set-JobSchedulerOption
-    •	Start-JobSchedulerDashboard
     •	Start-JobSchedulerJobEditor
     •	Start-JobSchedulerMaster
     •	Stop-JobSchedulerMaster
     •	Suspend-JobSchedulerMaster
-    •	Use-JobSchedulerAlias
     •	Use-JobSchedulerMaster
 
     Agent Managment
