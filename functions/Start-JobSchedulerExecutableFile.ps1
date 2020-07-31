@@ -2,10 +2,10 @@ function Start-JobSchedulerExecutableFile
 {
 <#
 .SYNOPSIS
-Starts an executable file with parameters optionally for a different user account.
+Starts an executable file in a Windows OS with parameters optionally for a different user account.
 
 .DESCRIPTION
-Runs the specified executable file in the context of a different user account.
+Runs the specified executable file in the context of a different user account for a Windows OS.
 The cmdlet reads credentials from the Windows Credential Manager, i.e. credentials
 that have previously been added by the Windows command "cmdkey" or any other credential management tools.
 Credentials are indicated by their "target" name which represents the identifier by which
@@ -116,7 +116,13 @@ param
 )
     Begin
     {
+        $stopWatch = Start-StopWatch
         $process = $null
+        
+        if ( !$isWindows )
+        {
+            throw "$($MyInvocation.MyCommand.Name): cmdlet can be used with Windows OS only"
+        }
     }
         
     Process
@@ -213,5 +219,10 @@ param
                 }
             }
         }
+    }
+
+    End
+    {
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

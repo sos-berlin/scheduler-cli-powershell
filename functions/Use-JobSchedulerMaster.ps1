@@ -118,6 +118,16 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [System.Management.Automation.PSCredential] $ProxyCredentials
 )
+    Begin
+    {
+        $stopWatch = Start-StopWatch
+        
+        if ( !$isWindows )
+        {
+            throw "$($MyInvocation.MyCommand.Name): cmdlet can be used with Windows OS only"
+        }
+    }
+        
     Process
     {
         if ( !$InstallPath -and !$Id -and !$Url )
@@ -310,5 +320,10 @@ param
         }
         
         $script:js
+    }
+
+    End
+    {
+        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

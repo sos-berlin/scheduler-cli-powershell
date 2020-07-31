@@ -73,6 +73,11 @@ param
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
+
+        if ( !$isWindows )
+        {
+            throw "$($MyInvocation.MyCommand.Name): cmdlet can be used with Windows OS only"
+        }
     }
 
     Process

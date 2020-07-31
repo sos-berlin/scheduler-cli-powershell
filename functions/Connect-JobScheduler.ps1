@@ -369,19 +369,16 @@ param
                 throw $message
             }        
 
-            if ( !$script:jsWebService.JobSchedulerId )
-            {
-                $body = New-Object PSObject
-       
-                [string] $requestBody = $body | ConvertTo-Json -Depth 100
-                $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/ids' -Body $requestBody
+            $body = New-Object PSObject
+   
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/ids' -Body $requestBody
            
-                if ( $response.StatusCode -eq 200 )
-                {
-                    $script:jsWebService.JobSchedulerId = ( $response.Content | ConvertFrom-JSON ).selected
-                } else {
-                    throw ( $response | Format-List -Force | Out-String )
-                }
+            if ( $response.StatusCode -eq 200 )
+            {
+                $script:jsWebService.JobSchedulerId = ( $response.Content | ConvertFrom-JSON ).selected
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
             }
 
             $script:jsWebService
