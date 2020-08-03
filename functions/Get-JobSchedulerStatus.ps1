@@ -74,9 +74,21 @@ param
             throw ( $response | Format-List -Force | Out-String )
         }    
  
+        [string] $requestBody = $body | ConvertTo-Json -Depth 100
+        $response = Invoke-JobSchedulerWebRequest '/jobscheduler/cluster/members/p' $requestBody
+    
+        if ( $response.StatusCode -eq 200 )
+        {
+            $clusterStatus = ( $response.Content | ConvertFrom-JSON ).masters
+        } else {
+            throw ( $response | Format-List -Force | Out-String )
+        }    
+ 
         $returnStatus = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'Volatile' -value $volatileStatus -InputObject $returnStatus
         Add-Member -Membertype NoteProperty -Name 'Permanent' -value $permanentStatus -InputObject $returnStatus
+        Add-Member -Membertype NoteProperty -Name 'Cluster' -value $clusterStatus -InputObject $returnStatus
+
          
         if ( $Display )
         {
@@ -88,10 +100,20 @@ JobScheduler instance: $($returnStatus.Permanent.jobschedulerId)
 ....... running since: $($returnStatus.Permanent.startedAt)
 ............ timezone: $($returnStatus.Permanent.timezone)
 ............... state: $($returnStatus.Volatile.state._text)
-........ cluster type: $($returnStatus.Permanent.clusterType._type)
-.................. OS: $($returnStatus.Permanent.os.name), $($returnStatus.Permanent.os.architecture), $($returnStatus.Permanent.os.distribution)
-________________________________________________________________________
-            "
+........ cluster type: $($returnStatus.Permanent.clusterType._type)"
+
+            foreach( $cluster in $returnStatus.cluster )
+            {
+                $output += "
+...... cluster member:   host: $($cluster.host), port: $($cluster.port)
+.................. OS:   $($cluster.os.name), $($cluster.os.architecture), $($cluster.os.distribution)"
+            }
+            
+#            $output += "
+#.................. OS: $($returnStatus.Permanent.os.name), $($returnStatus.Permanent.os.architecture), $($returnStatus.Permanent.os.distribution)
+#
+             $output += "
+________________________________________________________________________"
             Write-Output $output
         }
         

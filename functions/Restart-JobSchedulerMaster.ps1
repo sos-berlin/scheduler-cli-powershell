@@ -32,6 +32,20 @@ Carries out the operation -Action "terminate" for a JobScheduler Cluster:
 * All instances are terminated and restarted.
 * Optional -Timeout settings apply to this operation.
 
+.PARAMETER MasterHost
+When the operations to terminate or to restart a Master should not be applied to all cluster members
+but to a specific Master instance only then the respective Master's hostname has to be specified.
+Use of this parameter requires to use the -MasterPort parameter as well.
+
+This information is returned by the Get-JobSchedulerStatus cmdlet with the "Cluster" node information.
+
+.PARAMETER MasterPort
+When the operations to terminate or to restart a Master should not be applied to all cluster members
+but to a specific Master instance only then the respective Master's post has to be specified.
+Use of this parameter requires to use the -MasterHost parameter as well.
+
+This information is returned by the Get-JobSchedulerStatus cmdlet with the "Cluster" node information.
+
 .PARAMETER Timeout
 A timeout is applied for the operation -Action "terminate" that affects running tasks:
 
@@ -93,6 +107,10 @@ param
     [ValidateSet('terminate','abort')] [string] $Action = "terminate",
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [switch] $Cluster,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $MasterHost,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $MasterPort = 0,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [int] $Timeout = 0,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -117,6 +135,6 @@ param
 
     Process
     {        
-        Stop-JobSchedulerMaster -Action $Action -Cluster:$Cluster -Timeout $Timeout -Service:$Service -Restart -AuditComment $AuditComment -AuditTimeSpent $AuditTimeSpent -AuditTicketLink $AuditTicketLink
+        Stop-JobSchedulerMaster -Action $Action -Cluster:$Cluster -MasterHost $MasterHost -MasterPort $MasterPort -Timeout $Timeout -Service:$Service -Restart -AuditComment $AuditComment -AuditTimeSpent $AuditTimeSpent -AuditTicketLink $AuditTicketLink
     }
 }

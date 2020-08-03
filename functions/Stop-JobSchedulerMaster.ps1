@@ -51,7 +51,21 @@ Carries out the operation -Action "terminate" for a JobScheduler Master Cluster:
 * All instances are terminated and optionally are restarted.
 * Optional -Timeout settings apply to this operation.
 
-.PARAMETER Timeout
+.PARAMETER MasterHost
+When the operations to terminate or to restart a Master should not be applied to all cluster members
+but to a specific Master instance only then the respective Master's hostname has to be specified.
+Use of this parameter requires to use the -MasterPort parameter as well.
+
+This information is returned by the Get-JobSchedulerStatus cmdlet with the "Cluster" node information.
+
+.PARAMETER MasterPort
+When the operations to terminate or to restart a Master should not be applied to all cluster members
+but to a specific Master instance only then the respective Master's post has to be specified.
+Use of this parameter requires to use the -MasterHost parameter as well.
+
+This information is returned by the Get-JobSchedulerStatus cmdlet with the "Cluster" node information.
+
+ .PARAMETER Timeout
 A timeout is applied for the operation -Action "terminate" that affects running tasks:
 
 * For shell jobs
@@ -147,6 +161,10 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Cluster,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $MasterHost,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int] $MasterPort = 0,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $Timeout = 0,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
     [int] $Pid,
@@ -172,6 +190,11 @@ param
 
     Process
     {
+        if ( ( $MasterHost -and !$MasterPort ) -or ( !$MasterHost -and $MasterPort ) )
+        {
+            throw "$($MyInvocation.MyCommand.Name): either both or none of the parameters -MasterHost, -MasterPort have to be specified"
+        }
+    
         if ( $Service )
         {
             $serviceInstance = $null
@@ -217,6 +240,12 @@ param
                             $resource = '/jobscheduler/cluster/terminate'
                         }
                     } else {
+                        if ( $MasterHost -and $MasterPort )
+                        {
+                            Add-Member -Membertype NoteProperty -Name 'host' -value $MasterHost -InputObject $body
+                            Add-Member -Membertype NoteProperty -Name 'port' -value $MasterPort -InputObject $body
+                        }
+
                         if ( $Restart )
                         {
                             $resource = '/jobscheduler/restart'
@@ -310,7 +339,7 @@ param
                         throw ( $response | Format-List -Force | Out-String )
                     }
 
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): command resource for JobScheduler Master: $resouroce"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): command resource for JobScheduler Master: $resource"
                 } else {
                     throw ( $response | Format-List -Force | Out-String )
                 }        
