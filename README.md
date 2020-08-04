@@ -46,11 +46,11 @@ Find more information and documentation of cmdlets at [PowerShell Command Line I
 
 * PowerShell provides a number of locations for modules, see $env:PSModulePath for predefined module locations.
 * Download/unzip the JobScheduler CLI module 
- * either to a user's module location, e.g. for Windows `C:\Users\sosap\Documents\WindowsPowerShell\Modules\` or `/home/sosap/.local/share/powershell/Modules` for a Linux environment
+ * either to a user's module location, e.g. for Windows `C:\Users\<user-name>\Documents\WindowsPowerShell\Modules\` or `/home/<user-name>/.local/share/powershell/Modules` for a Linux environment
  * or to a location that is available for all users, e.g. `C:\Windows\system32\WindowsPowerShell\v1.0\Modules\`
  * or to an arbitrary location that later on is specified when importing the module.
 * Directory names might differ according to PowerShell versions.
-* The required JobScheduler CLI module folder name is *JobScheduler*. If you download the module it is wrapped in a folder that specifies the current branch, e.g. *scheduler-cli-powershell-1.1.0*. Manually create the *JobScheduler* folder in the module location and add the contents of the *scheduler-cli-powershell-1.1.0* folder from the archive.
+* The required JobScheduler CLI module folder name is *JobScheduler*. If you download the module it is wrapped in a folder that specifies the current branch, e.g. *scheduler-cli-powershell-1.2.0*. Manually create the *JobScheduler* folder in the module location and add the contents of the *scheduler-cli-powershell-1.2.0* folder from the archive.
 
 ## Import Module
 
@@ -65,33 +65,30 @@ Hint: you can add the `Import-Module` command to your PowerShell user profile to
 
 As a first operation after importing the module it is recommended to execute the Connect-JS cmdlet:
 
-* `PS \> Connect-JS <Url> -AskForCredentials`
+* `PS > Connect-JS <Url> -AskForCredentials`
  * specifies the URL of JOC Cockpit, e.g. http://localhost:4446, and aks interactively for credentials. The default acount is `root` with the password `root`.
-* `PS C:\> Connect-JS <Url> <Credentials> <JobSchedulerId>`  or  `PS > Connect-JS -Url <Url> -Credentials <Credentials> -Id <JobSchedulerId>`
- * specifies the URL for which the JobScheduler JOC Cockpit is available. This is the same URL that you would use when opening the JOC Cockpit GUI in your browser, e.g. `http://localhost:4446`. When omitting the protocol (http/https) for the URL then http is assumed.
+* `PS > Connect-JS <Url> <Credentials> <JobSchedulerId>`  or  `PS > Connect-JS -Url <Url> -Credentials <Credentials> -Id <JobSchedulerId>`
+ * specifies the URL for which JOC Cockpit is available. This is the same URL that you would use when opening the JOC Cockpit GUI in your browser, e.g. `http://localhost:4446`. When omitting the protocol (http/https) for the URL then http is assumed.
  * specifies the ID that a JobScheduler Master has been installed with. As JOC Cockpit can manage a number of Master instances the `-Id` parameter can be used to select the respective Master.
  * specifies the credentials (user account and password) that are used to connect to the Web Service.
    * A credential object can be created by keyboard input like this:
      * `Set-JSCredentials -AskForCredentials`
    * A credential object can be created like this:
-     * `$credentials = ( New-Object -typename System.Management.Automation.PSCredential -ArgumentList 'account', ( 'password' | ConvertTo-SecureString -AsPlainText -Force) )`
+     * `$credentials = ( New-Object -typename System.Management.Automation.PSCredential -ArgumentList 'root', ( 'root' | ConvertTo-SecureString -AsPlainText -Force) )`
+     * The example makes use of the default account "root" and password "root".
      * A possible location for the above code is a user's PowerShell Profile that would be executed for a PowerShell session.
    * Credentials can be forwarded with the Url parameter like this: 
      * `Connect-JS -Url http://root:root@localhost:4446 -Id jobscheduler`
      * Specifying account and password with a URL is considered insecure.
  * allows to execute cmdlets for the specified JobScheduler Master independently from the server and operating system that the  Master is operated for, i.e. you can use PowerShell cmdlets on Windows to manage a JobScheduler Master running e.g. on a Linux box and vice versa.
  * specifying the URL is not sufficient to connect to the Windows Web Service of a Master, see below.
-* `PS > Use-JSMaster -Id <JobSchedulerID>`
- * references the JobScheduler ID that has been assigned during installation of a JobScheduler Master. 
- * adds the JobScheduler ID to the assumed installation base path. A typical installation path would be `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10` with `scheduler1.10` being the JobScheduler ID.
-* `PS > Use-JSMaster -InstallPath <InstallationPath>`
- * specifies the full installation path, e.g. `C:\Program Files\sos-berlin.com\jobscheduler\scheduler1.10`, for a locally available JobScheduler Master.
-* `PS > Use-JSMaster <Url> <JobSchedulerID>` or `PS C:\> Use-JSMaster -Url <Url> -Id <JobSchedulerID>`
- * specifies both URL and JobScheduler ID.
- * determines if the JobScheduler Master with the specified *JobSchedulerID* is locally available.
 
 ## Run Commands
 
+The JobScheduler CLI provides a number of cmdlets, see [PowerShell CLI - Cmdlets](https://kb.sos-berlin.com/x/1QX3Ag). Return values of cmdlets generally correspond to the JOC Cockpit [REST Web Service](http://test.sos-berlin.com/JOC/raml-doc/JOC-API).
+
+* `PS > Get-Command -Module JobScheduler`
+    * The complete list of cmdlets is available with this command.
 * `PS > Get-JobSchedulerStatus`
     * Cmdlets come with a full name that includes the term JobScheduler.
 * `PS > Get-JSStatus`
@@ -99,8 +96,6 @@ As a first operation after importing the module it is recommended to execute the
 * `PS > Get-Status`
     * The term JobScheduler can further be omitted if the resulting alias does not conflict with existing cmdlets.
     * To prevent conflicts with existing cmdlets from other modules no conflicting aliases are created. This includes aliases for cmdlets from the PowerShell Core as e.g. Get-Job, Start-Job, Stop-Job etc. and cmdlets from other modules loaded prior to the JobScheduler CLI.
-* `PS > Get-Command -Module JobScheduler`
-  * provides the complete list of cmdlets.
 * `PS > Get-Help Get-JSStatus -detailed`
   * displays help information for the given cmdlet.
 
@@ -121,9 +116,22 @@ As a first operation after importing the module it is recommended to execute the
 * `PS > Get-JSTask -Enqueued | Stop-JSTask`
   * retrieves the list of scheduled tasks, i.e. tasks that are scheduled for later start.
 * `PS > $orders = ( Get-JSOrder -Directory /my_jobs -Recursive -Temporary | Suspend-JSOrder )`
-  * retrieves temporary ad hoc orders from the *my_jobs* directory and any subfolders with orders found being suspended. The list of affected orders is returned.
+  * retrieves temporary ad hoc orders from the *my_jobs* directory and any sub-folders with orders found being suspended. The list of affected orders is returned.
 * `PS > $orders | Remove-JSOrder`
   * remove orders based on a list that has previously been retrieved.
+
+# Manage Log Output
+
+JobScheduler cmdlets consider verbosity and debug settings.
+
+* `PS > $VerbosePreference = "Continue"`
+    * This will cause verbose output to be created from cmdlets.
+* `PS > $VerbosePreference = "SilentlyContinue"`
+    * The verbosity level is reset.
+* `PS > $DebugPreference = "Continue"`
+    * This will cause debug output to be created from cmdlets.
+* `PS > $DebugPreference = "SilentlyContinue"`
+    * The debug level is reset.
  
 # Further Reading
 
