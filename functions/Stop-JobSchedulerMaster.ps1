@@ -52,16 +52,18 @@ Carries out the operation -Action "terminate" for a JobScheduler Master Cluster:
 * Optional -Timeout settings apply to this operation.
 
 .PARAMETER MasterHost
-When the operations to terminate or to restart a Master should not be applied to all cluster members
-but to a specific Master instance only then the respective Master's hostname has to be specified.
-Use of this parameter requires to use the -MasterPort parameter as well.
+Should the operation to terminate or to restart a Master not be applied to a standalone Master instance
+or to the active Master instance in a cluster, but to a specific Master instance in a cluster 
+then the respective Master's hostname has to be specified.
+Use of this parameter requires to specify the corresponding -MasterPort parameter.
 
 This information is returned by the Get-JobSchedulerStatus cmdlet with the "Cluster" node information.
 
 .PARAMETER MasterPort
-When the operations to terminate or to restart a Master should not be applied to all cluster members
-but to a specific Master instance only then the respective Master's post has to be specified.
-Use of this parameter requires to use the -MasterHost parameter as well.
+Should the operation to terminate or to restart a Master not be applied to a standalone Master instance
+or to the active Master instance in a cluster, but to a specific Master instance in a cluster 
+then the respective Master's port has to be specified.
+Use of this parameter requires to specify the corresponding -MasterHost parameter.
 
 This information is returned by the Get-JobSchedulerStatus cmdlet with the "Cluster" node information.
 
@@ -112,7 +114,13 @@ It can be useful when integrated with a ticket system that logs interventions wi
 .EXAMPLE
 Stop-JobSchedulerMaster
 
-Stops the JobScheduler Master instance with normal termination.
+Stops a standalone JobScheduler Master instance with normal termination.
+This is the same as the operation: Stop-JobSchedulerMaster -Action "terminate"
+
+.EXAMPLE
+Stop-JobSchedulerMaster -MasterHost localhost -MasterPort 40444
+
+Stops a JobScheduler Master instance that is a member in a cluster with normal termination.
 This is the same as the operation: Stop-JobSchedulerMaster -Action "terminate"
 
 .EXAMPLE
@@ -124,13 +132,15 @@ i.e. with -Action "terminate" without any timeouts and cluster options being app
 .EXAMPLE
 Stop-JobSchedulerMaster -Action abort -Restart
 
-Stops the JobScheduler Master instance by immediately killing any tasks and aborting the JobScheduler Master.
+Stops a standalone JobScheduler Master instance or the active member of a cluster
+by immediately killing any tasks and aborting the JobScheduler Master.
 After shutdown the JobScheduler Master instance is restarted.
 
 .EXAMPLE
-Stop-JobSchedulerMaster -Action kill
+Stop-JobSchedulerMaster -Action kill -MasterHost localhost -MasterPort 40444
 
-Kills the JobScheduler Master process and any tasks without proper cleanup.
+Kills the specific JobScheduler Master instance that is a member in a cluster 
+and kills any tasks without proper cleanup.
 
 .EXAMPLE
 Stop-JobSchedulerMaster -Cluster -Timeout 30
@@ -184,7 +194,7 @@ param
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
-            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            throw "$($MyInvocation.MyCommand.Name): Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
     }
 

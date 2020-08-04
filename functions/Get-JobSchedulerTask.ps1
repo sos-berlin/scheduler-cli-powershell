@@ -127,7 +127,7 @@ param
             $Running = $true
         }
 
-        $task = ( Get-JobSchedulerJob -Job $Job -JobChain $JobChain -Directory $Directory -Recursive:$Recursive -Running:$Running -Enqueued:$Enqueued ).Tasks
+        $task = ( Get-JobSchedulerJob -Job $Job -JobChain $JobChain -Directory $Directory -Recursive:$Recursive -Running:$Running -Enqueued:$Enqueued )
         
         if ( $task )
         {

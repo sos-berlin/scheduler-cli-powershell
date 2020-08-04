@@ -54,6 +54,9 @@ Specifies that daily plan items are returned that did not yet complete.
 .PARAMETER Planned
 Specifies that daily plan items are returned that did not yet start.
 
+.PARAMETER IsJobStream
+Limits results to Job Streams only.
+
 .OUTPUTS
 This cmdlet returns an array of daily plan items.
 
@@ -76,6 +79,11 @@ Returns the daily plan items that failed or started later than expected.
 $items = Get-JobSchedulerDailyPlan -JobChain /holidays/some_job_chain
 
 Returns the daily plan items for any orders of the given job chain.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -IsJobStream -Planned
+
+Returns the daily plan items for job streams that are planned for the current day.
 
 .LINK
 about_jobscheduler
@@ -107,7 +115,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Incomplete,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Planned
+    [switch] $Planned,
+    [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $IsJobStream
 )
     Begin
     {
@@ -220,6 +230,7 @@ param
     {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+        Add-Member -Membertype NoteProperty -Name 'isJobStream' -value ( $IsJobStream -eq $true ) -InputObject $body
 
         if ( $DateFrom )
         {

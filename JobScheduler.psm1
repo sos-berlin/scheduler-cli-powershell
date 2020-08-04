@@ -233,6 +233,8 @@ param
 
         Set-Alias -Name Use-JobSchedulerWebService -Value Connect-JobScheduler
         Set-Alias -Name Use-JSWebService -Value Connect-JobScheduler
+        Set-Alias -Name Stop-JobSchedulerJob -Value Stop-JobSchedulerTask
+        Set-Alias -Name Stop-JSJob -Value Stop-JobSchedulerTask
         
         Export-ModuleMember -Alias "*"
     }    

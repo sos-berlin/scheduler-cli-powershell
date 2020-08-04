@@ -159,7 +159,7 @@ param
 
         if ( $isOrderJob -and $isStsandaloneJob )
         {
-            throw 'only one of the parameters -IsOrderJob and -IsStandaloneJob can be specified'
+            throw "$($MyInvocation.MyCommand.Name): only one of the parameters -IsOrderJob or -IsStandaloneJob can be specified"
         }
         
         $volatileJobChainJobs = @()
@@ -434,7 +434,13 @@ param
     
     End
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnJobs.count) jobs found"
+        if ( $returnJobs.count )
+        {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnJobs.count) jobs found"
+        } else {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no jobs found"
+        }
+        
         Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -117,7 +117,7 @@ param
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
-            throw "Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
+            throw "$($MyInvocation.MyCommand.Name): Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
 
         $objJobs = @()
@@ -174,9 +174,14 @@ param
                 {
                     if ( $task.path -and $task.path -eq $Job )
                     {
-                        $objTaskId = New-Object PSObject            
-                        Add-Member -Membertype NoteProperty -Name 'taskId' -value $task.taskId -InputObject $objTaskId
-                        $taskIds += $objTaskId
+                        $objTaskIds = @()
+                        foreach( $taskId in $task.tasks.taskId )
+                        {
+                            $objTaskId = New-Object PSObject
+                            Add-Member -Membertype NoteProperty -Name 'taskId' -value $taskId -InputObject $objTaskId
+                            $objTaskIds += $objTaskId
+                       }
+                        $taskIds += $objTaskIds
                     }
                 }
 
