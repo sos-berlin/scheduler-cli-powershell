@@ -112,7 +112,7 @@ The JobScheduler CLI provides a number of cmdlets, see [PowerShell CLI - Cmdlet
 * `PS > Get-JSJob -Directory /sos -Running | Stop-JSTask`
   * stops all running tasks from the specified folder.
 * `PS > Get-JSJob -Running -Enqueued | Stop-JSTask`
-  * performs and emergency stop and kills all running and eqneueud tasks.
+  * performs and emergency stop and kills all running and enqueued tasks.
 * `PS > Get-JSTask -Enqueued | Stop-JSTask`
   * retrieves the list of scheduled tasks, i.e. tasks that are scheduled for later start.
 * `PS > $orders = ( Get-JSOrder -Directory /my_jobs -Recursive -Temporary | Suspend-JSOrder )`
