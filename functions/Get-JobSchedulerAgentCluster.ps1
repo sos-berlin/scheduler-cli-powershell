@@ -28,6 +28,12 @@ One of the parameters -Directory or -AgentCluster has to be specified.
 .PARAMETER Recursive
 Specifies that any sub-folders should be looked up. By default no sub-folders will be searched for Agent Clusters.
 
+.PARAMETER Compact
+Specifies that fewer attributes of a AgentCluster are returned.
+
+.PARAMETER State
+Specifies the state of AgentCluster.
+
 .OUTPUTS
 This cmdlet returns an array of Agent Cluster objects.
 
