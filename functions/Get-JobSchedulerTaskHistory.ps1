@@ -1,25 +1,32 @@
-function Get-JobSchedulerOrderHistory
+function Get-JobSchedulerTaskHistory
 {
 <#
 .SYNOPSIS
-Returns the order execution history for job chains.
+Returns the task execution history for jobs.
 
 .DESCRIPTION
-History information is returned for orders from a JobScheduler Master. 
-Order executions can be selected by job chain, order ID, folder, history status etc.
+History information is returned for jobs from a JobScheduler Master. 
+Task executions can be selected by job name, folder, history status etc.
 
 The history information retured includes start time, end time, return code etc.
 
+.PARAMETER Job
+Optionally specifies the path and name of a job.
+If the name of a job is specified then the -Directory parameter is used to determine the folder.
+Otherwise the -Job parameter is assumed to include the full path and name of the job.
+
+One of the parameters -Directory, -JobChain or -Job has to be specified.
+
 .PARAMETER JobChain
-Optionally specifies the path and name of a job chain for which history information is returned.
+Optionally specifies the path and name of a job chain that includes jobs.
 If the name of a job chain is specified then the -Directory parameter is used to determine the folder.
 Otherwise the -JobChain parameter is assumed to include the full path and name of the job chain.
 
-One of the parameters -Directory or -JobChain has to be specified.
+One of the parameters -Directory, -JobChain or -Job has to be specified.
 
 .PARAMETER OrderId
-Optionally specifies the identifier of an order to limit results to that order.
-This parameter requires use of the -JobChain parameter.
+Optionally specifies the identifier of an order to limit results to jobs that 
+correspond to the order's current state.
 
 .PARAMETER Directory
 Optionally specifies the folder for which jobs should be returned. The directory is determined
@@ -28,6 +35,12 @@ from the root folder, i.e. the "live" directory.
 .PARAMETER Recursive
 Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
 By default no sub-folders will be looked up for jobs.
+
+.PARAMETER State
+Specifies that only jobs are considered that an order is currently passing. This is identified by the
+order's state attribute that corresponds to the job node's state attribute.
+This parameter requires use of the -JobChain parameter. If used with the -Order parameter then
+only jobs for that order are considered, otherwise jobs for any orders in the given job chain are considered.
 
 .PARAMETER DateFrom
 Specifies the date starting from which history items should be returned.
@@ -45,59 +58,64 @@ Default: End of the current day as a UTC date
 Specifies the timezone to which dates should be converted in the history information.
 A timezone can e.g. be specified like this: 
 
-  Get-JSOrderHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
+  Get-JSTaskHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
 
 All dates in JobScheduler are UTC and can be converted e.g. to the local time zone like this:
 
-  Get-JSOrderHistory -Timezone (Get-Timezone)
+  Get-JSTaskHistory -Timezone (Get-Timezone)
 
 Default: Dates are returned in UTC.
 
 .PARAMETER Limit
-Specifies the max. number of history items of order executions to be returned.
+Specifies the max. number of history items of task executions to be returned.
 The default value is 10000, for an unlimited number of items the value -1 can be specified.
 
 .PARAMETER Successful
-Returns history information for successfully executed orders.
+Returns history information for successfully executed tasks.
 
 .PARAMETER Failed
-Returns history informiaton for failed orders.
+Returns history informiaton for failed tasks.
 
 .PARAMETER Incomplete
-Specifies that history information for running orders should be returned.
+Specifies that history information for running tasks should be returned.
 
 .OUTPUTS
 This cmdlet returns an array of history items.
 
 .EXAMPLE
-$items = Get-JobSchedulerOrderHistory
+$items = Get-JobSchedulerTaskHistory
 
-Returns today's order execution history for any orders.
-
-.EXAMPLE
-$items = Get-JobSchedulerOrderHistory -Timezone (Get-Timezone)
-
-Returns today's order execution history for any orders with dates being converted to the local timezone.
+Returns today's task execution history for any jobs.
 
 .EXAMPLE
-$items = Get-JobSchedulerOrderHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
+$items = Get-JobSchedulerTaskHistory -Timezone (Get-Timezone)
 
-Returns today's order execution history for any orders with dates being converted to the GMT timezone.
-
-.EXAMPLE
-$items = Get-JobSchedulerOrderHistory -JobChain /test/globals/jobChain1
-
-Returns today's order execution history for a given job chain.
+Returns today's task execution history for any jobs with dates being converted to the local timezone.
 
 .EXAMPLE
-$items = Get-JobSchedulerOrderHistory -Failed -DateFrom (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(-7).ToUniversalTime()
+$items = Get-JobSchedulerTaskHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
 
-Returns the order execution history for any failed orders for the last seven days.
+Returns today's task execution history for any jobs with dates being converted to the GMT timezone.
 
 .EXAMPLE
-$items = Get-JobSchedulerOrderHistory -Directory /test -Recursive -Succesful -Failed
+$items = Get-JobSchedulerTaskHistory -Job /test/globals/job1
 
-Returns today's order execution history for any completed orders from the "/test" directory
+Returns today's task execution history for a given job.
+
+.EXAMPLE
+$items = Get-JobSchedulerTaskHistory -JobChain /test/globals/job_chain1
+
+Returns today's task execution history for jobs in the given job chain.
+
+.EXAMPLE
+$items = Get-JobSchedulerTaskHistory -Failed -DateFrom (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(-7).ToUniversalTime()
+
+Returns the task execution history for any failed jobs for the last seven days.
+
+.EXAMPLE
+$items = Get-JobSchedulerTaskHistory -Directory /test -Recursive -Succesful -Failed
+
+Returns today's task execution history for any completed tasks from the "/test" directory
 and any sub-folders recursively.
 
 .LINK
@@ -108,13 +126,17 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $OrderId,
+    [string] $Job,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobChain,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $OrderId,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $State,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 0 -Second 0).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -135,6 +157,7 @@ param
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-StopWatch
 
+        $jobs = @()
         $orders = @()
         $folders = @()
         $historyStates = @()
@@ -142,11 +165,11 @@ param
         
     Process
     {
-        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain, OrderId=$OrderId"
+        Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain Job=$Job"
     
-        if ( !$Directory -and !$JobChain )
+        if ( !$Directory -and !$JobChain -and !$Job )
         {
-            throw "$($MyInvocation.MyCommand.Name): no directory or job chain specified, use -Directory or -JobChain"
+            throw "$($MyInvocation.MyCommand.Name): no directory, job chain or job specified, use -Directory, -JobChain or -Job"
         }
 
         if ( $Directory -and $Directory -ne '/' )
@@ -184,6 +207,21 @@ param
             } # order id includes no directory
         }
 
+        if ( $Job )
+        {
+            if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
+            {
+                $Directory = Get-JobSchedulerObject-Parent $Job
+            } else { # job name includes no directory
+                if ( $Directory -eq '/' )
+                {
+                    $Job = $Directory + $Job
+                } else {
+                    $Job = $Directory + '/' + $Job
+                }
+            }
+        }
+        
         if ( $Directory -eq '/' -and !$OrderId -and !$JobChain -and !$Job -and !$Recursive )
         {
             $Recursive = $true
@@ -214,7 +252,18 @@ param
                 Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
             }
             
+            if ( $State )
+            {
+                Add-Member -Membertype NoteProperty -Name 'state' -value $State -InputObject $objOrder
+            }
+            
             $orders += $objOrder
+        }
+
+        if ( $Job ) {
+            $objJob = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
+            $jobs += $objJob
         }
 
         if ( !$JobChain -and $Directory )
@@ -231,9 +280,9 @@ param
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
-        if ( $orders )
+        if ( $jobs )
         {
-            Add-Member -Membertype NoteProperty -Name 'orders' -value $orders -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'jobs' -value $jobs -InputObject $body
         }
 
         if ( $DateFrom )
@@ -261,8 +310,13 @@ param
             Add-Member -Membertype NoteProperty -Name 'states' -value $historyStates -InputObject $body
         }
 
+        if ( $orders )
+        {
+            Add-Member -Membertype NoteProperty -Name 'orders' -value $orders -InputObject $body
+        }
+
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
-        $response = Invoke-JobSchedulerWebRequest '/orders/history' $requestBody
+        $response = Invoke-JobSchedulerWebRequest '/tasks/history' $requestBody
         
         if ( $response.StatusCode -eq 200 )
         {
@@ -285,17 +339,16 @@ param
             }
                         
             [string] $timezoneOffset = "$($prefix)$($hours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
-            
+
             $returnHistoryItems | Select-Object -Property `
+                                           clusterMember, `
                                            jobschedulerId, `
-                                           historyId, `
-                                           orderId, `
-                                           jobChain, `
-                                           path, `
+                                           taskId, `
+                                           job, `
                                            state, `
                                            @{name='startTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.startTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
                                            @{name='endTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.endTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
-                                           node, `
+                                           criticality, `
                                            exitCode, `
                                            @{name='surveyDate'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.surveyDate)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}
         }

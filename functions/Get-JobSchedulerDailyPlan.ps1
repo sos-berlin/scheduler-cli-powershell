@@ -31,13 +31,27 @@ When used with the -Directory parameter then any sub-folders of the specified di
 
 .PARAMETER DateFrom
 Optionally specifies the date starting from which daily plan items should be returned.
+Consider that a UTC date has to be provided.
 
-Default: Begin of the current day.
+Default: Begin of the current day as a UTC date
 
 .PARAMETER DateTo
 Optionally specifies the date until which daily plan items should be returned.
+Consider that a UTC date has to be provided.
 
-Default: End of the current day.
+Default: End of the current day as a UTC date
+
+.PARAMETER Timezone
+Specifies the timezone to which dates should be converted in the history information.
+A timezone can e.g. be specified like this: 
+
+  Get-JSTaskHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
+
+All dates in JobScheduler are UTC and can be converted e.g. to the local time zone like this:
+
+  Get-JSTaskHistory -Timezone (Get-Timezone)
+
+Default: Dates are returned in UTC.
 
 .PARAMETER Late
 Specifies that daily plan items are returned that did start later than expected.
@@ -103,9 +117,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Recursive,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 00 -Second 00).ToUniversalTime(),
+    [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 0 -Second 0).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
-    [DateTime] $DateTo = (Get-Date -Hour 0 -Minute 00 -Second 00).AddDays(1).ToUniversalTime(),
+    [DateTime] $DateTo = (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(1).ToUniversalTime(),
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [TimeZoneInfo] $Timezone = (Get-Timezone -Id 'UTC'),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Late,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -286,17 +302,50 @@ param
         
         if ( $response.StatusCode -eq 200 )
         {
-
-            $returnPlans = ( $response.Content | ConvertFrom-JSON ).planItems
+            $returnDailyPlanItems = ( $response.Content | ConvertFrom-JSON ).planItems
         } else {
             throw ( $response | Format-List -Force | Out-String )
         }
 
-        $returnPlans | Sort-Object plannedStartTime
 
-        if ( $returnPlans.count )
+        if ( $Timezone.Id -eq 'UTC' )
         {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnPlans.count) Daily Plan items found"
+            $returnDailyPlanItems | Sort-Object plannedStartTime
+        } else {
+            # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
+            $prefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
+
+            $hours = $Timezone.BaseUtcOffset.Hours
+            if ( $Timezone.SupportsDaylightSavingTime )
+            {
+                $hours += 1
+            }
+                        
+            [string] $timezoneOffset = "$($prefix)$($hours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
+
+            $returnDailyPlanItems | Sort-Object plannedStartTime | Select-Object -Property `
+                                           job, `
+                                           jobChain, `
+                                           orderId, `
+                                           historyId, `
+                                           state, `
+                                           late, `
+                                           jobSream, `
+                                           startMode, `
+                                           period, `
+                                           @{name='plannedStartTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.plannedStartTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           @{name='expectedEndTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.expectedEndTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           @{name='startTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.startTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           @{name='endTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.endTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           node, `
+                                           error, `
+                                           exitCode, `
+                                           @{name='surveyDate'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.surveyDate)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}
+        }
+
+        if ( $returnDailyPlanItems.count )
+        {
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnDailyPlanItems.count) Daily Plan items found"
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no Daily Plan items found"
         }
