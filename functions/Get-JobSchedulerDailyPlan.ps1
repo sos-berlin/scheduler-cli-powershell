@@ -42,14 +42,14 @@ Consider that a UTC date has to be provided.
 Default: End of the current day as a UTC date
 
 .PARAMETER Timezone
-Specifies the timezone to which dates should be converted in the history information.
+Specifies the timezone to which dates should be converted in the daily plan information.
 A timezone can e.g. be specified like this: 
 
-  Get-JSTaskHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
+  Get-JSDailyPlan -Timezone (Get-Timezone -Id 'GMT Standard Time')
 
 All dates in JobScheduler are UTC and can be converted e.g. to the local time zone like this:
 
-  Get-JSTaskHistory -Timezone (Get-Timezone)
+  Get-JSDailyPlan -Timezone (Get-Timezone)
 
 Default: Dates are returned in UTC.
 
@@ -80,14 +80,24 @@ $items = Get-JobSchedulerDailyPlan
 Returns daily plan items for the current day.
 
 .EXAMPLE
-$items = Get-JobSchedulerDailyPlan -DateTo (Get-Date).AddDays(3)
+$items = Get-JobSchedulerDailyPlan -Timezone (Get-Timezone)
 
-Returns the daily plan items for the next 3 days.
+Returns today's daily plan for any jobs with dates being converted to the local timezone.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -Timezone (Get-Timezone -Id 'GMT Standard Time')
+
+Returns today's daily plan for any jobs with dates being converted to the GMT timezone.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -DateTo (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(4).ToUniversalTime()
+
+Returns the daily plan items for the next 3 days until modnight.
 
 .EXAMPLE
 $items = Get-JobSchedulerDailyPlan -Failed -Late
 
-Returns the daily plan items that failed or started later than expected.
+Returns today's daily plan items that failed or started later than expected.
 
 .EXAMPLE
 $items = Get-JobSchedulerDailyPlan -JobChain /holidays/some_job_chain
@@ -333,14 +343,14 @@ param
                                            jobSream, `
                                            startMode, `
                                            period, `
-                                           @{name='plannedStartTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.plannedStartTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
-                                           @{name='expectedEndTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.expectedEndTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
-                                           @{name='startTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.startTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
-                                           @{name='endTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.endTime)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           @{name='plannedStartTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.plannedStartTime)".Substring(0, 19), 'UTC'), $Timezone ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           @{name='expectedEndTime';  expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.expectedEndTime)".SubString(0,19), 'UTC'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           @{name='startTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.startTime)".Substring(0, 19), 'UTC'), $Timezone ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
+                                           @{name='endTime';  expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.endTime)".SubString(0,19), 'UTC'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
                                            node, `
                                            error, `
                                            exitCode, `
-                                           @{name='surveyDate'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( "$($_.surveyDate)", 'Utc'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}
+                                           @{name='surveyDate'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.surveyDate)".SubString(0, 19), 'UTC'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}
         }
 
         if ( $returnDailyPlanItems.count )
