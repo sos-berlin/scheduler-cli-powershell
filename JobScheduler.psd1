@@ -38,6 +38,8 @@ FunctionsToExport = @(
     'Get-JobSchedulerJob',
     'Get-JobSchedulerJobChain',
     'Get-JobSchedulerJobHistory',
+    'Get-JobSchedulerJobStreamHistory',
+    'Get-JobSchedulerMasterCluster',
     'Get-JobSchedulerOrder',
     'Get-JobSchedulerOrderHistory',
     'Get-JobSchedulerStatus',

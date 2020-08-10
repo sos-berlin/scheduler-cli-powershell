@@ -343,7 +343,7 @@ param
 
         try {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service $($authenticationUrl)"
-            Write-Debug ".... Invoke-WebRequest:"
+            Write-Debug ".... Invoke-WebRequest Uri: $($requestParams.Uri)"
         
             $requestParams.Keys | % {
                 if ( $_ -eq 'Headers' )
@@ -359,6 +359,8 @@ param
 
             $response = Invoke-WebRequest @requestParams
 
+            Write-Debug ".... Invoke-WebRequest response:`n$response"
+
             if ( $response -and $response.StatusCode -eq 200 -and $response.Content )
             {
                 $content = $response.Content | ConvertFrom-JSON
@@ -369,16 +371,45 @@ param
                 throw $message
             }        
 
+
             $body = New-Object PSObject
-   
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service /jobscheduler/ids"
+            Write-Debug ".... Invoke-WebRequest Uri: /jobscheduler/ids"
+
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
             $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/ids' -Body $requestBody
-           
+
+            Write-Debug ".... Invoke-WebRequest response:`n$response"
+
             if ( $response.StatusCode -eq 200 )
             {
                 $script:jsWebService.JobSchedulerId = ( $response.Content | ConvertFrom-JSON ).selected
             } else {
                 throw ( $response | Format-List -Force | Out-String )
+            }
+
+
+            $body = New-Object PSObject
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service /jobscheduler/cluster/members"
+            Write-Debug ".... Invoke-WebRequest Uri: /jobscheduler/cluster/members"
+
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/cluster/members' -Body $requestBody
+
+            Write-Debug ".... Invoke-WebRequest response:`n$response"
+
+            if ( $response.StatusCode -eq 200 )
+            {
+                $returnMasterItems = ( $response.Content | ConvertFrom-JSON ).masters
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+
+            if ( $returnMasterItems )
+            {
+                $script:jsWebService.Masters = $returnMasterItems
             }
 
             $script:jsWebService

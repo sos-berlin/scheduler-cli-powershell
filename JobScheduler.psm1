@@ -478,6 +478,7 @@ function Create-WebServiceObject()
     $jsWebService | Add-Member -Membertype NoteProperty -Name Certificate -Value ''
     $jsWebService | Add-Member -Membertype NoteProperty -Name JobSchedulerId -Value ''
     $jsWebService | Add-Member -Membertype NoteProperty -Name AccessToken -Value ''
+    $jsWebService | Add-Member -Membertype NoteProperty -Name Masters -Value @()
 
     $jsWebService
 }
