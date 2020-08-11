@@ -42,6 +42,12 @@ order's state attribute that corresponds to the job node's state attribute.
 This parameter requires use of the -JobChain parameter. If used with the -Order parameter then
 only jobs for that order are considered, otherwise jobs for any orders in the given job chain are considered.
 
+.PARAMETER ExcludeJob
+This parameter accepts a single job path or an array of job paths that are excluded from the results.
+
+.PARAMETER RegEx
+Specifies a regular expression that filters the job paths to be returned.
+
 .PARAMETER DateFrom
 Specifies the date starting from which history items should be returned.
 Consider that a UTC date has to be provided.
@@ -53,6 +59,26 @@ Specifies the date until which history items should be returned.
 Consider that a UTC date has to be provided.
 
 Default: End of the current day as a UTC date
+
+.PARAMETER RelativeDateFrom
+Specifies a relative date starting from which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* -1w, -2w: one week ago, two weeks ago
+* -1M, -2M: one month ago, two months ago
+* -1y, -2y: one year ago, two years ago
+
+This parameter takes precedence over the -DateFrom parameter.
+
+.PARAMETER RelativeDateTo
+Specifies a relative date until which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* -1w, -2w: one week ago, two weeks ago
+* -1M, -2M: one month ago, two months ago
+* -1y, -2y: one year ago, two years ago
+
+This parameter takes precedence over the -DateTo parameter.
 
 .PARAMETER Timezone
 Specifies the timezone to which dates should be converted in the history information.
@@ -88,6 +114,17 @@ $items = Get-JobSchedulerTaskHistory
 Returns today's task execution history for any jobs.
 
 .EXAMPLE
+$items = Get-JobSchedulerTaskHistory -RegEx '^/sos'
+
+Returns today's task execution history for any jobs from the /sos folder.
+
+.EXAMPLE
+$items = Get-JobSchedulerTaskHistory -RegEx 'report'
+
+Returns today's task execution history for jobs that contain the string
+'report' in the job path.
+
+.EXAMPLE
 $items = Get-JobSchedulerTaskHistory -Timezone (Get-Timezone)
 
 Returns today's task execution history for any jobs with dates being converted to the local timezone.
@@ -108,9 +145,29 @@ $items = Get-JobSchedulerTaskHistory -JobChain /test/globals/job_chain1
 Returns today's task execution history for jobs in the given job chain.
 
 .EXAMPLE
+$items = Get-JobSchedulerTaskHistory -ExcludeJob /sos/dailyplan/CreateDailyPlan, /sos/housekeeping/scheduler_rotate_log
+
+Returns today's task execution history for any jobs excluding the specified job paths.
+
+.EXAMPLE
+$items = Get-JobSchedulerTaskHistory -Successful -DateFrom "2020-08-11 14:00:00Z"
+
+Returns the task execution history for successfully completed jobs that started after the specified UTC date and time.
+
+.EXAMPLE
 $items = Get-JobSchedulerTaskHistory -Failed -DateFrom (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(-7).ToUniversalTime()
 
 Returns the task execution history for any failed jobs for the last seven days.
+
+.EXAMPLE
+$items = Get-JobSchedulerTaskHistory -RelativeDateFrom -7d
+
+Returns the task execution history for any jobs for the last seven days.
+
+.EXAMPLE
+$items = Get-JobSchedulerTaskHistory -RelativeDateFrom -1w
+
+Returns the task execution history for any jobs during last week.
 
 .EXAMPLE
 $items = Get-JobSchedulerTaskHistory -Directory /test -Recursive -Succesful -Failed
@@ -137,10 +194,18 @@ param
     [switch] $Recursive,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $State,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string[]] $ExcludeJob,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RegEx,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 0 -Second 0).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateTo = (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(1).ToUniversalTime(),
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateFrom,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateTo,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [TimeZoneInfo] $Timezone = (Get-Timezone -Id 'UTC'),
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -161,6 +226,7 @@ param
         $orders = @()
         $folders = @()
         $historyStates = @()
+        $excludeJobs = @()
     }
         
     Process
@@ -273,6 +339,16 @@ param
             Add-Member -Membertype NoteProperty -Name 'recursive' -value ($Recursive -eq $true) -InputObject $objFolder
             $folders += $objFolder
         }
+        
+        if ( $ExcludeJob )
+        {
+            foreach( $excludeJobItem in $ExcludeJob )
+            {
+                $objExcludeJob = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'job' -value $excludeJobItem -InputObject $objExcludeJob
+                $excludeJobs += $objExcludeJob
+            }
+        }
     }
     
     End
@@ -285,14 +361,34 @@ param
             Add-Member -Membertype NoteProperty -Name 'jobs' -value $jobs -InputObject $body
         }
 
-        if ( $DateFrom )
+        if ( $excludeJobs )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'excludeJobs' -value $excludeJobs -InputObject $body
         }
 
-        if ( $DateTo )
+        if ( $RegEx )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'regex' -value $RegEx -InputObject $body
+        }
+
+        if ( $DateFrom -or $RelativeDateFrom )
+        {
+            if ( $RelativeDateFrom )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value $RelativeDateFrom -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
+        }
+
+        if ( $DateTo -or $RelativeDateTo )
+        {
+            if ( $RelativeDateTo )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value $RelativeDateTo -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
         }
 
         if ( $folders )
@@ -356,7 +452,7 @@ param
         if ( $returnHistoryItems.count )
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnHistoryItems.count) history items found"
-        } else {s
+        } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no history items found"
         }
         

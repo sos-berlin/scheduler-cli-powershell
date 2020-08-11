@@ -29,6 +29,13 @@ from the root folder, i.e. the "live" directory.
 Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
 By default no sub-folders will be looked up for jobs.
 
+.PARAMETER ExcludeOrder
+This parameter accepts a single job chain path or an array of job chain paths that are excluded from the results.
+Optionally the job chain path can be appended an order ID separated by a semicolon.
+
+.PARAMETER RegEx
+Specifies a regular expression that filters the orders paths to be returned.
+
 .PARAMETER DateFrom
 Specifies the date starting from which history items should be returned.
 Consider that a UTC date has to be provided.
@@ -40,6 +47,26 @@ Specifies the date until which history items should be returned.
 Consider that a UTC date has to be provided.
 
 Default: End of the current day as a UTC date
+
+.PARAMETER RelativeDateFrom
+Specifies a relative date starting from which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* -1w, -2w: one week ago, two weeks ago
+* -1M, -2M: one month ago, two months ago
+* -1y, -2y: one year ago, two years ago
+
+This parameter takes precedence over the -DateFrom parameter.
+
+.PARAMETER RelativeDateTo
+Specifies a relative date until which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* -1w, -2w: one week ago, two weeks ago
+* -1M, -2M: one month ago, two months ago
+* -1y, -2y: one year ago, two years ago
+
+This parameter takes precedence over the -DateTo parameter.
 
 .PARAMETER Timezone
 Specifies the timezone to which dates should be converted in the history information.
@@ -75,6 +102,17 @@ $items = Get-JobSchedulerOrderHistory
 Returns today's order execution history for any orders.
 
 .EXAMPLE
+$items = Get-JobSchedulerOrderHistory -RegEx '^/sos'
+
+Returns today's order execution history for any orders from the /sos folder.
+
+.EXAMPLE
+$items = Get-JobSchedulerOrderHistory -RegEx 'report'
+
+Returns today's order execution history for orders that contain the string
+'report' in the order path.
+
+.EXAMPLE
 $items = Get-JobSchedulerOrderHistory -Timezone (Get-Timezone)
 
 Returns today's order execution history for any orders with dates being converted to the local timezone.
@@ -88,6 +126,18 @@ Returns today's order execution history for any orders with dates being converte
 $items = Get-JobSchedulerOrderHistory -JobChain /test/globals/jobChain1
 
 Returns today's order execution history for a given job chain.
+
+.EXAMPLE
+$items = Get-JobSchedulerOrderHistory -ExcludeOrder /sos/dailyplan/CreateDailyPlan, /sos/notification/SystemNotifier:MonitorSystem
+
+Returns today's order execution history for any orders excluding orders from the specified job chain paths.
+The job chain path '/sos/notification/SystemNotifier' is appended the order ID 'MonitorSystem' separated by a semicolon
+to indicate that the specified order ID only is excluded from the results.
+
+.EXAMPLE
+$items = Get-JobSchedulerOrderHistory -Successful -DateFrom "2020-08-11 14:00:00Z"
+
+Returns the order execution history for successfully completed orders that started after the specified UTC date and time.
 
 .EXAMPLE
 $items = Get-JobSchedulerOrderHistory -Failed -DateFrom (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(-7).ToUniversalTime()
@@ -115,10 +165,18 @@ param
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string[]] $ExcludeOrder,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RegEx,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 0 -Second 0).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateTo = (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(1).ToUniversalTime(),
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateFrom,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateTo,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [TimeZoneInfo] $Timezone = (Get-Timezone -Id 'UTC'),
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -138,6 +196,7 @@ param
         $orders = @()
         $folders = @()
         $historyStates = @()
+        $excludeOrders = @()
     }
         
     Process
@@ -224,6 +283,23 @@ param
             Add-Member -Membertype NoteProperty -Name 'recursive' -value ($Recursive -eq $true) -InputObject $objFolder
             $folders += $objFolder
         }
+
+        if ( $ExcludeOrder )
+        {
+            foreach( $excludeOrderItem in $ExcludeOrder )
+            {
+                $objExcludeOrder = New-Object PSObject
+                if ( $excludeOrderItem.split(':').count -gt 1 )
+                {
+                    $excludeOrderItems = $excludeOrderItem.split(':')
+                    Add-Member -Membertype NoteProperty -Name 'jobChain' -value $excludeOrderItems[0] -InputObject $objExcludeOrder
+                    Add-Member -Membertype NoteProperty -Name 'orderId' -value $excludeOrderItems[1] -InputObject $objExcludeOrder
+                } else {
+                    Add-Member -Membertype NoteProperty -Name 'jobChain' -value $excludeOrderItem -InputObject $objExcludeOrder
+                }
+                $excludeOrders += $objExcludeOrder
+            }
+        }
     }
     
     End
@@ -236,14 +312,34 @@ param
             Add-Member -Membertype NoteProperty -Name 'orders' -value $orders -InputObject $body
         }
 
-        if ( $DateFrom )
+        if ( $excludeOrders )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'excludeOrders' -value $excludeOrders -InputObject $body
         }
 
-        if ( $DateTo )
+        if ( $RegEx )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'regex' -value $RegEx -InputObject $body
+        }
+
+        if ( $DateFrom -or $RelativeDateFrom )
+        {
+            if ( $RelativeDateFrom )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value $RelativeDateFrom -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
+        }
+
+        if ( $DateTo -or $RelativeDateTo )
+        {
+            if ( $RelativeDateTo )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value $RelativeDateTo -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
         }
 
         if ( $folders )

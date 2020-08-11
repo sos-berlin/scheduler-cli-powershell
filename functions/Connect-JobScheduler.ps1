@@ -96,6 +96,10 @@ Specifies that the JOC Cockpit SSL certificate will not be checked, i.e. the ide
 
 Use of this parameter is strongly discouraged with secure environments as it trusts a JOC Cockpit SSL certificate without verification.
 
+.PARAMETER MasterDetails
+Returns details about each Master such as host, port, active role etc.
+The details are provided with the "Masters" data structure in the response.
+
 .EXAMPLE
 Connect-JobScheduler http://localhost4446 -AskForCredentials
 
@@ -152,7 +156,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $AddRootCertificate,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $SkipCertificateCheck
+    [switch] $SkipCertificateCheck,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $MasterDetails
 )
     Begin
     {
@@ -390,26 +396,29 @@ param
             }
 
 
-            $body = New-Object PSObject
-
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service /jobscheduler/cluster/members"
-            Write-Debug ".... Invoke-WebRequest Uri: /jobscheduler/cluster/members"
-
-            [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/cluster/members' -Body $requestBody
-
-            Write-Debug ".... Invoke-WebRequest response:`n$response"
-
-            if ( $response.StatusCode -eq 200 )
+            if ( $MasterDetails )
             {
-                $returnMasterItems = ( $response.Content | ConvertFrom-JSON ).masters
-            } else {
-                throw ( $response | Format-List -Force | Out-String )
-            }
-
-            if ( $returnMasterItems )
-            {
-                $script:jsWebService.Masters = $returnMasterItems
+                $body = New-Object PSObject
+    
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service /jobscheduler/cluster/members"
+                Write-Debug ".... Invoke-WebRequest Uri: /jobscheduler/cluster/members"
+    
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/cluster/members' -Body $requestBody
+    
+                Write-Debug ".... Invoke-WebRequest response:`n$response"
+    
+                if ( $response.StatusCode -eq 200 )
+                {
+                    $returnMasterItems = ( $response.Content | ConvertFrom-JSON ).masters
+                } else {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+    
+                if ( $returnMasterItems )
+                {
+                    $script:jsWebService.Masters = $returnMasterItems
+                }
             }
 
             $script:jsWebService

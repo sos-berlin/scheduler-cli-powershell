@@ -29,6 +29,10 @@ from the root folder, i.e. the "live" directory and should start with a "/".
 .PARAMETER Recursive
 When used with the -Directory parameter then any sub-folders of the specified directory will be looked up.
 
+.PARAMETER RegEx
+Specifies a regular expression that filters the paths to be returned.
+This applies to jobs, job chains, orders and job streams that are filtered by path.
+
 .PARAMETER DateFrom
 Optionally specifies the date starting from which daily plan items should be returned.
 Consider that a UTC date has to be provided.
@@ -40,6 +44,34 @@ Optionally specifies the date until which daily plan items should be returned.
 Consider that a UTC date has to be provided.
 
 Default: End of the current day as a UTC date
+
+.PARAMETER RelativeDateFrom
+Specifies a relative date starting from which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* +1d, +2d: one day later, two days later
+* -1w, -2w: one week ago, two weeks ago
+* +1w, +2w: one week later, two weeks later
+* -1M, -2M: one month ago, two months ago
+* +1M, +2M: one month later, two months later
+* -1y, -2y: one year ago, two years ago
+* +1y, +2y: one year later, two years later
+
+This parameter takes precedence over the -DateFrom parameter.
+
+.PARAMETER RelativeDateTo
+Specifies a relative date until which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* +1d, +2d: one day later, two days later
+* -1w, -2w: one week ago, two weeks ago
+* +1w, +2w: one week later, two weeks later
+* -1M, -2M: one month ago, two months ago
+* +1M, +2M: one month later, two months later
+* -1y, -2y: one year ago, two years ago
+* +1y, +2y: one year later, two years later
+
+This parameter takes precedence over the -DateTo parameter.
 
 .PARAMETER Timezone
 Specifies the timezone to which dates should be converted in the daily plan information.
@@ -78,6 +110,17 @@ This cmdlet returns an array of daily plan items.
 $items = Get-JobSchedulerDailyPlan
 
 Returns daily plan items for the current day.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -RegEx '^/sos'
+
+Returns today's daily plan for any items from the /sos folder.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -RegEx 'report'
+
+Returns today's daily plan for items that contain the string
+'report' in the path.
 
 .EXAMPLE
 $items = Get-JobSchedulerDailyPlan -Timezone (Get-Timezone)
@@ -122,14 +165,22 @@ param
     [string] $OrderId,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Job,
+    [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $JobStream,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Recursive,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RegEx,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 0 -Second 0).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateTo = (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(1).ToUniversalTime(),
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateFrom,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateTo,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [TimeZoneInfo] $Timezone = (Get-Timezone -Id 'UTC'),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -153,6 +204,7 @@ param
         $jobs = @()
         $jobChains = @()
         $orderIds = @()
+        $jobStreams = @()
         $folders = @()
         $states = @()
         $returnPlans = @()        
@@ -246,6 +298,11 @@ param
             $orderIds = @( $OrderId )
         }
 
+        if ( $JobStream )
+        {
+            $jobStreams = @( $JobStream )
+        }
+
         if ( $Directory -ne '/' )
         {
             $folders += $Directory        
@@ -258,14 +315,29 @@ param
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
         Add-Member -Membertype NoteProperty -Name 'isJobStream' -value ( $IsJobStream -eq $true ) -InputObject $body
 
-        if ( $DateFrom )
+        if ( $RegEx )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'regex' -value $RegEx -InputObject $body
         }
 
-        if ( $DateTo )
+        if ( $DateFrom -or $RelativeDateFrom )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            if ( $RelativeDateFrom )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value $RelativeDateFrom -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
+        }
+
+        if ( $DateTo -or $RelativeDateTo )
+        {
+            if ( $RelativeDateTo )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value $RelativeDateTo -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
         }
 
         if ( $states )
@@ -305,6 +377,11 @@ param
         if ( $orderIds )
         {
             Add-Member -Membertype NoteProperty -Name 'orderId' -value $orderIds[0] -InputObject $body
+        }
+
+        if ( $jobStreams )
+        {
+            Add-Member -Membertype NoteProperty -Name 'jobStream' -value $jobStreams[0] -InputObject $body
         }
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
