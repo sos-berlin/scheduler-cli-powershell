@@ -62,6 +62,7 @@ Specifies a relative date starting from which daily plan items should be returne
 * -1y, -2y: one year ago, two years ago
 * +1y, +2y: one year later, two years later
 
+Optionally a timezone offset can be specified, e.g. -1d+02:00, as otherwise a UTC date is assumed.
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER RelativeDateTo
@@ -76,6 +77,7 @@ Specifies a relative date until which daily plan items should be returned, e.g.
 * -1y, -2y: one year ago, two years ago
 * +1y, +2y: one year later, two years later
 
+Optionally a timezone offset can be specified, e.g. -1d+02:00, as otherwise a UTC date is assumed.
 This parameter takes precedence over the -DateTo parameter.
 
 .PARAMETER Timezone
@@ -141,6 +143,29 @@ Returns today's daily plan for any jobs with dates being converted to the GMT ti
 $items = Get-JobSchedulerDailyPlan -DateTo (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(4).ToUniversalTime()
 
 Returns the daily plan items for the next 3 days until midnight.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -RelativeDateFrom -7d
+
+Returns the daily plan for the last seven days.
+The daily plan is reported starting from midnight UTC.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -RelativeDateFrom -7d+01:00
+
+Returns the daily plan for the last seven days.
+The daily plan is reported starting from 1 hour after midnight UTC.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -RelativeDateFrom -7d+TZ
+
+Returns the daily plan for the last seven days.
+The daily plan is reported starting from midnight in the same timezone that is used with the -Timezone parameter.
+
+.EXAMPLE
+$items = Get-JobSchedulerDailyPlan -RelativeDateFrom -1w
+
+Returns the daily plan for the last week.
 
 .EXAMPLE
 $items = Get-JobSchedulerDailyPlan -Failed -Late
@@ -316,6 +341,17 @@ param
 
     End
     {
+        # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
+        $timezoneOffsetPrefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
+        $timezoneOffsetHours = $Timezone.BaseUtcOffset.Hours
+
+        if ( $Timezone.SupportsDaylightSavingTime )
+        {
+            $timezoneOffsetHours += 1
+        }
+                    
+        [string] $timezoneOffset = "$($timezoneOffsetPrefix)$($timezoneOffsetHours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
+
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
         Add-Member -Membertype NoteProperty -Name 'isJobStream' -value ( $IsJobStream -eq $true ) -InputObject $body
@@ -329,6 +365,10 @@ param
         {
             if ( $RelativeDateFrom )
             {
+                if ( $RelativeDateFrom.endsWith( '+TZ' ) )
+                {
+                    $RelativeDateFrom = $RelativeDateFrom.Substring( 0, $RelativeDateFrom.length-3 ) + $timezoneOffset
+                }
                 Add-Member -Membertype NoteProperty -Name 'dateFrom' -value $RelativeDateFrom -InputObject $body
             } else {
                 Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
@@ -339,6 +379,10 @@ param
         {
             if ( $RelativeDateTo )
             {
+                if ( $RelativeDateTo.endsWith( '+TZ' ) )
+                {
+                    $RelativeDateTo = $RelativeDateTo.Substring( 0, $RelativeDateTo.length-3 ) + $timezoneOffset
+                }
                 Add-Member -Membertype NoteProperty -Name 'dateTo' -value $RelativeDateTo -InputObject $body
             } else {
                 Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
@@ -404,17 +448,6 @@ param
         {
             $returnDailyPlanItems | Sort-Object plannedStartTime
         } else {
-            # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
-            $prefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
-
-            $hours = $Timezone.BaseUtcOffset.Hours
-            if ( $Timezone.SupportsDaylightSavingTime )
-            {
-                $hours += 1
-            }
-                        
-            [string] $timezoneOffset = "$($prefix)$($hours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
-
             $returnDailyPlanItems | Sort-Object plannedStartTime | Select-Object -Property `
                                            job, `
                                            jobChain, `

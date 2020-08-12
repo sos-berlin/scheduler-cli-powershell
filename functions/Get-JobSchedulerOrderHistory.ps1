@@ -57,6 +57,7 @@ Specifies a relative date starting from which history items should be returned, 
 * -1M, -2M: one month ago, two months ago
 * -1y, -2y: one year ago, two years ago
 
+Optionally a timezone offset can be specified, e.g. -1d+02:00, as otherwise a UTC date is assumed.
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER RelativeDateTo
@@ -67,6 +68,7 @@ Specifies a relative date until which history items should be returned, e.g.
 * -1M, -2M: one month ago, two months ago
 * -1y, -2y: one year ago, two years ago
 
+Optionally a timezone offset can be specified, e.g. -1d+02:00, as otherwise a UTC date is assumed.
 This parameter takes precedence over the -DateTo parameter.
 
 .PARAMETER Timezone
@@ -144,6 +146,29 @@ Returns the order execution history for successfully completed orders that start
 $items = Get-JobSchedulerOrderHistory -Failed -DateFrom (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(-7).ToUniversalTime()
 
 Returns the order execution history for any failed orders for the last seven days.
+
+.EXAMPLE
+$items = Get-JobSchedulerOrderHistory -RelativeDateFrom -7d
+
+Returns the order execution history for the last seven days.
+The history is reported starting from midnight UTC.
+
+.EXAMPLE
+$items = Get-JobSchedulerOrderHistory -RelativeDateFrom -7d+01:00
+
+Returns the order execution history for the last seven days.
+The history is reported starting from 1 hour after midnight UTC.
+
+.EXAMPLE
+$items = Get-JobSchedulerOrderHistory -RelativeDateFrom -7d+TZ
+
+Returns the order execution history for the last seven days.
+The history is reported starting from midnight in the same timezone that is used with the -Timezone parameter.
+
+.EXAMPLE
+$items = Get-JobSchedulerOrderHistory -RelativeDateFrom -1w
+
+Returns the order execution history for any jobs for the last week.
 
 .EXAMPLE
 $items = Get-JobSchedulerOrderHistory -Directory /sos -Recursive -Successful -Failed
@@ -305,6 +330,17 @@ param
     
     End
     {
+        # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
+        $timezoneOffsetPrefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
+        $timezoneOffsetHours = $Timezone.BaseUtcOffset.Hours
+
+        if ( $Timezone.SupportsDaylightSavingTime )
+        {
+            $timezoneOffsetHours += 1
+        }
+                    
+        [string] $timezoneOffset = "$($timezoneOffsetPrefix)$($timezoneOffsetHours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
+
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
@@ -327,6 +363,10 @@ param
         {
             if ( $RelativeDateFrom )
             {
+                if ( $RelativeDateFrom.endsWith( '+TZ' ) )
+                {
+                    $RelativeDateFrom = $RelativeDateFrom.Substring( 0, $RelativeDateFrom.length-3 ) + $timezoneOffset
+                }
                 Add-Member -Membertype NoteProperty -Name 'dateFrom' -value $RelativeDateFrom -InputObject $body
             } else {
                 Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
@@ -337,6 +377,10 @@ param
         {
             if ( $RelativeDateTo )
             {
+                if ( $RelativeDateTo.endsWith( '+TZ' ) )
+                {
+                    $RelativeDateTo = $RelativeDateTo.Substring( 0, $RelativeDateTo.length-3 ) + $timezoneOffset
+                }
                 Add-Member -Membertype NoteProperty -Name 'dateTo' -value $RelativeDateTo -InputObject $body
             } else {
                 Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
@@ -371,18 +415,7 @@ param
         if ( $Timezone.Id -eq 'UTC' )
         {
             $returnHistoryItems
-        } else {
-            # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
-            $prefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
-
-            $hours = $Timezone.BaseUtcOffset.Hours
-            if ( $Timezone.SupportsDaylightSavingTime )
-            {
-                $hours += 1
-            }
-                        
-            [string] $timezoneOffset = "$($prefix)$($hours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
-            
+        } else {            
             $returnHistoryItems | Select-Object -Property `
                                            jobschedulerId, `
                                            historyId, `
