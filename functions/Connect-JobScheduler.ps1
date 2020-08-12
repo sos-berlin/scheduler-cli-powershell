@@ -125,6 +125,14 @@ The cmdlet returns an object with access information including the access token 
 .LINK
 about_jobscheduler
 
+.DESCRIPTION
+The Invoke-WebRequest may throw an error "The response content cannot be parsed because the Internet Explorer engine is not available, or Internet Explorer’s first-launch configuration is not complete. Specify the UseBasicParsing parameter and try again."
+
+The reason why the Invoke-WebRequest throws the error is because the Invoke-WebRequest command has a dependency on the IE assemblies. And when Internet Explorer is not configured then everytime we launch IE it shows a seeting prompt at the first launch. We can disable IE's first launch configuration window by running a PowerShell script:
+
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2
+
+
 #>
 [cmdletbinding()]
 param
