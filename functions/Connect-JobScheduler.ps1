@@ -5,13 +5,22 @@ function Connect-JobScheduler
 Connects to the JobScheduler JOC Cockpit Web Service.
 
 .DESCRIPTION
-This cmdlet can be used with the JobScheduler JOC Cockpit Web Service starting from release 1.11.
-
-A connection to the Web Service is established including support for credentials 
-and use of a proxy.
+A connection to the JOC Cockpit Web Service is established including support for credentials and use of a proxy.
 
 The cmdlet authenticates a user and returns an access token in case of successful authentication
-that can be used for subsequent requests to the Web Service.
+that is used for subsequent requests to the Web Service.
+
+Caveat: 
+* This cmdlet calls the Invoke-WebRequest cmdlet that may throw an error "The response content cannot be parsed because the Internet Explorer engine 
+is not available, or Internet Explorer’s first-launch configuration is not complete. Specify the UseBasicParsing parameter and try again."
+
+* This problem is limited to Windows. The reason for this error is a weird PowerShell dependency on IE assemblies. 
+* If Internet Explorer is not configured then it prompts the user for configuration when being launched. 
+
+* To disable IE's first launch configuration window you can modify the Windows registry
+** by running a PowerShell script: Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2
+** by using the "regedit" utility and navigating in the HKLM hive to the above key "DisableFirstRunCustomize" and assigning the value "2".
+** this operation requires administrative permissions.
 
 .PARAMETER Url
 Specifies the URL to access the Web Service.
@@ -104,6 +113,7 @@ The details are provided with the "Masters" data structure in the response.
 Connect-JobScheduler http://localhost4446 -AskForCredentials
 
 Connects to the JobScheduler Web Service at the indicated address and asks the user interactively to enter credentials.
+
 .EXAMPLE
 $credential = ( New-Object -typename System.Management.Automation.PSCredential -ArgumentList 'root', ( 'root' | ConvertTo-SecureString -AsPlainText -Force) )
 Connect-JobScheduler http://localhost:4446 $credential scheduler
@@ -124,14 +134,6 @@ The cmdlet returns an object with access information including the access token 
 
 .LINK
 about_jobscheduler
-
-.DESCRIPTION
-The Invoke-WebRequest may throw an error "The response content cannot be parsed because the Internet Explorer engine is not available, or Internet Explorer’s first-launch configuration is not complete. Specify the UseBasicParsing parameter and try again."
-
-The reason why the Invoke-WebRequest throws the error is because the Invoke-WebRequest command has a dependency on the IE assemblies. And when Internet Explorer is not configured then everytime we launch IE it shows a seeting prompt at the first launch. We can disable IE's first launch configuration window by running a PowerShell script:
-
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2
-
 
 #>
 [cmdletbinding()]
