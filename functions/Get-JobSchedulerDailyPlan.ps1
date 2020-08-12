@@ -13,14 +13,19 @@ If the name of a job chain is specified then the -Directory parameter is used to
 Otherwise the -JobChain parameter is assumed to include the full path and name of the job chain.
 
 .PARAMETER OrderId
-Optionally specifies the path and name of an order for which daily plan items should be returned.
-If the name of an order is specified then the -Directory parameter is used to determine the folder.
-Otherwise the -OrderId parameter is assumed to include the full path and name of the order.
+Optionally specifies the path and ID of an order for which daily plan items should be returned.
+If an order ID is specified then the -Directory parameter is used to determine the folder.
+Otherwise the -OrderId parameter is assumed to include the full path and ID of the order.
 
 .PARAMETER Job
 Optionally specifies the path and name of a job for which daily plan items should be returned.
 If the name of a job is specified then the -Directory parameter is used to determine the folder.
 Otherwise the -Job parameter is assumed to include the full path and name of the job.
+
+.PARAMETER JobStream
+Optionally specifies the name of a job stream for which daily plan items should be returned.
+Job streams are unique across folders and are specified by name. 
+Therefore the -Directory parameter is ignored if this parameter is used.
 
 .PARAMETER Directory
 Optionally specifies the folder for which daily plan items should be returned. The directory is determined
@@ -30,8 +35,8 @@ from the root folder, i.e. the "live" directory and should start with a "/".
 When used with the -Directory parameter then any sub-folders of the specified directory will be looked up.
 
 .PARAMETER RegEx
-Specifies a regular expression that filters the paths to be returned.
-This applies to jobs, job chains, orders and job streams that are filtered by path.
+Specifies a regular expression that filters the items to be returned.
+This applies to jobs, job chains, orders and job streams that are filtered by path including their name.
 
 .PARAMETER DateFrom
 Optionally specifies the date starting from which daily plan items should be returned.
@@ -46,7 +51,7 @@ Consider that a UTC date has to be provided.
 Default: End of the current day as a UTC date
 
 .PARAMETER RelativeDateFrom
-Specifies a relative date starting from which history items should be returned, e.g. 
+Specifies a relative date starting from which daily plan items should be returned, e.g. 
 
 * -1d, -2d: one day ago, two days ago
 * +1d, +2d: one day later, two days later
@@ -60,7 +65,7 @@ Specifies a relative date starting from which history items should be returned, 
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER RelativeDateTo
-Specifies a relative date until which history items should be returned, e.g. 
+Specifies a relative date until which daily plan items should be returned, e.g. 
 
 * -1d, -2d: one day ago, two days ago
 * +1d, +2d: one day later, two days later
@@ -86,16 +91,16 @@ All dates in JobScheduler are UTC and can be converted e.g. to the local time zo
 Default: Dates are returned in UTC.
 
 .PARAMETER Late
-Specifies that daily plan items are returned that did start later than expected.
+Specifies that daily plan items are returned that are late or that started later than expected.
 
 .PARAMETER Successful
-Specifies that daily plan items are returned that did complete successfully.
+Specifies that daily plan items are returned completed successfully.
 
 .PARAMETER Failed
-Specifies that daily plan items are returned that did complete with errors.
+Specifies that daily plan items are returned that completed with errors.
 
 .PARAMETER Incomplete
-Specifies that daily plan items are returned that did not yet complete.
+Specifies that daily plan items are returned for jobs, orders, job streams that did not yet complete.
 
 .PARAMETER Planned
 Specifies that daily plan items are returned that did not yet start.
@@ -135,15 +140,15 @@ Returns today's daily plan for any jobs with dates being converted to the GMT ti
 .EXAMPLE
 $items = Get-JobSchedulerDailyPlan -DateTo (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(4).ToUniversalTime()
 
-Returns the daily plan items for the next 3 days until modnight.
+Returns the daily plan items for the next 3 days until midnight.
 
 .EXAMPLE
 $items = Get-JobSchedulerDailyPlan -Failed -Late
 
-Returns today's daily plan items that failed or started later than expected.
+Returns today's daily plan items for jobs that failed or are late, i.e. that did not start at the expected point in time.
 
 .EXAMPLE
-$items = Get-JobSchedulerDailyPlan -JobChain /holidays/some_job_chain
+$items = Get-JobSchedulerDailyPlan -JobChain /sos/dailyplan/CreateDailyPlan
 
 Returns the daily plan items for any orders of the given job chain.
 

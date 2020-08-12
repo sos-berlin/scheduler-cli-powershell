@@ -39,14 +39,15 @@ By default no sub-folders will be looked up for jobs.
 .PARAMETER State
 Specifies that only jobs are considered that an order is currently passing. This is identified by the
 order's state attribute that corresponds to the job node's state attribute.
-This parameter requires use of the -JobChain parameter. If used with the -Order parameter then
+This parameter requires use of the -JobChain parameter. If used with the -OrderId parameter then
 only jobs for that order are considered, otherwise jobs for any orders in the given job chain are considered.
 
 .PARAMETER ExcludeJob
 This parameter accepts a single job path or an array of job paths that are excluded from the results.
 
 .PARAMETER RegEx
-Specifies a regular expression that filters the job paths to be returned.
+Specifies a regular expression that filters the jobs to be returned.
+The regular expression is applied to the path and name of jobs.
 
 .PARAMETER DateFrom
 Specifies the date starting from which history items should be returned.
@@ -93,14 +94,14 @@ All dates in JobScheduler are UTC and can be converted e.g. to the local time zo
 Default: Dates are returned in UTC.
 
 .PARAMETER Limit
-Specifies the max. number of history items of task executions to be returned.
+Specifies the max. number of history items for task executions to be returned.
 The default value is 10000, for an unlimited number of items the value -1 can be specified.
 
 .PARAMETER Successful
-Returns history information for successfully executed tasks.
+Returns history information for successfully completed tasks.
 
 .PARAMETER Failed
-Returns history informiaton for failed tasks.
+Returns history information for failed tasks.
 
 .PARAMETER Incomplete
 Specifies that history information for running tasks should be returned.
@@ -135,12 +136,12 @@ $items = Get-JobSchedulerTaskHistory -Timezone (Get-Timezone -Id 'GMT Standard T
 Returns today's task execution history for any jobs with dates being converted to the GMT timezone.
 
 .EXAMPLE
-$items = Get-JobSchedulerTaskHistory -Job /test/globals/job1
+$items = Get-JobSchedulerTaskHistory -Job /sos/dailyplan/CreateDailyPlan
 
 Returns today's task execution history for a given job.
 
 .EXAMPLE
-$items = Get-JobSchedulerTaskHistory -JobChain /test/globals/job_chain1
+$items = Get-JobSchedulerTaskHistory -JobChain /sos/dailyplan/CreateDailyPlan
 
 Returns today's task execution history for jobs in the given job chain.
 
@@ -170,9 +171,9 @@ $items = Get-JobSchedulerTaskHistory -RelativeDateFrom -1w
 Returns the task execution history for any jobs during last week.
 
 .EXAMPLE
-$items = Get-JobSchedulerTaskHistory -Directory /test -Recursive -Succesful -Failed
+$items = Get-JobSchedulerTaskHistory -Directory /sos -Recursive -Successful -Failed
 
-Returns today's task execution history for any completed tasks from the "/test" directory
+Returns today's task execution history for any completed tasks from the "/sos" directory
 and any sub-folders recursively.
 
 .LINK
@@ -403,7 +404,7 @@ param
 
         if ( $historyStates )
         {
-            Add-Member -Membertype NoteProperty -Name 'states' -value $historyStates -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'historyStates' -value $historyStates -InputObject $body
         }
 
         if ( $orders )

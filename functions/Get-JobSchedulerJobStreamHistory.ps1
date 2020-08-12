@@ -8,7 +8,7 @@ Returns the execution history for job streams.
 History information is returned for job streams from a JobScheduler Master. 
 Job stream executions can be selected by job stream name, history status etc.
 
-The history information retured includes start time, end time, tasks etc.
+The history information returned includes start time, end time, tasks etc.
 
 .PARAMETER JobStream
 Optionally specifies the path and name of a job stream. Such names are unique across
@@ -25,6 +25,26 @@ Specifies the date until which history items should be returned.
 Consider that a UTC date has to be provided.
 
 Default: End of the current day as a UTC date
+
+.PARAMETER RelativeDateFrom
+Specifies a relative date starting from which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* -1w, -2w: one week ago, two weeks ago
+* -1M, -2M: one month ago, two months ago
+* -1y, -2y: one year ago, two years ago
+
+This parameter takes precedence over the -DateFrom parameter.
+
+.PARAMETER RelativeDateTo
+Specifies a relative date until which history items should be returned, e.g. 
+
+* -1d, -2d: one day ago, two days ago
+* -1w, -2w: one week ago, two weeks ago
+* -1M, -2M: one month ago, two months ago
+* -1y, -2y: one year ago, two years ago
+
+This parameter takes precedence over the -DateTo parameter.
 
 .PARAMETER Timezone
 Specifies the timezone to which dates should be converted in the history information.
@@ -43,7 +63,7 @@ Specifies the max. number of history items for job stream executions to be retur
 The default value is 10000, for an unlimited number of items the value -1 can be specified.
 
 .PARAMETER Successful
-Returns history information for successfully executed job streams.
+Returns history information for successfully completed job streams.
 
 .PARAMETER Failed
 Returns history informiaton for failed job streams.
@@ -75,6 +95,11 @@ $items = Get-JobSchedulerJobStreamHistory -JobStream /test/globals/jobstream1
 Returns today's execution history for a given job stream.
 
 .EXAMPLE
+$items = Get-JobSchedulerJobStreamHistory -Successful -DateFrom "2020-08-11 14:00:00Z"
+
+Returns the order execution history for successfully completed job streams that started after the specified UTC date and time.
+
+.EXAMPLE
 $items = Get-JobSchedulerJobStreamHistory -Failed -DateFrom (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(-7).ToUniversalTime()
 
 Returns the execution history for any failed job streams for the last seven days.
@@ -94,6 +119,10 @@ param
     [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 0 -Second 0).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateTo = (Get-Date -Hour 0 -Minute 0 -Second 0).AddDays(1).ToUniversalTime(),
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateFrom,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $RelativeDateTo,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [TimeZoneInfo] $Timezone = (Get-Timezone -Id 'UTC'),
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -117,6 +146,11 @@ param
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter JobStream=$JobStream"
+
+        if ( $Successful -or $Failed )
+        {
+            throw "Parameters -Successful and -Failed are currently not supported"
+        }
     
         if ( $Successful )
         {
@@ -144,14 +178,24 @@ param
             Add-Member -Membertype NoteProperty -Name 'jobStream' -value $JobStream -InputObject $body
         }
 
-        if ( $DateFrom )
+        if ( $DateFrom -or $RelativeDateFrom )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            if ( $RelativeDateFrom )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value $RelativeDateFrom -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateFrom' -value ( Get-Date (Get-Date $DateFrom).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
         }
 
-        if ( $DateTo )
+        if ( $DateTo -or $RelativeDateTo )
         {
-            Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            if ( $RelativeDateTo )
+            {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value $RelativeDateTo -InputObject $body
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'dateTo' -value ( Get-Date (Get-Date $DateTo).ToUniversalTime() -Format 'u').Replace(' ', 'T') -InputObject $body
+            }
         }
 
         if ( $Limit )
@@ -178,8 +222,8 @@ param
         {
             $returnHistoryItems | Select-Object -Property `
                                            jobschedulerId, `
-                                           @{name='jobStreamSessionId'; expression={ $_.id }}, `
-                                           @{name='jobStreamSession'; expression={ $_.session }}, `
+                                           @{name='jobStreamInstanceId'; expression={ $_.id }}, `
+                                           @{name='jobStreamInstance'; expression={ $_.session }}, `
                                            jobStreamId, `
                                            jobStream, `
                                            jobStreamStarter, `
@@ -202,8 +246,8 @@ param
 
             $returnHistoryItems | Select-Object -Property `
                                            jobschedulerId, `
-                                           @{name='jobStreamSessionId'; expression={ $_.id }}, `
-                                           @{name='jobStreamSession'; expression={ $_.session }}, `
+                                           @{name='jobStreamInstanceId'; expression={ $_.id }}, `
+                                           @{name='jobStreamInstance'; expression={ $_.session }}, `
                                            jobStreamId, `
                                            jobStream, `
                                            jobStreamStarter, `

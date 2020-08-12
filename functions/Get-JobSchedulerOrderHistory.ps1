@@ -34,7 +34,8 @@ This parameter accepts a single job chain path or an array of job chain paths th
 Optionally the job chain path can be appended an order ID separated by a semicolon.
 
 .PARAMETER RegEx
-Specifies a regular expression that filters the orders paths to be returned.
+Specifies a regular expression that filters the orders to be returned.
+The regular expression is applied to the path and ID of orders.
 
 .PARAMETER DateFrom
 Specifies the date starting from which history items should be returned.
@@ -81,14 +82,14 @@ All dates in JobScheduler are UTC and can be converted e.g. to the local time zo
 Default: Dates are returned in UTC.
 
 .PARAMETER Limit
-Specifies the max. number of history items of order executions to be returned.
+Specifies the max. number of history items for order executions to be returned.
 The default value is 10000, for an unlimited number of items the value -1 can be specified.
 
 .PARAMETER Successful
-Returns history information for successfully executed orders.
+Returns history information for successfully completed orders.
 
 .PARAMETER Failed
-Returns history informiaton for failed orders.
+Returns history information for failed orders.
 
 .PARAMETER Incomplete
 Specifies that history information for running orders should be returned.
@@ -110,7 +111,7 @@ Returns today's order execution history for any orders from the /sos folder.
 $items = Get-JobSchedulerOrderHistory -RegEx 'report'
 
 Returns today's order execution history for orders that contain the string
-'report' in the order path.
+'report' in the order's path.
 
 .EXAMPLE
 $items = Get-JobSchedulerOrderHistory -Timezone (Get-Timezone)
@@ -123,7 +124,7 @@ $items = Get-JobSchedulerOrderHistory -Timezone (Get-Timezone -Id 'GMT Standard 
 Returns today's order execution history for any orders with dates being converted to the GMT timezone.
 
 .EXAMPLE
-$items = Get-JobSchedulerOrderHistory -JobChain /test/globals/jobChain1
+$items = Get-JobSchedulerOrderHistory -JobChain /sos/dailyplan/CreateDailyPlan
 
 Returns today's order execution history for a given job chain.
 
@@ -145,9 +146,9 @@ $items = Get-JobSchedulerOrderHistory -Failed -DateFrom (Get-Date -Hour 0 -Minut
 Returns the order execution history for any failed orders for the last seven days.
 
 .EXAMPLE
-$items = Get-JobSchedulerOrderHistory -Directory /test -Recursive -Succesful -Failed
+$items = Get-JobSchedulerOrderHistory -Directory /sos -Recursive -Successful -Failed
 
-Returns today's order execution history for any completed orders from the "/test" directory
+Returns today's order execution history for any completed orders from the "/sos" directory
 and any sub-folders recursively.
 
 .LINK
@@ -354,7 +355,7 @@ param
 
         if ( $historyStates )
         {
-            Add-Member -Membertype NoteProperty -Name 'states' -value $historyStates -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'historyStates' -value $historyStates -InputObject $body
         }
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
