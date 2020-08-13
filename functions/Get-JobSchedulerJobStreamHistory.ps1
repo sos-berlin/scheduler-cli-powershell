@@ -34,7 +34,10 @@ Specifies a relative date starting from which history items should be returned, 
 * -1M, -2M: one month ago, two months ago
 * -1y, -2y: one year ago, two years ago
 
-Optionally a timezone offset can be specified, e.g. -1d+02:00, as otherwise a UTC date is assumed.
+Optionally a time offset can be specified, e.g. -1d+02:00, as otherwise midnight UTC is assumed.
+Alternatively a timezone offset can be added, e.g. by using -1d+TZ, that is calculated by the cmdlet
+for the timezone that is specified with the -Timezone parameter.
+
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER RelativeDateTo
@@ -45,8 +48,11 @@ Specifies a relative date until which history items should be returned, e.g.
 * -1M, -2M: one month ago, two months ago
 * -1y, -2y: one year ago, two years ago
 
-Optionally a timezone offset can be specified, e.g. -1d+02:00, as otherwise a UTC date is assumed.
-This parameter takes precedence over the -DateTo parameter.
+Optionally a time offset can be specified, e.g. -1d+02:00, as otherwise midnight UTC is assumed.
+Alternatively a timezone offset can be added, e.g. by using -1d+TZ, that is calculated by the cmdlet
+for the timezone that is specified with the -Timezone parameter.
+
+This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER Timezone
 Specifies the timezone to which dates should be converted in the history information.
@@ -72,6 +78,10 @@ Returns history informiaton for failed job streams.
 
 .PARAMETER Incomplete
 Specifies that history information for running job streams should be returned.
+
+.PARAMETER WithTasks
+Specifies that to the history information that is returned an additional record for each task is added.
+This allows to receive the list of tasks executed for each job stream in the order of their start time.
 
 .OUTPUTS
 This cmdlet returns an array of history items.
