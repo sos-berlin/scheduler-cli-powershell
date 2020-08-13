@@ -225,6 +225,8 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [TimeZoneInfo] $Timezone = (Get-Timezone -Id 'UTC'),
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [int[]] $TaskId,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $Limit,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Successful,
@@ -243,15 +245,16 @@ param
         $folders = @()
         $historyStates = @()
         $excludeJobs = @()
+        $taskIds = @()
     }
         
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain Job=$Job"
     
-        if ( !$Directory -and !$JobChain -and !$Job )
+        if ( !$Directory -and !$JobChain -and !$Job -and !$TaskId )
         {
-            throw "$($MyInvocation.MyCommand.Name): no directory, job chain or job specified, use -Directory, -JobChain or -Job"
+            throw "$($MyInvocation.MyCommand.Name): no directory, job chain or job specified, use -Directory, -JobChain, -Job or -TaskId"
         }
 
         if ( $Directory -and $Directory -ne '/' )
@@ -365,6 +368,11 @@ param
                 $excludeJobs += $objExcludeJob
             }
         }
+        
+        if ( $TaskId )
+        {
+            $taskIds += $TaskId
+        }
     }
     
     End
@@ -446,6 +454,11 @@ param
             Add-Member -Membertype NoteProperty -Name 'orders' -value $orders -InputObject $body
         }
 
+        if ( $taskIds )
+        {
+            Add-Member -Membertype NoteProperty -Name 'taskIds' -value $taskIds -InputObject $body
+        }
+
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest '/tasks/history' $requestBody
         
@@ -461,8 +474,8 @@ param
             $returnHistoryItems
         } else {
             $returnHistoryItems | Select-Object -Property `
-                                           clusterMember, `
                                            jobschedulerId, `
+                                           clusterMember, `
                                            taskId, `
                                            job, `
                                            state, `

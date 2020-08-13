@@ -157,7 +157,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $Failed,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [switch] $Incomplete
+    [switch] $Incomplete,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [switch] $WithTasks
 )
     Begin
     {
@@ -264,7 +266,7 @@ param
 
         if ( $Timezone.Id -eq 'UTC' )
         {
-            $returnHistoryItems | Select-Object -Property `
+            $resultHistoryItems = $returnHistoryItems | Select-Object -Property `
                                            jobschedulerId, `
                                            @{name='jobStreamInstanceId'; expression={ $_.id }}, `
                                            @{name='jobStreamInstance'; expression={ $_.session }}, `
@@ -272,12 +274,12 @@ param
                                            jobStream, `
                                            jobStreamStarter, `
                                            @{name='jobStreamTasks'; expression={ $_.jobstreamTasks }}, `
-                                           @{name='state'; expression={ if ( $_.running -eq $false ) { 'INCOMPLETE' } else { 'SUCCESS' } }}, `
+                                           @{name='state'; expression={ if ( $_.running -eq $false ) { $stateText = 'INCOMPLETE'; $stateSeverity=1 } else { $stateText = 'SUCCESS'; $stateSeverity = 0 } ; $stateObj = New-Object PSObject; Add-Member -Membertype NoteProperty -Name '_text' -value $stateText -InputObject $stateObj; Add-Member -Membertype NoteProperty -Name 'severity' -value $stateSeverity -InputObject $stateObj; $stateObj }}, `
                                            @{name='startTime'; expression={ $_.started }}, `
                                            @{name='endTime'; expression={ $_.ended }}, `
                                            @{name='surveyDate'; expression={ $_.ended }}
         } else {
-            $returnHistoryItems | Select-Object -Property `
+            $resultHistoryItems = $returnHistoryItems | Select-Object -Property `
                                            jobschedulerId, `
                                            @{name='jobStreamInstanceId'; expression={ $_.id }}, `
                                            @{name='jobStreamInstance'; expression={ $_.session }}, `
@@ -285,10 +287,49 @@ param
                                            jobStream, `
                                            jobStreamStarter, `
                                            @{name='jobStreamTasks'; expression={$_.jobstreamTasks }}, `
-                                           @{name='state'; expression={ if ( $_.running -eq $false ) { 'INCOMPLETE' } else { 'SUCCESS' } }}, `
+                                           @{name='state'; expression={ if ( $_.running -eq $false ) { $stateText = 'INCOMPLETE'; $stateSeverity=1 } else { $stateText = 'SUCCESS'; $stateSeverity = 0 } ; $stateObj = New-Object PSObject; Add-Member -Membertype NoteProperty -Name '_text' -value $stateText -InputObject $stateObj; Add-Member -Membertype NoteProperty -Name 'severity' -value $stateSeverity -InputObject $stateObj; $stateObj }}, `
                                            @{name='startTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.started)".Substring(0, 19), 'UTC'), $Timezone ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
                                            @{name='endTime'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.ended)".SubString(0,19), 'UTC'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}, `
                                            @{name='surveyDate'; expression={ ( [System.TimeZoneInfo]::ConvertTimeFromUtc( [datetime]::SpecifyKind( [datetime] "$($_.ended)".SubString(0, 19), 'UTC'), $($Timezone) ) ).ToString("yyyy-MM-dd HH:mm:ss") + $timezoneOffset }}
+        }
+
+        if ( $WithTasks )
+        {
+            foreach( $resultHistoryItem in $resultHistoryItems )
+            {
+                $resultHistoryItem | Select-Object -Property `
+                                            jobschedulerId, `
+                                            jobStreamInstanceId, `
+                                            jobStreamId, `
+                                            jobStream, `
+                                            jobStreamStarter, `
+                                            @{name='clusterMember'; expression={ '' }}, `
+                                            @{name='taskId'; expression={ '' }}, `
+                                            @{name='job'; expression={ '' }}, `
+                                            @{name='criticality'; expression={ '' }}, `
+                                            @{name='exitCode'; expression={ '' }}, `
+                                            state, `
+                                            startTime, `
+                                            endTime, `
+                                            surveyDate
+                Get-JobSchedulerTaskHistory -TaskId $resultHistoryItem.jobStreamTasks.id | Select-Object -Property `
+                                                jobSchedulerId, `
+                                                @{name='jobStreamInstanceId'; expression={ $resultHistoryItem.jobStreamInstanceId }}, `
+                                                @{name='jobStreamId'; expression={ $resultHistoryItem.jobStreamId }}, `
+                                                @{name='jobStream'; expression={ $resultHistoryItem.jobStream }}, `
+                                                @{name='jobStreamStarter'; expression={ $resultHistoryItem.jobStreamStarter }}, `
+                                                clusterMember, `
+                                                taskId, `
+                                                job, `
+                                                criticality, `
+                                                exitCode, `
+                                                state, `
+                                                startTime, `
+                                                endTime, `
+                                                surveyDate
+            }
+        } else {
+            $resultHistoryItems 
         }
 
         if ( $returnHistoryItems.count )
