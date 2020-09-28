@@ -30,6 +30,15 @@ Specifies the point in time when the job should start:
 * yyyy-mm-dd HH:MM[:SS]
 ** specifies that the job should start at the specified point in time.
 
+.PARAMETER Timezone
+Specifies the time zone to be considered for the start time that is indicated with the -At parameter.
+Without this parameter the time zone of the JobScheduler Master is assumed. 
+
+This parameter should be used if the JobScheduler Master runs in a time zone different to the environment 
+that makes use of this cmdlet.
+
+Find the list of time zone names from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
 .PARAMETER AuditComment
 Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
 
@@ -58,6 +67,11 @@ This cmdlet returns an array of job objects.
 Start-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule
 
 Starts the indicated job.
+
+.EXAMPLE
+Start-JobSchedulerJob -Job /sos/dailyschedule/CheckDaysSchedule -At "2038-01-01 00:00:00" -Timezone "Europe/Berlin"
+
+Starts the indicated job for a later date that is specified for the "Europe/Berlin" time zone.
 
 .EXAMPLE
 Get-JobSchedulerJob -Directory /some_path -Recursive | Start-JobSchedulerJob

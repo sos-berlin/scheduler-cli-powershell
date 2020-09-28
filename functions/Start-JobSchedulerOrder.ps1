@@ -39,6 +39,15 @@ Specifies the point in time when the order should start:
 
 Default: now
 
+.PARAMETER Timezone
+Specifies the time zone to be considered for the start time that is indicated with the -At parameter.
+Without this parameter the time zone of the JobScheduler Master is assumed. 
+
+This parameter should be used if the JobScheduler Master runs in a time zone different to the environment 
+that makes use of this cmdlet.
+
+Find the list of time zone names from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
 .PARAMETER State
 Specifies that the order should enter the job chain at the job chain node that
 is assigend the specified state.
@@ -46,7 +55,6 @@ is assigend the specified state.
 .PARAMETER EndState
 Specifies that the order should leave the job chain at the job chain node that
 is assigend the specified state.
-
 
 .PARAMETER AuditComment
 Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
@@ -85,7 +93,12 @@ Starts the order "123" of the specified job chain.
 .EXAMPLE
 Start-JobSchedulerOrder -Order 123 -JobChain /sos/reporting/Reporting -At "now+1800"
 
-Starts the specified order.
+Starts the specified order for a start time 30 minutes (1800 seconds) from now.
+
+.EXAMPLE
+Start-JobSchedulerOrder -Order 123 -JobChain /sos/reporting/Reporting -At "2038-01-01 00:00:00" -Timezone "Europe/Berlin"
+
+Starts the indicated order for a later date that is specified for the "Europe/Berlin" time zone.
 
 .EXAMPLE
 Start-JobSchedulerOrder -JobChain /sos/reporting/Reporting -Order 548 -At "now+3600" -Parameters @{'param1' = 'value1'; 'param2' = 'value2'}

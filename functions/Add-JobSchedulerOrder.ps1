@@ -43,11 +43,13 @@ Specifies the point in time when the order should start. Values are added like t
 ** specifies that the order should start at the specified point in time.
 
 .PARAMETER Timezone
-Specifies the timezone to be considered for the start time that is indicated with the -At parameeter.
-Without this parameter the timezone of the JobScheduler Master is assumed. 
+Specifies the time zone to be considered for the start time that is indicated with the -At parameter.
+Without this parameter the time zone of the JobScheduler Master is assumed. 
 
-This parameter should be used if the JobScheduler Master runs in a timezone different to the environment 
+This parameter should be used if the JobScheduler Master runs in a time zone different to the environment 
 that makes use of this cmdlet.
+
+Find the list of time zone names from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 .PARAMETER RunTime
 Optionally specifies an XML configuration for the <run_time> of an order.
@@ -108,6 +110,11 @@ Adds the order "123" to the indicated job chain.
 Add-JobSchedulerOrder -Order 123 -JobChain /sos/reporting/Reporting -At "now+1800"
 
 Adds the indicated order for a start time 30 minutes (1800 seconds) from now.
+
+.EXAMPLE
+Add-JobSchedulerOrder -Order 123 -JobChain /sos/reporting/Reporting -At "2038-01-01 00:00:00" -Timezone "Europe/Berlin"
+
+Adds the indicated order for a later date that is specified for the "Europe/Berlin" time zone.
 
 .EXAMPLE
 Add-JobSchedulerOrder -JobChain /sos/reporting/Reporting -At "now+3600" -Parameters @{'param1' = 'value1'; 'param2' = 'value2'}
