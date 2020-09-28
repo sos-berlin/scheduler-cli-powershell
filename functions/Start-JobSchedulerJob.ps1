@@ -88,6 +88,8 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $At,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $Timezone,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $AuditTimeSpent,
@@ -141,7 +143,7 @@ param
 
         if ( $Timezone )
         {
-            Add-Member -Membertype NoteProperty -Name 'timezone' -value $Timezone -InputObject $objJob
+            Add-Member -Membertype NoteProperty -Name 'timeZone' -value $Timezone -InputObject $objJob
         }
 
         if ( $Parameters )
