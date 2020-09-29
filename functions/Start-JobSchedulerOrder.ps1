@@ -195,6 +195,12 @@ param
             }
         }
 
+        if ( !$Timezone -and $At -match "^\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01]) (\d{2}):(\d{2})(:(\d{2}))?$" )
+        {
+            $At = ( Get-Date (Get-Date $At).ToUniversalTime() -Format 'yyyy-MM-dd HH:mm:ss' )
+            $Timezone = 'UTC'
+        }
+
         $objOrder = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
 
@@ -207,7 +213,7 @@ param
 
         if ( $Timezone )
         {
-            Add-Member -Membertype NoteProperty -Name 'timezone' -value $Timezone -InputObject $objOrder
+            Add-Member -Membertype NoteProperty -Name 'timeZone' -value $Timezone -InputObject $objOrder
         }
 
         if ( $State )

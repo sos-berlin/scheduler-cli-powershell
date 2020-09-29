@@ -146,6 +146,12 @@ param
                 $Job = $Directory + '/' + $Job
             }
         }
+        
+        if ( !$Timezone -and $At -match "^\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01]) (\d{2}):(\d{2})(:(\d{2}))?$" )
+        {
+            $At = ( Get-Date (Get-Date $At).ToUniversalTime() -Format 'yyyy-MM-dd HH:mm:ss' )
+            $Timezone = 'UTC'
+        }
 
         $objJob = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
