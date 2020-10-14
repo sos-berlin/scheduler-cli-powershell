@@ -2,7 +2,7 @@ function Add-JobSchedulerOrder
 {
 <#
 .SYNOPSIS
-Adds an order to a job chain in the JobScheduler Master.xx
+Adds an order to a job chain in the JobScheduler Master.
 
 .DESCRIPTION
 Creates a temporary ad hoc order for execution with the specified job chain
