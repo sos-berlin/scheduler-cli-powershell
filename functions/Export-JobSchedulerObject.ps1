@@ -1,18 +1,17 @@
-function Import-JobSchedulerObject
+function Export-JobSchedulerObject
 {
 <#
 .SYNOPSIS
-Import an XML configuration object such as a job, a job chain etc. to JOC Cockpit.
+Export an XML configuration object such as a job, a job chain etc. from JOC Cockpit.
 
 .DESCRIPTION
-This cmdlet imports an XML configuration object that is stored with JOC Cockpit.
-However, the object is not immediately deployed, see Deploy-JobSchedulerObject cmdlet.
+This cmdlet exports an XML configuration object that is stored with JOC Cockpit.
 
 .PARAMETER Name
 Specifies the name of the object, e.g. a job name.
 
 .PARAMETER Directory
-Specifies the directory in JOC Cockpit to which the object should be stored.
+Specifies the directory in JOC Cockpit in which the object is available.
 
 .PARAMETER Type
 Specifies the object type which is one of: 
@@ -29,10 +28,12 @@ Specifies the object type which is one of:
 * HOLIDAYS
 
 .PARAMETER File
-Specifies the XML file that holds the configuration object.
+Specifies the XML file that the exported configuration object is written to.
 
-.PARAMETER DocPath
-Specifies the path to the documentation that is assigned the object.
+.PARAMETER ForeLive
+Specifies that the XML configuration object is not used from JOC Cockpit but is retrieved from the Master's "live" folder. 
+This option can be used to ensure that no draft versions of configurations objects are exported but objects only that
+have been deployed to a Master.
 
 .PARAMETER AuditComment
 Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
@@ -56,12 +57,17 @@ It can be useful when integrated with a ticket system that logs interventions wi
 This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job cmdlet.
 
 .OUTPUTS
-This cmdlet returns no output.
+This cmdlet returns the XML configuration object.
 
 .EXAMPLE
-Import-JobSchedulerObject -Name job174 -Directory /some/directory -Type JOB -File /tmp/job174.job.xml
+$jobXml = Export-JobSchedulerObject -Name job174 -Directory /some/directory -Type JOB
 
-Import the job configuration from the given file and store the job with the specified directory and name.
+Returns the exported job configuration from the specified directory.
+
+.EXAMPLE
+Export-JobSchedulerObject -Name job174 -Directory /some/directory -Type JOB -File /tmp/job174.job.xml | Out-Null
+
+Exports the XML job configuration to the specified file.
 
 .LINK
 about_jobscheduler
@@ -77,10 +83,10 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [ValidateSet('JOB','JOBCHAIN','ORDER','PROCESSCLASS','AGENTCLUSTER','LOCK','SCHEDULE','WORKINGDAYSCALENDAR','NONWORKINGDAYSCALENDAR','FOLDER','JOBSCHEDULER','DOCUMENTATION','MONITOR','NODEPARAMS','HOLIDAYS','JOE','OTHER')]
     [string] $Type,
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $File,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $DocPath,
+    [switch] $ForceLive,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -120,29 +126,6 @@ param
                 $Directory = Get-JobSchedulerObject-Parent $Name
             } else { # name includes no directory
             }
-        }
-
-        if ( !(Test-Path -Path $File -ErrorAction Continue) )
-        {
-            throw "file not found or not accessible: $File"
-        }
-
-        if ( $File )
-        {
-            $requestBody = Get-Content $File
-            $response = Invoke-JobSchedulerWebRequest -Path '/joe/tojson' -Body $requestBody -ContentType 'application/xml'
-            
-            if ( $response.StatusCode -eq 200 )
-            {
-                $objCustom = ( $response.Content | ConvertFrom-JSON )
-                
-                if ( !$objCustom )
-                {
-                    throw ( $response | Format-List -Force | Out-String )
-                }
-            } else {
-                throw ( $response | Format-List -Force | Out-String )
-            }
 
 
             $body = New-Object PSObject
@@ -156,32 +139,59 @@ param
             }
             
             Add-Member -Membertype NoteProperty -Name 'objectType' -value $Type -InputObject $body
-            Add-Member -Membertype NoteProperty -Name 'configuration' -value $objCustom -InputObject $body
 
-            if ( $DocPath )
+            if ( $ForceLive )
             {
-                Add-Member -Membertype NoteProperty -Name 'docPath' -value $DocPath -InputObject $body
+                Add-Member -Membertype NoteProperty -Name 'forceLive' -value $True -InputObject $body
             }
     
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest -Path '/joe/store' -Body $requestBody
+            $response = Invoke-JobSchedulerWebRequest -Path '/joe/read/file' -Body $requestBody
             
             if ( $response.StatusCode -eq 200 )
             {
-                $requestResult = ( $response.Content | ConvertFrom-JSON )
+                $objCustom = ( $response.Content | ConvertFrom-JSON ).configuration
                 
-                if ( !$requestResult.ok )
+                if ( !$objCustom )
                 {
                     throw ( $response | Format-List -Force | Out-String )
                 }
             } else {
                 throw ( $response | Format-List -Force | Out-String )
             }
-        
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): object imported"                
+
+            [string] $requestBody = $objCustom | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest -Path "/joe/$Type/toxml" -Body $requestBody
+            
+            if ( $response.StatusCode -eq 200 )
+            {
+                [XML] $objXml = $response.Content
+                
+                if ( !$objXml )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
+                throw ( $response | Format-List -Force | Out-String )
+            }
+            
+            if ( $File )
+            {
+                [System.XML.XmlWriterSettings] $xmlWriterSettings = New-Object System.XML.XmlWriterSettings
+                $xmlWriterSettings.Encoding = [System.Text.Encoding]::GetEncoding("UTF-8")
+                $xmlWriterSettings.Indent = $true
+                $xmlWriterSettings.NewLineChars = "`n"
+                $xmlWriter = [Xml.XmlTextWriter]::Create( $File, $xmlWriterSettings )
+                $objXml.WriteTo( $XmlWriter )
+                $xmlWriter.Close()
+            }
+            
+            $objXml
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): object exported"                
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no object imported"                
-        }        
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no object exported"                
+        }
     }
 
     End
