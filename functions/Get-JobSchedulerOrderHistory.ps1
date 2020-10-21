@@ -52,6 +52,9 @@ Default: End of the current day as a UTC date
 .PARAMETER RelativeDateFrom
 Specifies a relative date starting from which history items should be returned, e.g. 
 
+* -1s, -2s: one second ago, two seconds ago
+* -1m, -2m: one minute ago, two minutes ago
+* -1h, -2h: one hour ago, two hours ago
 * -1d, -2d: one day ago, two days ago
 * -1w, -2w: one week ago, two weeks ago
 * -1M, -2M: one month ago, two months ago
@@ -66,6 +69,9 @@ This parameter takes precedence over the -DateFrom parameter.
 .PARAMETER RelativeDateTo
 Specifies a relative date until which history items should be returned, e.g. 
 
+* -1s, -2s: one second ago, two seconds ago
+* -1m, -2m: one minute ago, two minutes ago
+* -1h, -2h: one hour ago, two hours ago
 * -1d, -2d: one day ago, two days ago
 * -1w, -2w: one week ago, two weeks ago
 * -1M, -2M: one month ago, two months ago

@@ -6,11 +6,11 @@ Read the order log from the JobScheduler History.
 
 .DESCRIPTION
 Reads an order log for a given job chain, order ID and history ID. This cmdlet is mostly used for pipelined input from the
-Get-JobScchedulerOrderHistory cmdlet that allows to search the execution history of orders and
-that returns history IDs that are used by this cmdlet to retrieve the orders's log output.
+Get-JobSchedulerOrderHistory cmdlet that allows to search the execution history of orders and
+that returns history IDs that are used by this cmdlet to retrieve the order's log output.
 
 .PARAMETER HistoryId
-Specifies the history ID that the orders was running for. This information is provided by the
+Specifies the history ID that the order was running for. This information is provided by the
 Get-JobSchedulerOrderHistory cmdlet.
 
 .PARAMETER OrderId
@@ -67,8 +67,8 @@ $lastHistory = Get-JobSchedulerOrderHistory -RelativeDateFrom -8h | Sort-Object 
 # execute by interval
 Get-JobSchedulerOrderHistory -DateFrom $lastHistory[0].startTime | Tee-Object -Variable lastHistory | Get-JobSchedulerOrderLog | Select-Object @{name='path'; expression={ "/tmp/history/$(Get-Date $_.startTime -f 'yyyyMMdd-hhmmss')-$([io.path]::GetFileNameWithoutExtension($_.jobChain))-$($_.orderId).log"}}, @{name='value'; expression={ $_.log }} | Set-Content
 
-Provides a mechanism to subsequently retrieve previous logs. Starting from intial execution of the Get-JobSchedulerOrderHistory cmdlet the resulting $lastHistory object is used for any subsequent calls. 
-Consider use of the Tee-Object cmdlet in the pipeline that updates the $lastHistory object that can be used for laster executions of the same pipeline. 
+Provides a mechanism to subsequently retrieve previous logs. Starting from initial execution of the Get-JobSchedulerOrderHistory cmdlet the resulting $lastHistory object is used for any subsequent calls. 
+Consider use of the Tee-Object cmdlet in the pipeline that updates the $lastHistory object that can be used for later executions of the same pipeline. 
 The pipeline can e.g. be executed in a cyclic job.
 
 .LINK
