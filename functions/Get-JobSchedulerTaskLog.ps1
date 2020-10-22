@@ -128,13 +128,11 @@ param
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/task/log/download' -Body $requestBody
             
-            
         if ( $response.StatusCode -ne 200 )
         {
             throw ( $response | Format-List -Force | Out-String )
         }
         
-        # [System.Text.Encoding]::UTF8.GetString( $response.Content )
         $objResult = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'clusterMember' -value $ClusterMember -InputObject $objResult
         Add-Member -Membertype NoteProperty -Name 'criticality' -value $Criticality -InputObject $objResult

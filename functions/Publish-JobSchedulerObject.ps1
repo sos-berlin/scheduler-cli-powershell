@@ -1,4 +1,4 @@
-function Deploy-JobSchedulerObject
+function Publish-JobSchedulerObject
 {
 <#
 .SYNOPSIS
@@ -52,7 +52,7 @@ This cmdlet accepts pipelined job objects that are e.g. returned from a Get-Job 
 This cmdlet returns no output.
 
 .EXAMPLE
-Deploy-JobSchedulerObject -Name job174 -Directory /some/directory -Type JOB
+Publish-JobSchedulerObject -Name job174 -Directory /some/directory -Type JOB
 
 Deploy the specified job that is available with JOC Cockpit.
 
