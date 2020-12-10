@@ -393,7 +393,7 @@ param
         $timezoneOffsetPrefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
         $timezoneOffsetHours = $Timezone.BaseUtcOffset.Hours
 
-        if ( $Timezone.SupportsDaylightSavingTime )
+        if ( $Timezone.SupportsDaylightSavingTime -and $Timezone.IsDaylightSavingTime( (Get-Date) ) )
         {
             $timezoneOffsetHours += 1
         }
