@@ -240,6 +240,25 @@ param
             Add-Member -Membertype NoteProperty -Name 'params' -value $objParams -InputObject $objOrder
         }
 
+        if ( $RunTime )
+        {
+            if ( $RunTime.startsWith( '<' ) )
+            {
+                $response = Invoke-JobSchedulerWebRequest -Path '/joe/tojson' -Body $RunTime -ContentType 'application/xml'
+            
+                if ( $response.StatusCode -eq 200 )
+                {
+                    $runTimeJson = ( $response.Content | ConvertFrom-JSON )
+                } else {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+
+                Add-Member -Membertype NoteProperty -Name 'runTime' -value $RunTimeJson -InputObject $objOrder
+            } else {
+                Add-Member -Membertype NoteProperty -Name 'runTime' -value $RunTime -InputObject $objOrder
+            }
+        }
+
         $objOrders += $objOrder
     }
 
