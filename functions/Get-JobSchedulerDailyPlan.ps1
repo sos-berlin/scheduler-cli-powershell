@@ -87,8 +87,8 @@ for the timezone that is specified with the -Timezone parameter.
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER Timezone
-Specifies the timezone to which dates should be converted in the daily plan information.
-A timezone can e.g. be specified like this: 
+Specifies the time zone to which dates should be converted in the daily plan information.
+A time zone can e.g. be specified like this: 
 
   Get-JSDailyPlan -Timezone (Get-Timezone -Id 'GMT Standard Time')
 

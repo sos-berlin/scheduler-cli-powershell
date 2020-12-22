@@ -87,17 +87,19 @@ Default: /sos/events/scheduler_event_service
 
 .PARAMETER ExpirationDate
 Specifies the point in time for which an event automatically expires: this parameter is considered by the
-Event Processor. A specific point in time can be specified by use of the ISO date format, i.e. yyyy-MM-dd HH:mm:ss.
-The value 'never' ensures that the event does not ever expire. 
+Event Processor. Should no expiration be considered then use of the -NoExpiration parameter is recommended.
 
 The parameters -ExpirationDate, -ExpirationCycle, -ExpirationPeriod, -NoExpiration may not be used at the same time.
 
-Default: 00:00 on the following day.
+Default: midnight on the following day in the UTC time zone.
 
 .PARAMETER ExpirationCycle
 Specifies the time for which the event will expire in the current period.
 Periods start at 00:00 and end at 24:00. An expiration cycle of 21:00 
 specifies 9pm of the current cycle for event expiration.
+
+The time zone specified with the -Timezone parameter is applied to the value
+of the expiration cycle.
 
 Values are specified by use of the format HH:mm:ss.
 
@@ -111,6 +113,16 @@ specifies that the event will expire 4 hours starting from the current point in 
 Values are specified by use of the format HH:mm:ss.
 
 The parameters -ExpirationDate, -ExpirationCycle, -ExpirationPeriod, -NoExpiration may not be used at the same time.
+
+.PARAMETER Timezone
+Specifies the time zone that is applied to the -ExpirationCycle parameter.
+This parameter is not used for the -ExpirationDate parameter that implicitly specifies its time zone.
+
+A time zone can e.g. be specified like this: 
+
+  Add-JobSchedulerEvent -ExpirationCycle 04:00 -Timezone (Get-Timezone -Id 'GMT Standard Time') ...
+
+Default: The value of the -ExpirationCycle parameters is considered for the UTC time zone.
 
 .PARAMETER NoExpiration
 Specifies that an event will not expire. Such events have to be removed by event action scripts.
@@ -188,6 +200,8 @@ param
     [string] $ExpirationCycle,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $ExpirationPeriod,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [TimeZoneInfo] $Timezone = (Get-Timezone -Id 'UTC'),
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [switch] $NoExpiration,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -353,11 +367,17 @@ param
     
         if ( $ExpirationDate )
         {
-           $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expires' -Value ( Get-Date $ExpirationDate -Format 'yyyy-MM-dd HH:mm:ss' ) ) ) | Out-Null
+           $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expires' -Value ( Get-Date (Get-Date $ExpirationDate).ToUniversalTime() -Format 'yyyy-MM-dd HH:mm:ss' ) ) ) | Out-Null
         } elseif ( $NoExpiration ) {
            $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expires' -Value 'never' ) ) | Out-Null
         } elseif ( $ExpirationCycle ) {
-            $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expiration_cycle' -Value $ExpirationCycle ) ) | Out-Null
+            if ( $ExpirationCycle.split(':').count -eq 2 )
+            {
+                $ExpirationCycle = "$($ExpirationCycle):00"
+            }
+            
+            $tmpCycle = Get-Date (Get-Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::Now, $Timezone.id)) -Hour $ExpirationCycle.split(':')[0] -Minute $ExpirationCycle.split(':')[1] -Second $ExpirationCycle.split(':')[2]).ToUniversalTime() -Format 'HH:mm:ss'
+            $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expiration_cycle' -Value $tmpCycle ) ) | Out-Null
         } elseif ( $ExpirationPeriod ) {
             $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expiration_period' -Value $ExpirationPeriod ) ) | Out-Null
         }
