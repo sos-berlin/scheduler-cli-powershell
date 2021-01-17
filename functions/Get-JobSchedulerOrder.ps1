@@ -326,7 +326,7 @@ param
 
         if ( $types.count -gt 0 )
         {
-            Add-Member -Membertype NoteProperty -Name 'type' -value $types -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'types' -value $types -InputObject $body
         }
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100

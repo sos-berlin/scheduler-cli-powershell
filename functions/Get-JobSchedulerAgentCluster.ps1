@@ -178,7 +178,11 @@ param
             $returnAgentClusters += $returnAgentCluster
         }
 
-        $returnAgentClusters
+        $returnAgentClusters | Select-Object -Property `
+                                            agentCluster, `
+                                            @{name='path'; expression={ $_.agentCluster }}, `
+                                            agents, `
+                                            volatile
 
         if ( $returnAgentClusters.count )
         {
