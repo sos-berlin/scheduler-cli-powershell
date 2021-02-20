@@ -87,10 +87,46 @@ protocol version.
 ** use TLS protocol version 1.1 or 1.2 only
 
 .PARAMETER Certificate
-This parameter currently is not used. It is provided for future releases of JOC Cockpit
-that support client authentication certificates.
+This parameter can be used for client authentication if JOC Cockpit is configured for mutual authentication with HTTPS (SSL).
+If JOC Cockpit is configured to accept one-factor authentication then the certificate specified with this parameter replaces 
+the password for login. If JOC Cockpit requires two-factor authentication then a certificate is required
+in addition to specifying a password for login.
 
-The certificate specified with this parameter replaces the account/password specified during login.
+Consider that this parameter expects a certificate with the data type [System.Security.Cryptography.X509Certificates.X509Certificate2].
+This parameter can be used for Windows only. For other operating systems use the -KekyStorePath parameter.
+
+Use of this parameter requires that the certificate object includes the private key and the certificate chain, i.e. the certificate 
+and any intermediate/root certificates required for validation of the certificate.
+
+This parameter cannot be used with the -CertificateThumbprint parameter or -KeyStorePath parameter.
+
+.PARAMETER CertificateThumbprint
+This parameter can be used for client authentication if JOC Cockpit is configured for mutual authentication with HTTPS (SSL).
+If JOC Cockpit is configured to accept one-factor authentication then the certificate identified with this parameter replaces 
+the password for login. If JOC Cockpit requires two-factor authentication then a certificate is required
+in addition to specifying a password for login.
+
+This parameter can be used for Windows only. For other operating sysems use the -KekyStorePath parameter.
+
+Use of this parameter requires a certificate store to be in place that holds the private key and certificate chain, i.e. the same certificate 
+and any intermediate/root certificates required for validation of the certificate. Consider this parameter a reference
+to a certificate entry in your Windows certificate store that includes the private key and certificate chain.
+
+This parameter cannot be used with the -Certificate parameter or -KeyStorePath parameter.
+
+.PARAMETER KeyStorePath
+This parameter can be used for client authentication if JOC Cockpit is configured for mutual authentication with HTTPS (SSL).
+If JOC Cockpit is configured to accept one-factor authentication then the certificate from the keystore specified with this parameter replaces 
+the password for login. If JOC Cockpit requires two-factor authentication then a certificate is required
+in addition to specifying a password for login.
+
+This parameter expects the path to a keystore file, preferably a PKCS12 keystore, that holds the private key and certificate chain, i.e. the certificate
+and any intermediate/root certificates required for validation of the certificate. Certificates of type X509 are supported.
+
+The cmdlet adds the private key, certificate and any intermediate/root certificates from the keystore to the certificate store
+used by the current account. This parameter can be used for Windows and Unix operating systems.
+
+This parameter cannot be used with the -Certificate parameter or -CertificateThumbprint parameter.
 
 .PARAMETER AddRootCertificate
 Specifies the location of a file that holds the root certificate that was when signing the JOC Cockpit
@@ -162,7 +198,11 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $SSLProtocol,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Certificate,
+    [System.Security.Cryptography.X509Certificates.X509Certificate2] $Certificate,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [string] $CertificateThumbprint,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [string] $KeyStorePath,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $AddRootCertificate,
     [Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
@@ -173,6 +213,11 @@ param
     Begin
     {
         $stopWatch = Start-StopWatch
+
+        if ( ($Certificate -and $KeyStorePath) -or ( $Certificate -and $CertificateThumbprint) -or ($KeyStorePath -and $CertificateThumbprint) )
+        {
+             throw "$($MyInvocation.MyCommand.Name): only one of the parameters -Certificate, -CertificateThumbprint or -KeyStorePath can be used"
+        }
     }
 
     Process
@@ -264,6 +309,45 @@ param
             $authenticationUrl = $Url.scheme + '://' + $Url.Authority + $Base + '/security/login'
         }
 
+        if ( $CertificateThumbprint )
+        {
+            $storeName = [System.Security.Cryptography.X509Certificates.StoreName]
+            $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]
+            $openFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]
+            $store = [System.Security.Cryptography.X509Certificates.X509Store]::new( $storeName::My, $storeLocation::CurrentUser )
+            
+            $store.Open( $openFlags::ReadOnly )
+            $certCollection = $store.Certificates.Find( [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint, $CertificateThumbprint, $false )            
+
+            if ( $certCollection.count -eq 0 )
+            {
+                throw "$($MyInvocation.MyCommand.Name): could not find certificate for thumbprint: $CertificateThumbprint"
+            }
+                        
+            if ( $certCollection.count -gt 1 )
+            {
+                throw "$($MyInvocation.MyCommand.Name): more than one certificate found for thumbprint: $CertificateThumbprint"
+            }
+                        
+            $Certificate = $certCollection[0]
+            $store.Close()        
+        }
+
+        if ( $KeyStorePath )
+        {
+            $storeName = [System.Security.Cryptography.X509Certificates.StoreName]
+            $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]
+            $openFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]
+            $store = [System.Security.Cryptography.X509Certificates.X509Store]::new( $storeName::My, $storeLocation::CurrentUser )
+            
+            $certPath = ( Resolve-Path $KeyStorePath ).Path
+            $Certificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2( $certPath )
+            
+            $store.Open( $openFlags::ReadWrite )
+            $store.Add( $Certificate )
+            $store.Close()        
+        }
+
         if ( $AddRootCertificate )
         {
             # add root certificate to truststore
@@ -274,7 +358,6 @@ param
             $openFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]
             $store = [System.Security.Cryptography.X509Certificates.X509Store]::new( $storeName::Root, $storeLocation::CurrentUser )
             
-            $X509Certificate2 = [System.Security.Cryptography.X509Certificates.X509Certificate2]
             $certPath = ( Resolve-Path $RootCertificate ).Path
             $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2( $certPath )
             
@@ -292,7 +375,11 @@ param
 
         if ( isPowerShellVersion 6 )
         {
-            $requestParams.Add( 'AllowUnencryptedAuthentication', $true )
+            $requestParams.Add( 'AllowUnencryptedAuthentication', $true )            
+        }
+
+        if ( isPowerShellVersion 7 )
+        {
             $requestParams.Add( 'SkipHttpErrorCheck', $true )
         }
 
@@ -352,9 +439,8 @@ param
         if ( $Certificate )
         {
             # Client Authentication Certificate
-            $clientCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2( $Certificate )
-            $requestParams.Add( 'Certificate', $clientCert )
-            $script:jsWebService.Certificate = $clientCert
+            $requestParams.Add( 'Certificate', $Certificate )
+            $script:jsWebService.Certificate = $Certificate
         }
 
         try {

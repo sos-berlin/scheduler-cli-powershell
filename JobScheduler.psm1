@@ -564,12 +564,12 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
     
     if ( $script:jsWebService.SSLProtocol )
     {
-        $requestParams.Add( 'SSLProtocol', $script:jsWebService.SSLProtocol  )
+        $requestParams.Add( 'SSLProtocol', $script:jsWebService.SSLProtocol )
     }
 
     if ( $script:jsWebService.Certificate )
     {
-        $requestParams.Add( 'Certificate', $script:jsWebService.Certificate  )
+        $requestParams.Add( 'Certificate', $script:jsWebService.Certificate )
     }
 
     if ( $Body )
@@ -1401,14 +1401,14 @@ param
                 
                 if ( $scheduleFolder -eq '/' )
                 {
-                    Add-Member -Membertype NoteProperty -Name 'path' -value "/$($scheduleName)" -InputObject $objSchedule
+                    Add-Member -Membertype NoteProperty -Name 'path' -value "$($scheduleName)" -InputObject $objSchedule
                 } else {
                     Add-Member -Membertype NoteProperty -Name 'path' -value "$($scheduleFolder)$($scheduleName)" -InputObject $objSchedule                    
                 }
                 
                 if ( $jobFolder -eq '/' )
                 {
-                    Add-Member -Membertype NoteProperty -Name 'workflowPath' -value "/$($jobName)" -InputObject $objSchedule
+                    Add-Member -Membertype NoteProperty -Name 'workflowPath' -value "$($jobName)" -InputObject $objSchedule
                 } else {
                     Add-Member -Membertype NoteProperty -Name 'workflowPath' -value "$($jobFolder)$($jobName)" -InputObject $objSchedule                    
                 }
