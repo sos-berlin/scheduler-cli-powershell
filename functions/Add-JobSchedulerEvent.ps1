@@ -7,7 +7,7 @@ Adds an event to a JobScheduler instance.
 .DESCRIPTION
 Events can be added to a JobScheduler Master or Supervisor instance that implements event handling.
 
-Should the JobScheduler Master or Supervisor not be accessible then events are stored in 
+Should the JobScheduler Master or Supervisor not be accessible then events are stored in
 the local file %TEMP%\jobscheduler_events.xml for later dequeueing. Subsequent calls to this
 cmdlet will dequeue any previously stored events.
 
@@ -21,11 +21,11 @@ Specifies a unique identifier when used together with the -EventId parameter.
 .PARAMETER EventId
 An identifier for an event. Allows event handlers to react to events having a particular ID.
 
-Specifies a unique identifier when used together with the -EventClass parameter. An event id is required to be unique 
+Specifies a unique identifier when used together with the -EventClass parameter. An event id is required to be unique
 for the same event class.
 
 .PARAMETER ExitCode
-Specifies the exit code that is added to the event. Usually this signals the execution status of a job, 
+Specifies the exit code that is added to the event. Usually this signals the execution status of a job,
 however, you can assign a specific numeric exit code.
 
 Without this parameter being used the $LastExitCode is implicitely assumed, i.e. the last exit code
@@ -37,7 +37,7 @@ with the -AllowedExitCodes parameter.
 Default: last script exit code or failed execution of previous command.
 
 .PARAMETER AllowedExitCodes
-Specifies a list of exit codes that signal that a job is considered as having run successfully. 
+Specifies a list of exit codes that signal that a job is considered as having run successfully.
 This is useful if job scripts provide return values in the form of exit codes and these codes
 should not be considered as errors. When adding an event then any exit codes that match one of the
 allowed exit codes are set to 0.
@@ -76,12 +76,12 @@ event handler and starts jobs and job chains for registered JobScheduler Master 
 
 The URL consists of the protocol, host name and port, e.g. http://localhost:4454.
 
-Default: If used with a job then the CLI will assign by default the JobScheduler Supervisor that the 
+Default: If used with a job then the CLI will assign by default the JobScheduler Supervisor that the
 current JobScheduler Master is registered for and otherwise assign the JobScheduler Master.
 
 .PARAMETER SupervisorJobChain
 Specifies the path of the job chain in the JobScheduler Master or Supervisor instance that implements the event
-processor. 
+processor.
 
 Default: /sos/events/scheduler_event_service
 
@@ -95,7 +95,7 @@ Default: midnight on the following day in the UTC time zone.
 
 .PARAMETER ExpirationCycle
 Specifies the time for which the event will expire in the current period.
-Periods start at 00:00 and end at 24:00. An expiration cycle of 21:00 
+Periods start at 00:00 and end at 24:00. An expiration cycle of 21:00
 specifies 9pm of the current cycle for event expiration.
 
 The time zone specified with the -Timezone parameter is applied to the value
@@ -107,7 +107,7 @@ The parameters -ExpirationDate, -ExpirationCycle, -ExpirationPeriod, -NoExpirati
 
 .PARAMETER ExpirationPeriod
 Specifies the duration after which the event will expire in the current period.
-Periods start at 00:00 and end at 24:00. An expiration period of 04:00 
+Periods start at 00:00 and end at 24:00. An expiration period of 04:00
 specifies that the event will expire 4 hours starting from the current point in time.
 
 Values are specified by use of the format HH:mm:ss.
@@ -118,7 +118,7 @@ The parameters -ExpirationDate, -ExpirationCycle, -ExpirationPeriod, -NoExpirati
 Specifies the time zone that is applied to the -ExpirationCycle parameter.
 This parameter is not used for the -ExpirationDate parameter that implicitly specifies its time zone.
 
-A time zone can e.g. be specified like this: 
+A time zone can e.g. be specified like this:
 
   Add-JobSchedulerEvent -ExpirationCycle 04:00 -Timezone (Get-Timezone -Id 'GMT Standard Time') ...
 
@@ -146,7 +146,7 @@ Creates an event with the specified event class and event id.
 Add-JobSchedulerEvent -EventClass daily_closing -EventId 12345678 -AllowedExitCodes @(1..4)
 
 Creates an event with the specified event class and event id. The exit code is implicitely added
-from the global $LastExitCode value. Should the exit code be contained in the list of 
+from the global $LastExitCode value. Should the exit code be contained in the list of
 allowed exit codes then its value is set to 0.
 
 .EXAMPLE
@@ -211,8 +211,8 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
-        
+        $stopWatch = Start-JobSchedulerStopWatch
+
         $tmpEventsLocation = "$env:TEMP\jobscheduler.events.log"
 
         if ( Test-Path $tmpEventsLocation -PathType Leaf )
@@ -226,9 +226,9 @@ param
             $commandsNode = $xmlDoc.CreateElement( 'commands' )
             $eventCount = 0
         }
-        
+
         $countArgs = 0
-        
+
         if ( $ExpirationDate )
         {
             $countArgs++
@@ -238,7 +238,7 @@ param
         {
             $countArgs++
         }
-        
+
         if ( $ExpirationPeriod )
         {
             $countArgs++
@@ -252,7 +252,7 @@ param
         if ( $countArgs -gt 1 )
         {
             throw "$($MyInvocation.MyCommand.Name): only one of the parameters -ExpirationDate, -ExpirationCycle, -ExpirationPeriod, -NoExpiration can be specified"
-        }        
+        }
     }
 
     Process
@@ -267,19 +267,19 @@ param
         {
             # last exit code provided from a command or program
             $ExitCode = $LastExitCode
-            
+
             # last failed execution
             if ( !$ExitCode -and !$? )
             {
                 $ExitCode = 1
             }
         }
-        
+
         if ( !$EventId )
         {
             $EventId = $ExitCode
         }
-        
+
         if ( $ExitCode )
         {
             if ( $AllowedExitCodes -contains $ExitCode )
@@ -287,21 +287,21 @@ param
                $ExitCode = 0
             }
         }
-        
+
         if ( $script:jsOperations )
         {
             if ( !$Job )
             {
                 $Job = $spooler_job.name()
             }
-            
+
             if ( $spooler_task.order() )
             {
                 if ( !$JobChain )
                 {
                     $JobChain = $spooler_task.order().job_chain().name()
                 }
-                
+
                 if ( !$Order )
                 {
                     $Order = $spooler_task.order().id()
@@ -317,82 +317,82 @@ param
                     $SupervisorUrl = $MasterUrl
                 }
             }
-#>            
+#>
         } else {
             if ( !$Job )
             {
                 $Job = $env:SCHEDULER_JOB_NAME
             }
-            
+
             if ( $env:SCHEDULER_ORDER_ID )
             {
                 if ( !$JobChain )
                 {
                     $JobChain = $env:SCHEDULER_JOB_CHAIN
                 }
-                
+
                 if ( !$Order )
                 {
                     $Order = $env:SCHEDULER_ORDER_ID
                 }
             }
-<#            
+<#
             if ( !$SupervisorUrl )
             {
                 $SupervisorUrl = $MasterUrl
             }
 #>
         }
-        
+
         $currentDate = Get-Date
 
         $orderNode = $xmlDoc.CreateElement( 'add_order' )
         $orderNode.SetAttribute( 'job_chain', $SupervisorJobChain )
-        
+
         $paramsNode = $xmlDoc.CreateElement( 'params' )
-                
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'action' -Value 'add' ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_host' -Value $MasterUrl.Host ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_port' -Value $MasterUrl.Port ) ) | Out-Null
-    
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'job_chain' -Value $JobChain ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'order_id' -Value $Order ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'job_name' -Value $Job ) ) | Out-Null
-        
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'event_class' -Value $EventClass ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'event_id' -Value $EventId ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'exit_code' -Value $ExitCode ) ) | Out-Null
-    
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'created' -Value ( Get-Date $currentDate -Format 'yyyy-MM-dd HH:mm:ss' ) ) ) | Out-Null
-    
+
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'action' -Value 'add' ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_host' -Value $MasterUrl.Host ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_port' -Value $MasterUrl.Port ) ) | Out-Null
+
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'job_chain' -Value $JobChain ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'order_id' -Value $Order ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'job_name' -Value $Job ) ) | Out-Null
+
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'event_class' -Value $EventClass ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'event_id' -Value $EventId ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'exit_code' -Value $ExitCode ) ) | Out-Null
+
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'created' -Value ( Get-Date $currentDate -Format 'yyyy-MM-dd HH:mm:ss' ) ) ) | Out-Null
+
         if ( $ExpirationDate )
         {
-           $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expires' -Value ( Get-Date (Get-Date $ExpirationDate).ToUniversalTime() -Format 'yyyy-MM-dd HH:mm:ss' ) ) ) | Out-Null
+           $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'expires' -Value ( Get-Date (Get-Date $ExpirationDate).ToUniversalTime() -Format 'yyyy-MM-dd HH:mm:ss' ) ) ) | Out-Null
         } elseif ( $NoExpiration ) {
-           $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expires' -Value 'never' ) ) | Out-Null
+           $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'expires' -Value 'never' ) ) | Out-Null
         } elseif ( $ExpirationCycle ) {
             if ( $ExpirationCycle.split(':').count -eq 2 )
             {
                 $ExpirationCycle = "$($ExpirationCycle):00"
             }
-            
+
             $tmpCycle = Get-Date (Get-Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::Now, $Timezone.id)) -Hour $ExpirationCycle.split(':')[0] -Minute $ExpirationCycle.split(':')[1] -Second $ExpirationCycle.split(':')[2]).ToUniversalTime() -Format 'HH:mm:ss'
-            $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expiration_cycle' -Value $tmpCycle ) ) | Out-Null
+            $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'expiration_cycle' -Value $tmpCycle ) ) | Out-Null
         } elseif ( $ExpirationPeriod ) {
-            $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'expiration_period' -Value $ExpirationPeriod ) ) | Out-Null
+            $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'expiration_period' -Value $ExpirationPeriod ) ) | Out-Null
         }
-        
+
         if ( $Parameters )
         {
-            $Parameters.Keys | % { 
-                $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name $_ -Value $Parameters.Item($_) ) ) | Out-Null
+            $Parameters.Keys | ForEach-Object {
+                $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name $_ -Value $Parameters.Item($_) ) ) | Out-Null
             }
         }
-        
+
         $orderNode.AppendChild( $paramsNode ) | Out-Null
         $commandsNode.AppendChild( $orderNode ) | Out-Null
 
-        $e = Create-EventObject
+        $e = New-JobSchedulerEventObject
         $e.EventClass = $EventClass
         $e.EventId = $EventId
         $e.ExitCode = $ExitCode
@@ -408,7 +408,7 @@ param
         $e
         $eventCount++
     }
-    
+
     End
     {
         $xmlDoc.RemoveAll()
@@ -418,7 +418,7 @@ param
 
         if ( $eventCount )
         {
-<#        
+<#
             if ( $SupervisorUrl )
             {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
@@ -427,17 +427,17 @@ param
             }
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.outerXml)"
 #>
-            try 
+            try
             {
                 $response = Invoke-JobSchedulerWebRequestXmlCommand -Command $commandsNode.outerXml
                 $response
-                
+
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {
                     Remove-Item $tmpEventsLocation -Force
                 }
-                
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events added"                
+
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events added"
             } catch {
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {
@@ -449,14 +449,14 @@ param
                 {
                     $item.node.outerXml | Out-File $tmpEventsLocation -Encoding UTF8 -Append
                 }
-                
+
                 Write-Warning ".. $($MyInvocation.MyCommand.Name): could not forward $($eventCount) events to JobScheduler, events are stored for later dequeueing in $($tmpEventsLocation): $($_.Exception.Message)"
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): response: $($response)"
             }
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no events found to add"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch        
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

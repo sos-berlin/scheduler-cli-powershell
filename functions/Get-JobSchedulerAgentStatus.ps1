@@ -48,8 +48,8 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
-        
+        $stopWatch = Start-JobSchedulerStopWatch
+
         $allAgents = @()
     }
 
@@ -60,12 +60,12 @@ param
             $allAgents += $agent
         }
     }
-    
+
     End
-    {    
+    {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-        
+
         if ( $allAgents )
         {
             $objAgents = @()
@@ -81,24 +81,24 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/agents' -Body $requestBody
-    
+
         if ( $response.StatusCode -eq 200 )
         {
             $volatileStatus = ( $response.Content | ConvertFrom-JSON ).agents
         } else {
             throw ( $response | Format-List -Force | Out-String )
-        }    
+        }
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/agents/p' -Body $requestBody
-    
+
         if ( $response.StatusCode -eq 200 )
         {
             $permanentStatus = ( $response.Content | ConvertFrom-JSON ).agents
         } else {
             throw ( $response | Format-List -Force | Out-String )
-        }    
- 
+        }
+
         $returnAgents = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'Volatile' -value $volatileStatus -InputObject $returnAgents
         Add-Member -Membertype NoteProperty -Name 'Permanent' -value $permanentStatus -InputObject $returnAgents
@@ -121,7 +121,7 @@ JobScheduler Agent URL: $($permanentStatus[$i].url)
                     $output += "
 .......................: $($item)"
                 }
-                
+
                 $output += "
 .............. version: $($volatileStatus[$i].version)
 ................... OS: $($permanentStatus[$i].os.name), $($permanentStatus[$i].os.architecture), $($permanentStatus[$i].os.distribution)
@@ -133,6 +133,6 @@ ________________________________________________________________________
             return $returnAgents
         }
 
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

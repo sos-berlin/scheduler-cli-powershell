@@ -22,7 +22,7 @@ Optionally specifies the folder for which jobs should be stopped. The directory 
 from the root folder, i.e. the "live" directory.
 
 .PARAMETER Tasks
-Optionally specifies the identifier of a task that includes the properties "path" and "taskId". 
+Optionally specifies the identifier of a task that includes the properties "path" and "taskId".
 Task information as returned by the Get-JobSchedulerJob and Get-JobSchedulerTask cmdlets can
 be used for pipelined input into this cmdlet.
 
@@ -43,11 +43,11 @@ and optionally the -Timeout parameter is considered.
 This parameter is applicable for jobs running on Unix environments only.
 
 .PARAMETER AuditComment
-Specifies a free text that indicates the reason for the current intervention, 
+Specifies a free text that indicates the reason for the current intervention,
 e.g. "business requirement", "maintenance window" etc.
 
 The Audit Comment is visible from the Audit Log view of JOC Cockpit.
-This parameter is not mandatory, however, JOC Cockpit can be configured 
+This parameter is not mandatory, however, JOC Cockpit can be configured
 to enforece Audit Log comments for any interventions.
 
 .PARAMETER AuditTimeSpent
@@ -59,11 +59,11 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
-This cmdlet accepts pipelined task objects that are e.g. returned from the Get-JobSchedulerTask 
+This cmdlet accepts pipelined task objects that are e.g. returned from the Get-JobSchedulerTask
 and Get-JobSchedlerJob cmdlets.
 
 .OUTPUTS
@@ -78,7 +78,7 @@ Kills all running and enqueued tasks for all jobs.
 .EXAMPLE
 Get-JobSchedulerTask -Directory /some_path -Recursive -Running -Enqueued | Stop-JobSchedulerTask -Terminate -Timeout 30
 
-Terminates all running and enqueued tasks that are configured with the folder "some_path" and any sub-folders. 
+Terminates all running and enqueued tasks that are configured with the folder "some_path" and any sub-folders.
 For Unix environments tasks are sent a SIGTERM signal and after expiration of 30s a SIGKILL signal is sent.
 
 .EXAMPLE
@@ -90,7 +90,7 @@ Kills all running tasks for job "job1" from the folder "/test/globals".
 about_jobscheduler
 
 #>
-[cmdletbinding()]
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -113,7 +113,7 @@ param
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
@@ -126,25 +126,25 @@ param
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Job=$Job, Directory=$Directory"
-    
+
         if ( !$Job -and !$Tasks )
         {
             throw "$($MyInvocation.MyCommand.Name): no job and no tasks specified, use -Job or -Tasks"
         }
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
-        if ( $Job ) 
+
+        if ( $Job )
         {
             if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
             {
@@ -165,7 +165,7 @@ param
         if ( $Job )
         {
             Add-Member -Membertype NoteProperty -Name 'job' -value $Job -InputObject $objJob
-            
+
             # if a job is specified then select tasks matching the job path
             if ( $Tasks )
             {
@@ -193,7 +193,7 @@ param
         } elseif ( $Tasks ) {
             foreach( $task in $Tasks )
             {
-                $objTaskId = New-Object PSObject            
+                $objTaskId = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'taskId' -value $task.taskId -InputObject $objTaskId
 
                 Add-Member -Membertype NoteProperty -Name 'job' -value $task.path -InputObject $objJob
@@ -235,37 +235,40 @@ param
         {
             if ( $Timeout )
             {
-                $url = '/tasks/terminate_within'
+                $resource = '/tasks/terminate_within'
                 Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
             } else {
-                $url = '/tasks/terminate'
+                $resource = '/tasks/terminate'
             }
         } else {
-            $url = '/tasks/kill'
+            $resource = '/tasks/kill'
         }
-        
+
         if ( $objJobs.count )
         {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobs.count) tasks are requested to stop"        
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobs.count) tasks are requested to stop"
 
-            [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest $url $requestBody
-            
-            if ( $response.StatusCode -eq 200 )
+            if ( $PSCmdlet.ShouldProcess( $resource ) )
             {
-                $requestResult = ( $response.Content | ConvertFrom-JSON )
-                
-                if ( !$requestResult.ok )
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest -Path $resource -Body $requestBody
+
+                if ( $response.StatusCode -eq 200 )
                 {
+                    $requestResult = ( $response.Content | ConvertFrom-Json )
+
+                    if ( !$requestResult.ok )
+                    {
+                        throw ( $response | Format-List -Force | Out-String )
+                    }
+                } else {
                     throw ( $response | Format-List -Force | Out-String )
                 }
-            } else {
-                throw ( $response | Format-List -Force | Out-String )
-            }        
+            }
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no tasks found to stop"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch        
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

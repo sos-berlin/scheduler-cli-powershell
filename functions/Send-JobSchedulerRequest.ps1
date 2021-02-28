@@ -7,7 +7,7 @@ Sends a JSON request or XMl command to the JobScheduler Web Service.
 .DESCRIPTION
 The JobScheduler Web Service accepts JSON requests and a number of XML commands.
 
-This cmdlet accepts 
+This cmdlet accepts
 
 * JSON requests and forwards them to the JOC Cockpit REST Web Service.
 * XML commands and forwards them to the JobScheduler REST Web Service.
@@ -45,12 +45,6 @@ Specifies the JSON elements or XML command that are sent to the Web Service.
 ** The XML body can use the <jobscheduler_commands> element to specify the JobScheduler ID,
 otherwise the JobScheduler ID is used from the Connect-JobScheduler cmdlet or from the -Id parameter.
 
-.PARAMETER Id
-The Id specifies the JobScheduler ID that identifies an individual JobScheduler Master.
-This Id is used to addresse the JobScheduler Master that should execute the request.
-
-If no Id is specified then the JobScheduler ID is used from the Connect-JobScheduler cmdlet. 
-
 .PARAMETER Method
 This parameter specifies the HTTP method in use.
 
@@ -73,11 +67,11 @@ A hashmap can be specified with name/value pairs for HTTP headers.
 Typicall the Accept header is required for use of the REST API.
 
 .PARAMETER AuditComment
-Specifies a free text that indicates the reason for the current intervention, 
+Specifies a free text that indicates the reason for the current intervention,
 e.g. "business requirement", "maintenance window" etc.
 
 The Audit Comment is visible from the Audit Log view of JOC Cockpit.
-This parameter is not mandatory, however, JOC Cockpit can be configured 
+This parameter is not mandatory, however, JOC Cockpit can be configured
 to enforece Audit Log comments for any interventions.
 
 .PARAMETER AuditTimeSpent
@@ -89,7 +83,7 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .OUTPUTS
@@ -117,8 +111,6 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [string] $Body,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Id,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Method = 'POST',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $ContentType = 'application/xml',
@@ -135,7 +127,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
@@ -150,18 +142,11 @@ param
             $Path = '/' + $Path
         }
 
-        if ( $Id )
-        {
-            $requestId = $Id
-        } else {
-            $requestId = $script:jsWebService.jobSchedulerId
-        }
-
         # gradefully modify Content-Type and Accept headers for JSON-based requests
         if ( $ContentType -eq 'application/xml' -and $Body.startsWith( '{') )
         {
             $ContentType = 'application/json'
-            
+
             if ( $Headers.Accept -eq 'application/xml' )
             {
                 $Headers.Accept = 'application/json'
@@ -178,6 +163,6 @@ param
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

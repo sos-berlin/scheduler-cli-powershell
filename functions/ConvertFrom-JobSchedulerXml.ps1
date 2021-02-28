@@ -17,7 +17,7 @@ The cmdlet makes use of API version 1.13.5 or later, i.e. it can be used with a 
 Use with earlier JobScheduler releases is possible within limits of converted object types, however,
 this is not in scope of testing of the cmdlet by SOS.
 
-The cmdlet can be operated from any machine with a PowerShell version 5.1, 6.x and 7.x. 
+The cmdlet can be operated from any machine with a PowerShell version 5.1, 6.x and 7.x.
 
 The cmdlet will access JOC Cockpit and JobScheduler Master running on the same or on a remote machine.
 For operation of the cmdlet both ports for JOC Cockpit and for JobScheduler Master have to be accessible.
@@ -33,7 +33,7 @@ of object paths and by pipelining from other cmdlets, e.g. using
 
 STANDALONE JOBS
 
-JS7 considers standalone jobs being workflows with a single job node. 
+JS7 considers standalone jobs being workflows with a single job node.
 Therefore, migrating standalone jobs results in one workflow per job.
 For each workflow created a schedule is added with the path and name of the job.
 
@@ -45,7 +45,7 @@ by the respective job chain nodes are migrated to the JS7 workflow.
 
 ORDERS
 
-Consider the change in wording: JobScheduler 1.x orders are migrated to JS7 schedules. 
+Consider the change in wording: JobScheduler 1.x orders are migrated to JS7 schedules.
 Therefore an order for a job chain maps to a schedule for a workflow in JS7.
 Such schedules are used by the Daily Plan service to generate individual orders for the respective dates and times of the Daily Plan.
 
@@ -90,7 +90,7 @@ Optionally specifies the folder for which JobScheduler objects should be convert
 from the root folder, i.e. the "live" directory of a JobScheduler Master.
 
 .PARAMETER Recursive
-Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
+Specifies that any sub-folders should be looked up when used with the -Directory parameter.
 By default no sub-folders will be looked up for jobs.
 
 .PARAMETER Job
@@ -151,7 +151,7 @@ and for references within the objects.
 This allows to export converted objects to a new folder structure that includes the base folder.
 
 .PARAMETER DefaultAgentName
-JS7 requires any jobs to be executed with Agents. Therefore jobs that are executed with a Master 
+JS7 requires any jobs to be executed with Agents. Therefore jobs that are executed with a Master
 from a JobScheduler 1.x release will use the Agent Name that is specified with this parameter.
 Jobs or job chains that are assigned an Agent are not affected by this parameter.
 
@@ -165,7 +165,7 @@ This parameter performs a mapping of JobScheduler 1.x Agent Clusters to JS7 Agen
 * In JS7 Agents and their URLs are unique
 
 Therefore a number of JobScheduler 1.x Agent Clusters have to be mapped to a single JS7 Agent.
-A JS7 Agent is identified by its Agent ID (that is unchangeable after Agent installation) 
+A JS7 Agent is identified by its Agent ID (that is unchangeable after Agent installation)
 and is assigned an Agent Name. Additional Agent Names can be assigned an Agent to specify alias names.
 
 The value of this parameter accepts a hashmap that is e.g. created like this:
@@ -235,7 +235,7 @@ Specifies that any converted objects will be added to an existing archive file t
 -ArchivePath parameter. Without this parameter an existing archive file will be overwritten.
 
 .PARAMETER RemoveOutputDirectory
-Specifies that the output directory that is indicated with the -OutputDirectory parameter will be 
+Specifies that the output directory that is indicated with the -OutputDirectory parameter will be
 removed after JobScheduler objects have been converted and the archive file that is specified with the
 -ArchivePath parameter has been created.
 
@@ -282,12 +282,12 @@ with the indicated OS directory.
 ConvertFrom-JobSchedulerXml -Directory /product_demo -OutputDirectory /tmp/js7/jobchain2js7/js7
 
 .EXAMPLE
-Get-JobSchedulerJob -IsStandaloneJob -Directory /product_demo | ConvertFrom-JobSchedulerXml -ArchivePath /tmp/export.zip 
+Get-JobSchedulerJob -IsStandaloneJob -Directory /product_demo | ConvertFrom-JobSchedulerXml -ArchivePath /tmp/export.zip
 
 Reads standalone jobs from the specified directory and pipes the result to the converter cmdlet.
 
 .EXAMPLE
-Get-JobSchedulerJobChain -Directory /product_demo -Recursive | ConvertFrom-JobSchedulerXml -ArchivePath /tmp/export.zip 
+Get-JobSchedulerJobChain -Directory /product_demo -Recursive | ConvertFrom-JobSchedulerXml -ArchivePath /tmp/export.zip
 
 Reads job chains from the specified directory and any sub-directories and pipes the result to the converter cmdlet.
 #>
@@ -353,7 +353,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $directories = @()
         $jobs = @()
@@ -368,7 +368,7 @@ param
     Process
     {
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): parameter FilePath=$FilePath, Directory=$Directory, Job=$Job, JobChain=$JobChain, JobStream=$JobStream, Lock=$Lock, OutputDirectory=$OutputDirectory"
-        
+
         if ( $Directory )
         {
             if ( !$Directory.endsWith( '/' ) )
@@ -420,14 +420,14 @@ param
             }
             $jobs += $objPath
         }
-        
+
         if ( $JobChain )
         {
             $objPath = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'Path' -value $JobChain -InputObject $objPath
             $jobChains += $objPath
         }
-        
+
         if ( $JobStream )
         {
             $objPath = New-Object PSObject
@@ -441,7 +441,7 @@ param
             {
                  throw "use of -OrderId parameter requires to specify the -JobChain parameter"
             }
-            
+
             $objPath = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objPath
             Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objPath
@@ -478,23 +478,23 @@ param
     End
     {
         Write-Verbose ".. exporting objects to output directory: $OutputDirectory"
-        
+
         $arguments = @{}
         $arguments.Add( 'OutputDirectory', $OutputDirectory )
-        $arguments.Add( 'BaseFolder', $BaseFolder )        
-        
+        $arguments.Add( 'BaseFolder', $BaseFolder )
+
         if ( $Directory -and !$jobs -and !$jobChains -and !$jobStreams -and !$calendars -and !$locks -and !$agentClusters )
         {
             if ( $UseJobs )
             {
                 Get-JobSchedulerJob -Directory $Directory -Recursive:$Recursive -IsStandaloneJob | ConvertFrom-JobSchedulerXmlJob -DefaultAgentName $DefaultAgentName -ForcedAgentName $ForcedAgentName -MappedAgentNames $MappedAgentNames -PrefixOrders:$PrefixOrders -SubmitOrders:$SubmitOrders -PlanOrders:$PlanOrders @arguments
             }
-            
+
             if ( $UseJobChains )
             {
                 Get-JobSchedulerJobChain -Directory $Directory -Recursive:$Recursive | ConvertFrom-JobSchedulerXmlJobChain -DefaultAgentName $DefaultAgentName -ForcedAgentName $ForcedAgentName -MappedAgentNames $MappedAgentNames @arguments
             }
-            
+
             if ( $UseJobStreams )
             {
                 # Get-JobSchedulerJobStream -Directory $Directory -Recursive:$Recursive | ConvertFrom-JobSchedulerXmlJobStream -DefaultAgentName $DefaultAgentName -ForcedAgentName $ForcedAgentName -MappedAgentNames $MappedAgentNames @arguments
@@ -519,44 +519,44 @@ param
             {
                 Get-JobSchedulerAgentCluster -Directory $Directory -Recursive:$Recursive | ConvertFrom-JobSchedulerXmlAgentCluster -MappedAgentNames $MappedAgentNames @arguments
             }
-        }        
+        }
 
 
         if ( $jobs )
         {
             $jobs | ConvertFrom-JobSchedulerXmlJob -DefaultAgentName $DefaultAgentName -ForcedAgentName $ForcedAgentName -MappedAgentNames $MappedAgentNames -PrefixOrders:$PrefixOrders -SubmitOrders:$SubmitOrders -PlanOrders:$PlanOrders @arguments
         }
-        
+
         if ( $jobChains )
         {
             $jobChains | ConvertFrom-JobSchedulerXmlJobChain -DefaultAgentName $DefaultAgentName -ForcedAgentName $ForcedAgentName -MappedAgentNames $MappedAgentNames @arguments
         }
-        
+
         if ( $jobStreams )
         {
            # $jobStreams | ConvertFrom-JobSchedulerXmlJobStream -DefaultAgentName $DefaultAgentName -ForcedAgentName $ForcedAgentName -MappedAgentNames $MappedAgentNames @arguments
         }
-        
+
         if ( $orders )
         {
            $orders | ConvertFrom-JobSchedulerXmlOrder -SubmitOrders:$SubmitOrders -PlanOrders:$PlanOrders @arguments
         }
-        
+
         if ( $calendars )
         {
            $calendars | ConvertFrom-JobSchedulerXmlCalendar @arguments
         }
-        
+
         if ( $locks )
         {
            $locks | ConvertFrom-JobSchedulerXmlLock @arguments
         }
-        
+
         if ( $agentClusters )
         {
            $agentClusters | ConvertFrom-JobSchedulerXmlAgentCluster -MappedAgentNames $MappedAgentNames @arguments
         }
-        
+
 
         if ( $ArchivePath )
         {
@@ -575,7 +575,7 @@ param
                 Remove-Item -Path $OutputDirectory -Recurse -Force
             }
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

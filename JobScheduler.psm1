@@ -9,7 +9,7 @@ For further information see
 If the documentation is not available for your language then consider to use
 
     PS > [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'en-US'
-    
+
 #>
 
 # --------------------------------
@@ -17,43 +17,43 @@ If the documentation is not available for your language then consider to use
 # --------------------------------
 
 # JobScheduler Master Object
-[PSObject] $js = $null
+[PSObject] $script:js = $null
 
 # CLI operated for a JobScheduler job or monitor
-[bool] $jsOperations = ( $spooler -and $spooler.id() )
+[bool] $script:jsOperations = ( $spooler -and $spooler.id() )
 
 # JobScheduler Master environment
-[hashtable] $jsEnv = @{}
+[hashtable] $script:jsEnv = @{}
 
 # Commands that require a local Master instance (Management of Windows Service)
-[string[]] $jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
+[string[]] $script:jsLocalCommands = @( 'Install-JobSchedulerService', 'Remove-JobSchedulerService', 'Start-JobSchedulerMaster' )
 
 # -------------------------------
 # Globals with JobScheduler Agent
 # -------------------------------
 
 # JobScheduler Agent Object
-[PSObject] $jsAgent = $null
+[PSObject] $script:jsAgent = $null
 
 # Commands that require a local Agent instance (Management of Windows Service)
-[string[]] $jsAgentLocalCommands = @( 'Install-JobSchedulerAgentService', 'Remove-JobSchedulerAgentService', 'Start-JobSchedulerAgent' )
+[string[]] $script:jsAgentLocalCommands = @( 'Install-JobSchedulerAgentService', 'Remove-JobSchedulerAgentService', 'Start-JobSchedulerAgent' )
 
 # -------------------------------------
 # Globals with JobScheduler Web Service
 # -------------------------------------
 
 # JobScheduler Web Service Object
-[PSObject] $jsWebService = $null
+[PSObject] $script:jsWebService = $null
 
-# JobScheduler Web Service Request 
+# JobScheduler Web Service Request
 #     Credentials
-[System.Management.Automation.PSCredential] $jsWebServiceCredential = $null
+[System.Management.Automation.PSCredential] $script:jsWebServiceCredential = $null
 #    Use default credentials of the current user?
-[bool] $jsWebServiceOptionWebRequestUseDefaultCredentials = $false
+[bool] $script:jsWebServiceOptionWebRequestUseDefaultCredentials = $false
 #     Proxy Credentials
-[System.Management.Automation.PSCredential] $jsWebServiceProxyCredential = $null
+[System.Management.Automation.PSCredential] $script:jsWebServiceProxyCredential = $null
 #    Use default credentials of the current user?
-[bool] $jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $true
+[bool] $script:jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $true
 
 # --------------------
 # Globals with Options
@@ -61,9 +61,9 @@ If the documentation is not available for your language then consider to use
 
 # Options
 #     Debug Message: responses exceeding the max. output size are stored in temporary files
-[int] $jsOptionDebugMaxOutputSize = 1000
+[int] $script:jsOptionDebugMaxOutputSize = 1000
 #    Master Web Request: timeout for establishing the connection in ms
-[int] $jsOptionWebRequestTimeout = 30
+[int] $script:jsOptionWebRequestTimeout = 30
 
 # ----------------------------------------------------------------------
 # Public Functions
@@ -129,7 +129,7 @@ When omitting the -Prefix parameter then
 * Stop-Job
 
 .PARAMETER ExcludesPrefix
-Specifies a prefix that is used should a resulting alias be a member of the list of 
+Specifies a prefix that is used should a resulting alias be a member of the list of
 excluded aliases that is specified with the -Excludes parameter.
 
 When used with the -NoDuplicates parameter then this parameter specifies the prefix that is used
@@ -180,9 +180,9 @@ param
     {
         if ( $NoDuplicates )
         {
-            $allCommands = Get-Command | Select-Object -Property Name | foreach { $_.Name }
+            $allCommands = Get-Command | Select-Object -Property Name | ForEach-Object { $_.Name }
         }
-        
+
         $commands = Get-Command -Module JobScheduler -CommandType 'Function'
         foreach( $command in $commands )
         {
@@ -202,10 +202,10 @@ param
                     continue
                 }
             }
-            
+
             if ( $NoDuplicates )
             {
-                if ( $allCommands -contains $aliasName ) 
+                if ( $allCommands -contains $aliasName )
                 {
                     if ( $ExcludesPrefix )
                     {
@@ -217,7 +217,7 @@ param
             }
 
             Set-Alias -Name $aliasName -Value $command.Name
-            
+
             switch( $aliasName )
             {
                 'Start-JobEditor'    {
@@ -235,9 +235,9 @@ param
         Set-Alias -Name Use-JSWebService -Value Connect-JobScheduler
         Set-Alias -Name Stop-JobSchedulerJob -Value Stop-JobSchedulerTask
         Set-Alias -Name Stop-JSJob -Value Stop-JobSchedulerTask
-        
+
         Export-ModuleMember -Alias "*"
-    }    
+    }
 }
 
 # create alias names to shorten 'JobScheduler' to 'JS'
@@ -292,201 +292,265 @@ function Approve-JobSchedulerAgentCommand( [System.Management.Automation.Command
     }
 }
 
-function Start-StopWatch()
+function Start-JobSchedulerStopWatch
 {
-    [System.Diagnostics.Stopwatch]::StartNew()
-}
+[cmdletbinding(SupportsShouldProcess)]
+[OutputType([System.Diagnostics.Stopwatch])]
+param
+()
 
-function Log-StopWatch( [string] $commandName, [System.Diagnostics.Stopwatch] $stopWatch )
-{
-    if ( $stopWatch )
+    if ( $PSCmdlet.ShouldProcess( 'Stopwatch' ) )
     {
-        Write-Verbose ".. $($commandName): time elapsed: $($stopWatch.Elapsed.TotalMilliseconds) ms"
+        [System.Diagnostics.Stopwatch]::StartNew()
     }
 }
 
-function Create-JSObject()
+function Trace-JobSchedulerStopWatch( [string] $CommandName, [System.Diagnostics.Stopwatch] $StopWatch )
 {
-    $js = New-Object PSObject
-    $jsInstall = New-Object PSObject
-    $jsConfig = New-Object PSObject
-    $jsService = New-Object PSObject
-    
-    $js | Add-Member -Membertype NoteProperty -Name Id -Value ''
-    $js | Add-Member -Membertype NoteProperty -Name Url -Value ''
-    $js | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
-    $js | Add-Member -Membertype NoteProperty -Name Local -Value $false
-
-    $jsInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ''
-    $jsInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ''
-    $jsInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
-    $jsInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
-    $jsInstall | Add-Member -Membertype NoteProperty -Name ClusterOptions -Value ''
-    $jsInstall | Add-Member -Membertype NoteProperty -Name PidFile -Value ''
-
-    $jsConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
-    $jsConfig | Add-Member -Membertype NoteProperty -Name FactoryIni -Value ''
-    $jsConfig | Add-Member -Membertype NoteProperty -Name SosIni -Value ''
-    $jsConfig | Add-Member -Membertype NoteProperty -Name SchedulerXml -Value ''
-
-    $jsService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ''
-    $jsService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ''
-    $jsService | Add-Member -Membertype NoteProperty -Name ServiceDescription -Value ''
-
-    $js | Add-Member -Membertype NoteProperty -Name Install -Value $jsInstall
-    $js | Add-Member -Membertype NoteProperty -Name Config -Value $jsConfig
-    $js | Add-Member -Membertype NoteProperty -Name Service -Value $jsService
-
-    $js
+    if ( $StopWatch )
+    {
+        Write-Verbose ".. $($CommandName): time elapsed: $($StopWatch.Elapsed.TotalMilliseconds) ms"
+    }
 }
 
-function Create-StatisticsObject()
+function New-JobSchedulerObject
 {
-    $stat = New-Object PSObject
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
 
-    $stat | Add-Member -Membertype NoteProperty -Name JobsExist -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name JobsPending -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name JobsRunning -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name JobsStopped -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name JobsNeedProcess -Value 0
+    if ( $PSCmdlet.ShouldProcess( 'JS' ) )
+    {
+        $js = New-Object PSObject
+        $jsInstall = New-Object PSObject
+        $jsConfig = New-Object PSObject
+        $jsService = New-Object PSObject
 
-    $stat | Add-Member -Membertype NoteProperty -Name TasksExist -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name TasksRunning -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name TasksStarting -Value 0
-    
-    $stat | Add-Member -Membertype NoteProperty -Name OrdersExist -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name OrdersClustered -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name OrdersStanding -Value 0
+        $js | Add-Member -Membertype NoteProperty -Name Id -Value ''
+        $js | Add-Member -Membertype NoteProperty -Name Url -Value ''
+        $js | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
+        $js | Add-Member -Membertype NoteProperty -Name Local -Value $false
 
-    $stat | Add-Member -Membertype NoteProperty -Name SchedulesExist -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name ProcessClassesExist -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name FoldersExist -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name LocksExist -Value 0
-    $stat | Add-Member -Membertype NoteProperty -Name MonitorsExist -Value 0
-    
-    $stat
+        $jsInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+        $jsInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ''
+        $jsInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
+        $jsInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
+        $jsInstall | Add-Member -Membertype NoteProperty -Name ClusterOptions -Value ''
+        $jsInstall | Add-Member -Membertype NoteProperty -Name PidFile -Value ''
+
+        $jsConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+        $jsConfig | Add-Member -Membertype NoteProperty -Name FactoryIni -Value ''
+        $jsConfig | Add-Member -Membertype NoteProperty -Name SosIni -Value ''
+        $jsConfig | Add-Member -Membertype NoteProperty -Name SchedulerXml -Value ''
+
+        $jsService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ''
+        $jsService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ''
+        $jsService | Add-Member -Membertype NoteProperty -Name ServiceDescription -Value ''
+
+        $js | Add-Member -Membertype NoteProperty -Name Install -Value $jsInstall
+        $js | Add-Member -Membertype NoteProperty -Name Config -Value $jsConfig
+        $js | Add-Member -Membertype NoteProperty -Name Service -Value $jsService
+
+        $js
+    }
 }
 
-function Create-JobChainObject()
+function New-JobSchedulerStatisticsObject
 {
-    $jobChain = New-Object PSObject
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
 
-    $jobChain | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
-    $jobChain | Add-Member -Membertype NoteProperty -Name Path -Value ''
-    $jobChain | Add-Member -Membertype NoteProperty -Name Directory -Value ''
-    $jobChain | Add-Member -Membertype NoteProperty -Name Volatile -Value ''
-    $jobChain | Add-Member -Membertype NoteProperty -Name Permanent -Value ''
+    if ( $PSCmdlet.ShouldProcess( 'Statistics' ) )
+    {
+        $stat = New-Object PSObject
 
-    $jobChain
+        $stat | Add-Member -Membertype NoteProperty -Name JobsExist -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name JobsPending -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name JobsRunning -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name JobsStopped -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name JobsNeedProcess -Value 0
+
+        $stat | Add-Member -Membertype NoteProperty -Name TasksExist -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name TasksRunning -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name TasksStarting -Value 0
+
+        $stat | Add-Member -Membertype NoteProperty -Name OrdersExist -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name OrdersClustered -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name OrdersStanding -Value 0
+
+        $stat | Add-Member -Membertype NoteProperty -Name SchedulesExist -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name ProcessClassesExist -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name FoldersExist -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name LocksExist -Value 0
+        $stat | Add-Member -Membertype NoteProperty -Name MonitorsExist -Value 0
+
+        $stat
+    }
 }
 
-function Create-OrderObject()
+function New-JobSchedulerJobChainObject
 {
-    $order = New-Object PSObject
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
 
-    $order | Add-Member -Membertype NoteProperty -Name OrderId -Value ''
-    $order | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
-    $order | Add-Member -Membertype NoteProperty -Name Path -Value ''
-    $order | Add-Member -Membertype NoteProperty -Name Directory -Value ''
-    $order | Add-Member -Membertype NoteProperty -Name Volatile -Value ''
-    $order | Add-Member -Membertype NoteProperty -Name Permanent -Value ''
-    $order | Add-Member -Membertype NoteProperty -Name OrderHistory -Value @()
+    if ( $PSCmdlet.ShouldProcess( 'JobChain' ) )
+    {
+        $jobChain = New-Object PSObject
 
-    $order
+        $jobChain | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
+        $jobChain | Add-Member -Membertype NoteProperty -Name Path -Value ''
+        $jobChain | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+        $jobChain | Add-Member -Membertype NoteProperty -Name Volatile -Value ''
+        $jobChain | Add-Member -Membertype NoteProperty -Name Permanent -Value ''
+
+        $jobChain
+    }
 }
 
-function Create-JobObject()
+function New-JobSchedulerOrderObject
 {
-    $job = New-Object PSObject
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
 
-    $job | Add-Member -Membertype NoteProperty -Name Job -Value ''
-    $job | Add-Member -Membertype NoteProperty -Name Path -Value ''
-    $job | Add-Member -Membertype NoteProperty -Name Directory -Value ''
-    $job | Add-Member -Membertype NoteProperty -Name Volatile -Value ''
-    $job | Add-Member -Membertype NoteProperty -Name Permanent -Value ''
-    $job | Add-Member -Membertype NoteProperty -Name Tasks -Value @()
-    $job | Add-Member -Membertype NoteProperty -Name TaskHistory -Value @()
+    if ( $PSCmdlet.ShouldProcess( 'Order' ) )
+    {
+        $order = New-Object PSObject
 
-    $job
+        $order | Add-Member -Membertype NoteProperty -Name OrderId -Value ''
+        $order | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
+        $order | Add-Member -Membertype NoteProperty -Name Path -Value ''
+        $order | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+        $order | Add-Member -Membertype NoteProperty -Name Volatile -Value ''
+        $order | Add-Member -Membertype NoteProperty -Name Permanent -Value ''
+        $order | Add-Member -Membertype NoteProperty -Name OrderHistory -Value @()
+
+        $order
+    }
 }
 
-function Create-EventObject()
+function New-JobSchedulerJobObject
 {
-    $event = New-Object PSObject
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
 
-    $event | Add-Member -Membertype NoteProperty -Name EventClass -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name EventId -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name ExitCode -Value 0
-    $event | Add-Member -Membertype NoteProperty -Name Job -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name Order -Value ''
-   #$event | Add-Member -Membertype NoteProperty -Name MasterUrl -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name ExpirationDate -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name ExpirationCycle -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name ExpirationPeriod -Value ''
-    $event | Add-Member -Membertype NoteProperty -Name Created -Value ''
+    if ( $PSCmdlet.ShouldProcess( 'Job' ) )
+    {
+        $job = New-Object PSObject
 
-    $event
+        $job | Add-Member -Membertype NoteProperty -Name Job -Value ''
+        $job | Add-Member -Membertype NoteProperty -Name Path -Value ''
+        $job | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+        $job | Add-Member -Membertype NoteProperty -Name Volatile -Value ''
+        $job | Add-Member -Membertype NoteProperty -Name Permanent -Value ''
+        $job | Add-Member -Membertype NoteProperty -Name Tasks -Value @()
+        $job | Add-Member -Membertype NoteProperty -Name TaskHistory -Value @()
+
+        $job
+    }
 }
 
-function Create-JSAgentObject()
+function New-JobSchedulerEventObject
 {
-    $jsAgent = New-Object PSObject
-    $jsAgentInstall = New-Object PSObject
-    $jsAgentConfig = New-Object PSObject
-    $jsAgentService = New-Object PSObject
-    
-    $jsAgent | Add-Member -Membertype NoteProperty -Name Url -Value ''
-    $jsAgent | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
-    $jsAgent | Add-Member -Membertype NoteProperty -Name Local -Value $false
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
 
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name HttpPort -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name HttpsPort -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name LogDirectory -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name PidFileDirectory -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name WorkingDirectory -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name KillScript -Value ''
-    $jsAgentInstall | Add-Member -Membertype NoteProperty -Name InstanceScript -Value ''
+    if ( $PSCmdlet.ShouldProcess( 'Event' ) )
+    {
+        $jsEvent = New-Object PSObject
 
-    $jsAgentConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name EventClass -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name EventId -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name ExitCode -Value 0
+        $jsEvent | Add-Member -Membertype NoteProperty -Name Job -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name JobChain -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name Order -Value ''
+        # $jsEvent | Add-Member -Membertype NoteProperty -Name MasterUrl -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name ExpirationDate -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name ExpirationCycle -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name ExpirationPeriod -Value ''
+        $jsEvent | Add-Member -Membertype NoteProperty -Name Created -Value ''
 
-    $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ''
-    $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ''
-    $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceDescription -Value ''
-
-    $jsAgent | Add-Member -Membertype NoteProperty -Name Install -Value $jsAgentInstall
-    $jsAgent | Add-Member -Membertype NoteProperty -Name Config -Value $jsAgentConfig
-    $jsAgent | Add-Member -Membertype NoteProperty -Name Service -Value $jsAgentService
-
-    $jsAgent
+        $jsEvent
+    }
 }
 
-function Create-WebServiceObject()
+function New-JobSchedulerAgenObject
 {
-    $jsWebService = New-Object PSObject
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
 
-    $jsWebService | Add-Member -Membertype NoteProperty -Name Url -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name Base -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name Timeout -Value $script:jsOptionWebRequestTimeout
-    $jsWebService | Add-Member -Membertype NoteProperty -Name SkipCertificateCheck -Value $false
-    $jsWebService | Add-Member -Membertype NoteProperty -Name SSLProtocol -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name Certificate -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name JobSchedulerId -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name AccessToken -Value ''
-    $jsWebService | Add-Member -Membertype NoteProperty -Name Masters -Value @()
+    if ( $PSCmdlet.ShouldProcess( 'Agent' ) )
+    {
+        $jsAgent = New-Object PSObject
+        $jsAgentInstall = New-Object PSObject
+        $jsAgentConfig = New-Object PSObject
+        $jsAgentService = New-Object PSObject
 
-    $jsWebService
+        $jsAgent | Add-Member -Membertype NoteProperty -Name Url -Value ''
+        $jsAgent | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
+        $jsAgent | Add-Member -Membertype NoteProperty -Name Local -Value $false
+
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name ExecutableFile -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name Params -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name StartParams -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name HttpPort -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name HttpsPort -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name LogDirectory -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name PidFileDirectory -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name WorkingDirectory -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name KillScript -Value ''
+        $jsAgentInstall | Add-Member -Membertype NoteProperty -Name InstanceScript -Value ''
+
+        $jsAgentConfig | Add-Member -Membertype NoteProperty -Name Directory -Value ''
+
+        $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceName -Value ''
+        $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceDisplayName -Value ''
+        $jsAgentService | Add-Member -Membertype NoteProperty -Name ServiceDescription -Value ''
+
+        $jsAgent | Add-Member -Membertype NoteProperty -Name Install -Value $jsAgentInstall
+        $jsAgent | Add-Member -Membertype NoteProperty -Name Config -Value $jsAgentConfig
+        $jsAgent | Add-Member -Membertype NoteProperty -Name Service -Value $jsAgentService
+
+        $jsAgent
+    }
+}
+
+function New-JobSchedulerWebServiceObject
+{
+[cmdletbinding(SupportsShouldProcess)]
+param
+()
+
+    if ( $PSCmdlet.ShouldProcess( 'WebService' ) )
+    {
+        $jsWebService = New-Object PSObject
+
+        $jsWebService | Add-Member -Membertype NoteProperty -Name Url -Value ''
+        $jsWebService | Add-Member -Membertype NoteProperty -Name ProxyUrl -Value ''
+        $jsWebService | Add-Member -Membertype NoteProperty -Name Base -Value ''
+        $jsWebService | Add-Member -Membertype NoteProperty -Name Timeout -Value $script:jsOptionWebRequestTimeout
+        $jsWebService | Add-Member -Membertype NoteProperty -Name SkipCertificateCheck -Value $false
+        $jsWebService | Add-Member -Membertype NoteProperty -Name SSLProtocol -Value ''
+        $jsWebService | Add-Member -Membertype NoteProperty -Name Certificate -Value ''
+        $jsWebService | Add-Member -Membertype NoteProperty -Name JobSchedulerId -Value ''
+        $jsWebService | Add-Member -Membertype NoteProperty -Name AccessToken -Value ''
+        $jsWebService | Add-Member -Membertype NoteProperty -Name Masters -Value @()
+
+        $jsWebService
+    }
 }
 
 function isPowerShellVersion( [int] $Major=-1, [int] $Minor=-1, [int] $Patch=-1 )
 {
     $rc = $false
-    
+
     if ( $Major -gt -1 )
     {
         if ( $PSVersionTable.PSVersion.Major -eq $Major )
@@ -541,27 +605,27 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
     $Headers.Add( 'Content-Type', $ContentType )
     $Headers.Add( 'X-Access-Token', $script:jsWebService.AccessToken )
     $requestParams.Add( 'Headers', $Headers )
-    
+
     if ( isPowerShellVersion 6 )
     {
         $requestParams.Add( 'AllowUnencryptedAuthentication', $true )
     }
-        
+
     if ( isPowerShellVersion 7 )
     {
         $requestParams.Add( 'SkipHttpErrorCheck', $true )
     }
-        
+
     if ( $script:jsWebService.Timeout )
     {
         $requestParams.Add( 'TimeoutSec', $script:jsWebService.Timeout )
     }
-    
+
     if ( $script:jsWebService.SkipCertificateCheck )
     {
         $requestParams.Add( 'SkipCertificateCheck', $true )
     }
-    
+
     if ( $script:jsWebService.SSLProtocol )
     {
         $requestParams.Add( 'SSLProtocol', $script:jsWebService.SSLProtocol )
@@ -577,23 +641,23 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
         $requestParams.Add( 'Body', $Body )
     }
 
-    try 
+    try
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service $($requestUrl)"
         Write-Debug ".... Invoke-WebRequest:"
-        
-        $requestParams.Keys | % {
+
+        $requestParams.Keys | ForEach-Object {
             if ( $_ -eq 'Headers' )
             {
                 $item = $_
-                $requestParams.Item($_).Keys | % {
+                $requestParams.Item($_).Keys | ForEach-Object {
                     Write-Debug "...... Header: $_ : $($requestParams.Item($item).Item($_))"
                 }
             } else {
                 Write-Debug "...... Argument: $_  $($requestParams.Item($_))"
             }
         }
-        
+
         if ( isPowerShellVersion 7 )
         {
             $response = Invoke-WebRequest @requestParams
@@ -621,7 +685,7 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
     }
 }
 
-function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $IgnoreResponse, [string] $Path='/jobscheduler/commands', [Uri] $Uri, $Method='POST', $ContentType='application/xml', [hashtable] $Headers=@{'Accept' = 'application/xml'} ) 
+function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $IgnoreResponse, [string] $Path='/jobscheduler/commands', [Uri] $Uri, $Method='POST', $ContentType='application/xml', [hashtable] $Headers=@{'Accept' = 'application/xml'} )
 {
     $xmlDoc = [xml] $command
     if ($xmlDoc.commands)
@@ -650,26 +714,26 @@ function Invoke-JobSchedulerWebRequestXmlCommand( [string] $Command, [switch] $I
     if ( $response.StatusCode -ne 200 )
     {
         throw ( $response | Format-List -Force | Out-String )
-    }    
+    }
 
     if ( $IgnoreResponse )
     {
         return $response
     }
-    
+
     if ( $response.Headers.'Content-Type' -eq 'application/xml' )
     {
         try
         {
             $answer = Select-XML -Content $response.Content -Xpath '/spooler/answer'
-            if ( !$answer ) 
+            if ( !$answer )
             {
                 throw 'missing answer element /spooler/answer in response'
             }
         } catch {
             throw 'not a valid JobScheduler XML response: ' + $_.Exception.Message
         }
-    
+
         $errorText = Select-XML -Content $response.Content -Xpath '/spooler/answer/ERROR/@text'
         if ( $errorText.Node."#text" )
         {
@@ -696,7 +760,7 @@ function Get-DirectoryName( [string] $path )
     } elseif ( $path.LastIndexOf('/') -ge 0 ) {
         $path = $path.Substring( $path.LastIndexOf('/')+1 )
     }
-    
+
     $path
 }
 
@@ -727,7 +791,7 @@ function Get-JobSchedulerObject-CanonicalPath( [string] $objectPath )
     {
         $objectPath = $objectPath.Substring( 0, $objectPath.LastIndexOf('/') )
     }
-    
+
     $objectPath = ([string] $spooler.configuration_directory()) + $objectPath
 
     $objectPath
@@ -771,24 +835,52 @@ param
         if($_ -match "^(.*?)=(.*)$")
         {
 #           Set-Content "env:\$($matches[1])" $matches[2]
-            $SCRIPT:jsEnv["$($matches[1])"] = $matches[2]
+            $script:jsEnv["$($matches[1])"] = $matches[2]
         }
     }
 
     Remove-Item $tempFile
 }
 
-function Create-ParamNode( [xml] $xmlDoc, [string] $name, [string] $value )
+function New-JobSchedulerParamNode
 {
-    $paramNode = $xmlDoc.CreateElement( 'param' )
-    $paramNode.SetAttribute( 'name', $name )
-    $paramNode.SetAttribute( 'value', $value )
-        
-    $paramNode
+[cmdletbinding(SupportsShouldProcess)]
+param
+(
+    [Parameter(Mandatory = $true)]
+    [xml] $XmlDoc,
+    [string] $Name,
+    [string] $Value
+)
+
+    if ( $PSCmdlet.ShouldProcess( 'ParamNode' ) )
+    {
+        $paramNode = $XmlDoc.CreateElement( 'param' )
+        $paramNode.SetAttribute( 'name', $Name )
+        $paramNode.SetAttribute( 'value', $Value )
+
+        $paramNode
+    }
 }
 
-function Create-AgentInstanceScript( $SchedulerHome, $SchedulerData, $HttpPort='127.0.0.1:4445', $HttpsPort, $LogDirectory, $PidFileDirectory, $WorkingDirectory, $KillScript, $JavaHome, $JavaOptions )
+function New-JobSchedulerAgentInstanceScript
 {
+[cmdletbinding(SupportsShouldProcess)]
+param
+(
+    [Parameter(Mandatory = $false)]
+    [string] $SchedulerHome,
+    [string] $SchedulerData,
+    [string] $HttpPort='127.0.0.1:4445',
+    [string] $HttpsPort,
+    [string] $LogDirectory,
+    [string] $PidFileDirectory,
+    [string] $WorkingDirectory,
+    [string] $KillScript,
+    [string] $JavaHome,
+    [string] $JavaOptions
+)
+
     $script = "
 @echo off
 
@@ -801,15 +893,15 @@ SETLOCAL
 
 rem ### USAGE OF THIS FILE ####################################
 rem #
-rem # This is a template for the JobScheduler Agent Instance 
-rem # script. 
+rem # This is a template for the JobScheduler Agent Instance
+rem # script.
 rem # It can be used as service startscript.
 rem #
 rem # Each instance of the JobScheduler Agent must have a
-rem # different HTTP port. For example if the port 4445 
+rem # different HTTP port. For example if the port 4445
 rem # is used for the instance then copy this file
-rem # 
-rem # '.\bin\jobscheduler_agent_instance.cmd-example' 
+rem #
+rem # '.\bin\jobscheduler_agent_instance.cmd-example'
 rem # -> '.\bin\jobscheduler_agent_4445.cmd'
 rem #
 rem # and set the SCHEDULER_HTTP_PORT variable below.
@@ -820,9 +912,9 @@ rem ###########################################################
 
 rem ### SETTINGS ##############################################
 
-rem # This variable has to point to the installation path of 
+rem # This variable has to point to the installation path of
 rem # the JobScheduler Agent.
-rem # If this variable not defined then the parent directory 
+rem # If this variable not defined then the parent directory
 rem # of this startscript is used.
 
 "
@@ -841,22 +933,22 @@ rem set SCHEDULER_HOME=
 
 rem # The http port of the JobScheduler Agent can be set here,
 rem # as command line option -http-port (see usage) or as
-rem # environment variable. Otherwise the above default port 
+rem # environment variable. Otherwise the above default port
 rem # is used.
-rem # If only a port is specified then the JobScheduler Agent 
+rem # If only a port is specified then the JobScheduler Agent
 rem # listens to all available network interfaces.
 rem # It is the same like 0.0.0.0:port.
-rem # Use the form <ip address or hostname>:port for indicating 
-rem # which network interfaces the JobScheduler Agent should 
+rem # Use the form <ip address or hostname>:port for indicating
+rem # which network interfaces the JobScheduler Agent should
 rem # listen to.
-rem # The command line option -http-port beats the environment 
-rem # variable SCHEDULER_HTTP_PORT and the environment variable 
-rem # SCHEDULER_HTTP_PORT beats the default port from 
+rem # The command line option -http-port beats the environment
+rem # variable SCHEDULER_HTTP_PORT and the environment variable
+rem # SCHEDULER_HTTP_PORT beats the default port from
 rem # SCHEDULER_AGENT_DEFAULT_HTTP_PORT(=4445).
 rem ### NOTE:
-rem # If you start the JobScheduler Agent with the command line 
-rem # option -http-port then you must enter -http-port for 
-rem # stop, status, restart too (see usage). It's recommended 
+rem # If you start the JobScheduler Agent with the command line
+rem # option -http-port then you must enter -http-port for
+rem # stop, status, restart too (see usage). It's recommended
 rem # to set this environment variable instead.
 
 "
@@ -869,21 +961,21 @@ set SCHEDULER_HTTP_PORT=$($HttpPort)
     } else {
         $script += "
 rem set SCHEDULER_HTTP_PORT=
-"        
+"
     }
 
     $script += "
 
-rem # In addition to the http port a https port of the 
-rem # JobScheduler Agent can be set here, as command line option 
+rem # In addition to the http port a https port of the
+rem # JobScheduler Agent can be set here, as command line option
 rem # -https-port (see usage) or as environment variable.
-rem # If only a port is specified then the JobScheduler Agent 
+rem # If only a port is specified then the JobScheduler Agent
 rem # listens to all available network interfaces.
 rem # It is the same like 0.0.0.0:port.
-rem # Use the form <ip address or hostname>:port for indicating 
-rem # which network interfaces the JobScheduler Agent should 
+rem # Use the form <ip address or hostname>:port for indicating
+rem # which network interfaces the JobScheduler Agent should
 rem # listen to.
-rem # The command line option -https-port beats the environment 
+rem # The command line option -https-port beats the environment
 rem # variable SCHEDULER_HTTPS_PORT.
 
 "
@@ -896,17 +988,17 @@ set SCHEDULER_HTTPS_PORT=$($HttpsPort)
     } else {
         $script += "
 rem set SCHEDULER_HTTPS_PORT=
-"        
+"
     }
 
     $script += "
 
 rem # Set the directory where the JobScheduler Agent has the
-rem # configuration, logs, etc. 
-rem # This directory must be unique for each instance of the 
+rem # configuration, logs, etc.
+rem # This directory must be unique for each instance of the
 rem # JobScheduler Agent. The default is
 rem # SCHEDULER_HOME\var_SCHEDULER_HTTP_PORT
-rem # Make sure that the JobScheduler Agent user has read/write 
+rem # Make sure that the JobScheduler Agent user has read/write
 rem # permissions
 
 "
@@ -923,11 +1015,11 @@ rem set SCHEDULER_DATA=
     }
 
     $script += "
- 
-rem # Set the directory where the JobScheduler Agent log file 
+
+rem # Set the directory where the JobScheduler Agent log file
 rem # is created. The default is SCHEDULER_DATA\logs
 rem ### NOTE:
-rem # Make sure that the JobScheduler Agent user has write 
+rem # Make sure that the JobScheduler Agent user has write
 rem # permissions
 
 "
@@ -945,10 +1037,10 @@ rem set SCHEDULER_LOG_DIR=
 
     $script += "
 
-rem # Set the directory where the JobScheduler Agent pid file 
+rem # Set the directory where the JobScheduler Agent pid file
 rem # is created. The default is SCHEDULER_LOG_DIR
 rem ### NOTE:
-rem # Make sure that the JobScheduler Agent user has write 
+rem # Make sure that the JobScheduler Agent user has write
 rem # permissions
 
 "
@@ -966,8 +1058,8 @@ rem set SCHEDULER_PID_FILE_DIR=
 
     $script += "
 
-rem # The working directory of the JobScheduler Agent is  
-rem # SCHEDULER_HOME. Here you can set a different working 
+rem # The working directory of the JobScheduler Agent is
+rem # SCHEDULER_HOME. Here you can set a different working
 rem # directory (e.g. %USERPROFILE%).
 
 "
@@ -985,7 +1077,7 @@ rem set SCHEDULER_WORK_DIR=
 
     $script += "
 
-rem # Set the location of a script which is called by the 
+rem # Set the location of a script which is called by the
 rem # JobScheduler Agent to kill a process and it's children.
 
 "
@@ -1003,8 +1095,8 @@ rem set SCHEDULER_KILL_SCRIPT=
 
     $script += "
 
-rem # Actually JAVA_HOME is already set. If you want to use 
-rem # another Java environment then you can set it here. If  
+rem # Actually JAVA_HOME is already set. If you want to use
+rem # another Java environment then you can set it here. If
 rem # no JAVA_HOME is set then the Java from the path is used.
 
 "
@@ -1022,11 +1114,11 @@ rem set JAVA_HOME=
 
     $script += "
 
-rem # With Java 1.8 the initial memory allocation has changed, 
+rem # With Java 1.8 the initial memory allocation has changed,
 rem # for details see https://kb.sos-berlin.com/x/aIC9
-rem # As a result on start-up of the JobScheduler Agent an 
-rem # excessive amount of virtual memory is assigned by Java.  
-rem # The environment variable JAVA_OPTIONS can use to apply 
+rem # As a result on start-up of the JobScheduler Agent an
+rem # excessive amount of virtual memory is assigned by Java.
+rem # The environment variable JAVA_OPTIONS can use to apply
 rem # memory settings such as '-Xms100m' (default).
 
 "
@@ -1052,7 +1144,10 @@ if not defined SCHEDULER_HOME set SCHEDULER_HOME=%~dp0..
 
 ENDLOCAL
 '
-    $script
+    if ( $PSCmdlet.ShouldProcess( 'Script' ) )
+    {
+        $script
+    }
 }
 
 function Get-JobSchedulerJobConfiguration( [string] $Job, [string] $Mime='XML' )
@@ -1064,14 +1159,14 @@ function Get-JobSchedulerJobConfiguration( [string] $Job, [string] $Mime='XML' )
 
     [string] $requestBody = $body | ConvertTo-Json -Depth 100
     $response = Invoke-JobSchedulerWebRequest -Path '/job/configuration' -Body $requestBody
-    
+
     if ( $response.StatusCode -eq 200 )
     {
         $configuration = ( $response.Content | ConvertFrom-JSON ).configuration.content.xml
     } else {
         throw ( $response | Format-List -Force | Out-String )
     }
-    
+
     $configuration
 }
 
@@ -1084,14 +1179,14 @@ function Get-JobSchedulerJobChainConfiguration( [string] $JobChain, [string] $Mi
 
     [string] $requestBody = $body | ConvertTo-Json -Depth 100
     $response = Invoke-JobSchedulerWebRequest -Path '/job_chain/configuration' -Body $requestBody
-    
+
     if ( $response.StatusCode -eq 200 )
     {
         $configuration = ( $response.Content | ConvertFrom-JSON ).configuration.content.xml
     } else {
         throw ( $response | Format-List -Force | Out-String )
     }
-    
+
     $configuration
 }
 
@@ -1105,14 +1200,14 @@ function Get-JobSchedulerOrderConfiguration( [string] $OrderId, [string] $JobCha
 
     [string] $requestBody = $body | ConvertTo-Json -Depth 100
     $response = Invoke-JobSchedulerWebRequest -Path '/order/configuration' -Body $requestBody
-    
+
     if ( $response.StatusCode -eq 200 )
     {
         $configuration = ( $response.Content | ConvertFrom-JSON ).configuration.content.xml
     } else {
         throw ( $response | Format-List -Force | Out-String )
     }
-    
+
     $configuration
 }
 
@@ -1125,14 +1220,14 @@ function Get-JobSchedulerLockConfiguration( [string] $Lock, [string] $Mime='XML'
 
     [string] $requestBody = $body | ConvertTo-Json -Depth 100
     $response = Invoke-JobSchedulerWebRequest -Path '/lock/configuration' -Body $requestBody
-    
+
     if ( $response.StatusCode -eq 200 )
     {
         $configuration = ( $response.Content | ConvertFrom-JSON ).configuration.content.xml
     } else {
         throw ( $response | Format-List -Force | Out-String )
     }
-    
+
     $configuration
 }
 
@@ -1144,15 +1239,15 @@ param
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Path,
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $OutputDirectory,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $BaseFolder,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $DefaultAgentName,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $ForcedAgentName,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [hashtable] $MappedAgentNames
+    [string] $OutputDirectory
+#    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+#    [string] $BaseFolder,
+#    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+#    [string] $DefaultAgentName,
+#    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+#    [string] $ForcedAgentName,
+#    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+#    [hashtable] $MappedAgentNames
 )
 
     Begin
@@ -1167,7 +1262,22 @@ param
 
     End
     {
+                if ( $jobFolder -eq '/' )
+                {
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
+                } else {
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($jobFolder)".Replace( '\', '/' )
+                }
 
+                if ( !(Test-Path -Path $outputFolder) )
+                {
+                    New-Item -Path $outputFolder -ItemType Directory | Out-Null
+                }
+
+                Write-Debug ".... writing job stream: $($outputFolder)/$($jobName).jobstream.json"
+
+                $jsonJobStream = $objJobSream | ConvertTo-Json -Depth 100
+                $jsonJobStream | Out-File "$($outputFolder)/$($jobName).jobstream.json"
     }
 }
 
@@ -1199,6 +1309,7 @@ param
     Begin
     {
         $jobs = @()
+        Write-Debug "prefixOrders: $PrefixOrders"
     }
 
     Process
@@ -1213,18 +1324,18 @@ param
             try
             {
                 Write-Verbose ".... processing job: $job"
-    
+
                 $jobName = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetFileName( $job ))
                 $jobFolder = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetDirectoryName( $job ).Replace( '\', '/' ))
                 $objectFolder = $jobFolder
-                
+
                 if ( $BaseFolder )
                 {
                     $jobFolder = "$($BaseFolder)$($jobFolder)"
                 }
-    
+
                 [xml] $xmlJob = Get-JobSchedulerJobConfiguration -Job $job
-    
+
 # ---------- Begin: Create Workflow ----------
                 $workflowInstructions = @()
                 $objWorkflowJobs = New-Object PSObject
@@ -1234,18 +1345,18 @@ param
                 Add-Member -Membertype NoteProperty -Name 'TYPE' -value "Execute.Named" -InputObject $objWorkflowInstruction
                 Add-Member -Membertype NoteProperty -Name 'jobName' -value $jobName -InputObject $objWorkflowInstruction
                 Add-Member -Membertype NoteProperty -Name 'label' -value $jobName -InputObject $objWorkflowInstruction
-    
+
                 $objWorkflowDefaultArguments = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'defaultArguments' -value $objWorkflowDefaultArguments -InputObject $objWorkflowInstruction
-                
+
         # ---------- Begin: Create Workflow Job ----------
                 $objWorkflowJobProperties = New-Object PSObject
-                
+
                 if ( $xmlJob.job.title )
                 {
                     Add-Member -Membertype NoteProperty -Name 'title' -value $xmlJob.job.title -InputObject $objWorkflowJobProperties
                 }
-                
+
                 if ( $ForcedAgentName )
                 {
                     $agentId = $ForcedAgentName
@@ -1254,8 +1365,8 @@ param
                 } else {
                     $agentId = $DefaultAgentName
                 }
-                
-                if ( $MappedAgentNames -and ($item = $MappedAgentNames.Item( $agentId ) ) ) 
+
+                if ( $MappedAgentNames -and ($item = $MappedAgentNames.Item( $agentId ) ) )
                 {
                     $agentId = $item.AgentName
                 }
@@ -1267,15 +1378,15 @@ param
 
                     $scriptCode = Get-JobSchedulerXmlScriptInclude -IncludeNodes $xmlJob.job.script.include -ObjectFolder $objectFolder
                     Add-Member -Membertype NoteProperty -Name 'script' -value ($scriptCode + $xmlJob.job.script."#cdata-section") -InputObject $objWorkflowJobExecutable
-                                        
+
                 Add-Member -Membertype NoteProperty -Name 'executable' -value $objWorkflowJobExecutable -InputObject $objWorkflowJobProperties
-    
+
                     $objWorkflowJobReturnCode = New-Object PSObject
                     $returnCodeMeaningSuccess = @( 0 )
                     Add-Member -Membertype NoteProperty -Name 'success' -value $returnCodeMeaningSuccess -InputObject $objWorkflowJobReturnCode
-    
+
                 Add-Member -Membertype NoteProperty -Name 'returnCodeMeaning' -value $objWorkflowJobReturnCode -InputObject $objWorkflowJobProperties
-    
+
                 if ( $xmlJob.job.tasks )
                 {
                     Add-Member -Membertype NoteProperty -Name 'taskLimit' -value $xmlJob.job.tasks -InputObject $objWorkflowJobProperties
@@ -1287,7 +1398,7 @@ param
                 $objWorkflowJobDefaultArguments = New-Object PSObject
 
                 # ---------- Begin: Create Job Arguments from <job><params><include> elements ----------
-                $xmlArguments = Get-JobSchedulerXmlParamsInclude -IncludeNodes $xmlJob.job.params.include -ObjectFolder $objectFolder                        
+                $xmlArguments = Get-JobSchedulerXmlParamsInclude -IncludeNodes $xmlJob.job.params.include -ObjectFolder $objectFolder
                 foreach( $argumentNode in $xmlArguments.params.param )
                 {
                     Add-Member -Membertype NoteProperty -Name $argumentNode.name -value $argumentNode.value -InputObject $objWorkflowJobDefaultArguments -Force
@@ -1301,50 +1412,50 @@ param
                     Add-Member -Membertype NoteProperty -Name $argumentNode.name -value $argumentNode.value -InputObject $objWorkflowJobDefaultArguments -Force
                 }
                 # ---------- Begin: Create Job Arguments from <job><params><param> elements ----------
-                
+
                 Add-Member -Membertype NoteProperty -Name 'defaultArguments' -value $objWorkflowJobDefaultArguments -InputObject $objWorkflowJobProperties
             # ---------- End: Create the Job Arguments ----------
 
                 $workflowInstructions += $objWorkflowInstruction
                 Add-Member -Membertype NoteProperty -Name $jobName -value $objWorkflowJobProperties -InputObject $objWorkflowJobs
         # ---------- End: Create Workflow Job ----------
-                
+
         # ---------- Begin: Create Workflow Retry ----------
                 if ( $xmlJob.job.delay_after_error )
                 {
                     Write-Debug "...... delay_after_error found"
-        
+
                     $objTryInstruction = New-Object PSObject
                     Add-Member -Membertype NoteProperty -Name 'instructions' -value $workflowInstructions -InputObject $objTryInstruction
-        
+
                     $objRetryInstruction = New-Object PSObject
-                    Add-Member -Membertype NoteProperty -Name 'TYPE' -value 'Retry' -InputObject $objRetryInstruction                        
-        
+                    Add-Member -Membertype NoteProperty -Name 'TYPE' -value 'Retry' -InputObject $objRetryInstruction
+
                     $objCatchInstruction = New-Object PSObject
                     Add-Member -Membertype NoteProperty -Name 'instructions' -value @( $objRetryInstruction ) -InputObject $objCatchInstruction
-                    
+
                     $objWorkflowInstruction = New-Object PSObject
                     Add-Member -Membertype NoteProperty -Name 'TYPE' -value 'Try' -InputObject $objWorkflowInstruction
                     Add-Member -Membertype NoteProperty -Name 'try' -value $objTryInstruction -InputObject $objWorkflowInstruction
-                    Add-Member -Membertype NoteProperty -Name 'catch' -value $objCatchInstruction -InputObject $objWorkflowInstruction                        
-                    
+                    Add-Member -Membertype NoteProperty -Name 'catch' -value $objCatchInstruction -InputObject $objWorkflowInstruction
+
                     if ( $errorCount = ( $xmlJob.job.delay_after_error | Where-Object -Property 'delay' -match -value 'STOP' ).error_count )
                     {
-                        Add-Member -Membertype NoteProperty -Name 'maxTries' -value $errorCount -InputObject $objWorkflowInstruction                        
+                        Add-Member -Membertype NoteProperty -Name 'maxTries' -value $errorCount -InputObject $objWorkflowInstruction
                     }
-                    
+
                     $lastDelay = 1
                     $lastErrorCount = 1
                     $errorDelays = @()
-                    $errors = ( $xmlJob.job.delay_after_error | Sort-Object -Property @{expression={$_.error_count -as [int]}} ) 
-        
+                    $errors = ( $xmlJob.job.delay_after_error | Sort-Object -Property @{expression={$_.error_count -as [int]}} )
+
                     foreach( $error in $errors )
                     {
                         for( $i=$lastErrorCount+1; $i -lt ($error.error_count -as [int]); $i++ )
                         {
                             $errorDelays += $lastDelay
                         }
-                        
+
                         if ( $error.delay -and $error.delay -ne 'STOP' )
                         {
                             if ( ([regex]::Matches($error.delay, ':' )).count -eq 0 )
@@ -1353,16 +1464,16 @@ param
                             } elseif ( ([regex]::Matches($error.delay, ':' )).count -eq 1 ) {
                                 $error.delay = "00:$($error.delay):00"
                             }
-        
+
                             $delay = [TimeSpan]::Parse( $error.delay )
                             $errorDelays += [int] $delay.TotalSeconds
                             $lastErrorCount = ( $error.error_count -as [int] )
                             $lastDelay = [int] $delay.TotalSeconds
                         }
                     }
-                    
-                    Add-Member -Membertype NoteProperty -Name 'retryDelays' -value $errorDelays -InputObject $objWorkflowInstruction                        
-                    
+
+                    Add-Member -Membertype NoteProperty -Name 'retryDelays' -value $errorDelays -InputObject $objWorkflowInstruction
+
                     Write-Debug "...... adding instruction for retry"
                     $WorkflowInstructions = @( $objWorkflowInstruction )
                 }
@@ -1373,22 +1484,22 @@ param
                 Add-Member -Membertype NoteProperty -Name 'instructions' -value $workflowInstructions -InputObject $objWorkflow
                 Add-Member -Membertype NoteProperty -Name 'jobs' -value $objWorkflowJobs -InputObject $objWorkflow
 # ---------- End: Create Workflow ----------
-        
+
                 if ( $jobFolder -eq '/' )
                 {
                     $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
                 } else {
-                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($jobFolder)".Replace( '\', '/' )            
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($jobFolder)".Replace( '\', '/' )
                 }
 
                 if ( !(Test-Path -Path $outputFolder) )
                 {
                     New-Item -Path $outputFolder -ItemType Directory | Out-Null
                 }
-            
+
                 Write-Debug ".... writing workflow: $($outputFolder)/$($jobName).workflow.json"
-        
-                $jsonWorkflow = $objWorkflow | ConvertTo-Json -Depth 100        
+
+                $jsonWorkflow = $objWorkflow | ConvertTo-Json -Depth 100
                 $jsonWorkflow | Out-File "$($outputFolder)/$($jobName).workflow.json"
 
 
@@ -1398,21 +1509,21 @@ param
 
                 Write-Verbose ".... processing schedule $scheduleName for job: $jobName in folder: $scheduleFolder"
                 $objSchedule = New-Object PSObject
-                
+
                 if ( $scheduleFolder -eq '/' )
                 {
                     Add-Member -Membertype NoteProperty -Name 'path' -value "$($scheduleName)" -InputObject $objSchedule
                 } else {
-                    Add-Member -Membertype NoteProperty -Name 'path' -value "$($scheduleFolder)$($scheduleName)" -InputObject $objSchedule                    
+                    Add-Member -Membertype NoteProperty -Name 'path' -value "$($scheduleFolder)$($scheduleName)" -InputObject $objSchedule
                 }
-                
+
                 if ( $jobFolder -eq '/' )
                 {
                     Add-Member -Membertype NoteProperty -Name 'workflowPath' -value "$($jobName)" -InputObject $objSchedule
                 } else {
-                    Add-Member -Membertype NoteProperty -Name 'workflowPath' -value "$($jobFolder)$($jobName)" -InputObject $objSchedule                    
+                    Add-Member -Membertype NoteProperty -Name 'workflowPath' -value "$($jobFolder)$($jobName)" -InputObject $objSchedule
                 }
-                
+
                 if ( $xmlJob.job.title )
                 {
                     Add-Member -Membertype NoteProperty -Name 'title' -value $xmlJob.job.title -InputObject $objSchedule
@@ -1423,7 +1534,7 @@ param
 
                 $workingDayCalendars = @()
                 $nonWorkingDayCalendars = @()
-                
+
                 if ( $xmlJob.job.run_time.calendars )
                 {
                     if ( isPowerShellVersion 6 )
@@ -1432,7 +1543,7 @@ param
                     } else {
                         $jsonCalendars = $xmlJob.job.run_time.calendars."#cdata-section" | ConvertFrom-Json
                     }
-    
+
                     if ( $jsonCalendars )
                     {
                         foreach( $calendar in $jsonCalendars.calendars )
@@ -1442,7 +1553,7 @@ param
                                 if ( $period.whenHoliday )
                                 {
                                     if ( $period.whenHoliday -eq 'suppress' )
-                                    {                                
+                                    {
                                         $period.whenHoliday = 'SUPPRESS'
                                     } elseif ( $period.whenHoliday -eq 'next_non_holiday' ) {
                                         $period.whenHoliday = 'NEXTNONWORKINGDAY'
@@ -1453,27 +1564,27 @@ param
                                     }
                                 }
                             }
-                            
+
                             $objCalendar = New-Object PSObject
-                            
+
                             if ( $BaseFolder )
                             {
                                 Add-Member -Membertype NoteProperty -Name 'calendarPath' -value ($BaseFolder + (Get-NormalizedObjectName -ObjectName $calendar.basedOn)) -InputObject $objCalendar
                             } else {
                                 Add-Member -Membertype NoteProperty -Name 'calendarPath' -value (Get-NormalizedObjectName -ObjectName $calendar.basedOn) -InputObject $objCalendar
                             }
-                            
+
                             Add-Member -Membertype NoteProperty -Name 'timeZone' -value $xmlOrder.order.run_time.time_zone -InputObject $objCalendar
                             Add-Member -Membertype NoteProperty -Name 'periods' -value $calendar.periods -InputObject $objCalendar
                             Add-Member -Membertype NoteProperty -Name 'includes' -value $calendar.includes -InputObject $objCalendar
-                            
+
                             if ( $calendar.type -eq 'WORKING_DAYS' )
                             {
                                 $workingDayCalendars += $objCalendar
                             } else {
-                                $nonWorkingDayCalendars += $objCalendar                            
+                                $nonWorkingDayCalendars += $objCalendar
                             }
-                        }                    
+                        }
                     }
                 }
 
@@ -1485,17 +1596,17 @@ param
                 {
                     $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
                 } else {
-                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($scheduleFolder)".Replace( '\', '/' )            
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($scheduleFolder)".Replace( '\', '/' )
                 }
-    
+
                 if ( !(Test-Path -Path $outputFolder) )
                 {
                     New-Item -Path $outputFolder -ItemType Directory | Out-Null
                 }
-            
+
                 Write-Debug ".... writing schedule: $($outputFolder)/$($scheduleName).schedule.json"
-        
-                $jsonSchedule = $objSchedule | ConvertTo-Json -Depth 100        
+
+                $jsonSchedule = $objSchedule | ConvertTo-Json -Depth 100
                 $jsonSchedule | Out-File "$($outputFolder)/$($scheduleName).schedule.json"
             } catch {
                 $message = $_.Exception | Format-List -Force | Out-String
@@ -1541,21 +1652,20 @@ param
             try
             {
                 Write-Verbose ".... processing job chain: $jobChain"
-    
-                $jobChainName = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetFileName( $jobChain ))                
-                $jobChainFolder = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetDirectoryName( $jobChain ).Replace( '\', '/' ))                    
+
+                $jobChainName = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetFileName( $jobChain ))
+                $jobChainFolder = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetDirectoryName( $jobChain ).Replace( '\', '/' ))
 
                 $objectFolder = $jobChainFolder
-                $objectFolders = $objectFolder.split( '/' )
 
                 if ( $BaseFolder )
                 {
                     $jobChainFolder = "$($BaseFolder)$($jobChainFolder)"
                 }
-                
-            
+
+
                 [xml] $xmlJobChain = Get-JobSchedulerJobChainConfiguration -JobChain $jobChain
-            
+
                 $workflowInstructions = @{}
                 $workflowJobs = @{}
                 $workflowNodes = @{}
@@ -1565,7 +1675,7 @@ param
                 $forkLevel = 0
                 $forkStates = @{}
                 $forks = @{}
-                
+
                 foreach( $node in $xmlJobChain.job_chain.job_chain_node )
                 {
                     if ( !$firstState )
@@ -1582,7 +1692,7 @@ param
                     $job = Get-CanonicalObjectPath -ObjectName $node.job -ObjectFolder $objectFolder
                     $jobName = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetFileName( $job ))
 
-                    Write-Debug "...... processing job: $($job) for node state: $($node.state)"          
+                    Write-Debug "...... processing job: $($job) for node state: $($node.state)"
 
                     [xml] $xmlJob = Get-JobSchedulerJobConfiguration -Job $job
                     $workflowNodes.Add( $node.state, @{ 'state' = $node.state; 'job' = $jobName; 'next_state' = $node.next_state; 'error_state' = $node.error_state; 'on_error' = $node.on_error; 'xmlJob' = $xmlJob } )
@@ -1610,35 +1720,35 @@ param
                         }
 
                         $forkBranchState = $stateNamesList[0]
-                        
+
                         $forkStates.Add( $forkLevel, $node.state )
-                        $forks.Add( $node.state, $forkBranches )                            
+                        $forks.Add( $node.state, $forkBranches )
                         continue
                     }
 # ---------- End: initiate fork from Split Job ----------
-        
+
 # ---------- Begin: add fork branches from Join Job ----------
                     if ( $xmlJob.job.script.java_class -eq 'com.sos.jitl.join.JobSchedulerJoinOrdersJSAdapterClass' )
                     {
                         $objWorkflowInstruction = New-Object PSObject
                         Add-Member -Membertype NoteProperty -Name 'TYPE' -value "Fork" -InputObject $objWorkflowInstruction
-                        
+
                         $branches = @()
                         foreach( $forkBranch in $forks[$forkStates[$forkLevel]].getEnumerator() )
                         {
                             Write-Debug "........ fork branch found, id: $($forkBranch.value.id)"
                             $objBranchInstruction = New-Object PSObject
                             Add-Member -Membertype NoteProperty -Name 'id' -value (Get-NormalizedObjectName $forkBranch.value.id) -InputObject $objBranchInstruction
-                            
+
                             $objBranchWorkflowInstructions = New-Object PSObject
                             Add-Member -Membertype NoteProperty -Name 'instructions' -value $forkBranch.value.workflows -InputObject $objBranchWorkflowInstructions
-                            
+
                             Add-Member -Membertype NoteProperty -Name 'workflow' -value $objBranchWorkflowInstructions -InputObject $objBranchInstruction
                             $branches += $objBranchInstruction
                         }
-                        
+
                         Add-Member -Membertype NoteProperty -Name 'branches' -value $branches -InputObject $objWorkflowInstruction
-                        
+
                         Write-Debug "...... join job found, adding workflow instruction for state: $($node.state)"
                         $workflowInstructions.Add( $forkStates[$forkLevel], $objWorkflowInstruction )
 
@@ -1655,7 +1765,7 @@ param
                     {
                         Add-Member -Membertype NoteProperty -Name 'title' -value $xmlJob.job.title -InputObject $objWorkflowJobProperties
                     }
-                    
+
                     if ( $ForcedAgentName )
                     {
                         $agentId = $ForcedAgentName
@@ -1666,28 +1776,28 @@ param
                     } else {
                         $agentId = $DefaultAgentName
                     }
-                    
+
                     if ( $MappedAgentNames -and ($item = $MappedAgentNames.Item( $agentId )) )
                     {
                         $agentId = $item.AgentName
                     }
 
                     Add-Member -Membertype NoteProperty -Name 'agentId' -value $agentId -InputObject $objWorkflowJobProperties
-                                    
+
                         $objWorkflowJobExecutable = New-Object PSObject
                         Add-Member -Membertype NoteProperty -Name 'TYPE' -value 'ExecutableScript' -InputObject $objWorkflowJobExecutable
 
                         $scriptCode = Get-JobSchedulerXmlScriptInclude -IncludeNodes $xmlJob.job.script.include -ObjectFolder $objectFolder
                         Add-Member -Membertype NoteProperty -Name 'script' -value ($scriptCode + $xmlJob.job.script."#cdata-section") -InputObject $objWorkflowJobExecutable
-                                            
+
                     Add-Member -Membertype NoteProperty -Name 'executable' -value $objWorkflowJobExecutable -InputObject $objWorkflowJobProperties
-    
+
                         $objWorkflowJobReturnCode = New-Object PSObject
                         $returnCodeMeaningSuccess = @( 0 )
                         Add-Member -Membertype NoteProperty -Name 'success' -value $returnCodeMeaningSuccess -InputObject $objWorkflowJobReturnCode
-    
+
                     Add-Member -Membertype NoteProperty -Name 'returnCodeMeaning' -value $objWorkflowJobReturnCode -InputObject $objWorkflowJobProperties
-    
+
                     if ( $xmlJob.job.tasks )
                     {
                         Add-Member -Membertype NoteProperty -Name 'taskLimit' -value $xmlJob.job.tasks -InputObject $objWorkflowJobProperties
@@ -1698,7 +1808,7 @@ param
     # ---------- Begin: Create Job Arguments ----------
                     $objWorkflowJobDefaultArguments = New-Object PSObject
 
-                    $xmlArguments = Get-JobSchedulerXmlParamsInclude -IncludeNodes $xmlJob.job.params.include -ObjectFolder $objectFolder                        
+                    $xmlArguments = Get-JobSchedulerXmlParamsInclude -IncludeNodes $xmlJob.job.params.include -ObjectFolder $objectFolder
                     foreach( $argumentNode in $xmlArguments.params.param )
                     {
                         Add-Member -Membertype NoteProperty -Name $argumentNode.name -value $argumentNode.value -InputObject $objWorkflowJobDefaultArguments -Force
@@ -1712,7 +1822,7 @@ param
 
                     Add-Member -Membertype NoteProperty -Name 'defaultArguments' -value $objWorkflowJobDefaultArguments -InputObject $objWorkflowJobProperties
     # ---------- End: Create Job Arguments ----------
-        
+
 
                     if ( !$workflowJobs.Item( $jobName ) )
                     {
@@ -1720,7 +1830,7 @@ param
                     }
 # ---------- End: Create the Job Object ----------
 
-                    
+
 #                   TODO: return codes
 #                   $node.on_return_codes mapped to junctions
 
@@ -1730,15 +1840,15 @@ param
                     Add-Member -Membertype NoteProperty -Name 'TYPE' -value "Execute.Named" -InputObject $objWorkflowInstruction
                     Add-Member -Membertype NoteProperty -Name 'jobName' -value $jobName -InputObject $objWorkflowInstruction
                     Add-Member -Membertype NoteProperty -Name 'label' -value (Get-NormalizedObjectName $node.state) -InputObject $objWorkflowInstruction
-        
-                        # ---------- Begin: Add job chain node arguments ----------                
+
+                        # ---------- Begin: Add job chain node arguments ----------
                         $objWorkflowDefaultArguments = New-Object PSObject
 
-                        $masterUrl = (Get-JobSchedulerMasterCluster -Active).url                            
+                        $masterUrl = (Get-JobSchedulerMasterCluster -Active).url
                         $canonicalPath = Get-CanonicalObjectPath -ObjectName "$($jobChainName).config.xml" -ObjectFolder $objectFolder
 
-                        $response = Invoke-JobSchedulerWebRequest -Url $masterUrl -Path "/jobscheduler/master/api/live$canonicalPath" -Method 'GET' -Headers @{ 'Accept' = 'application/octet-stream' }          
-        
+                        $response = Invoke-JobSchedulerWebRequest -Url $masterUrl -Path "/jobscheduler/master/api/live$canonicalPath" -Method 'GET' -Headers @{ 'Accept' = 'application/octet-stream' }
+
                         if ( $response.StatusCode -eq 200 )
                         {
                             [Xml] $xmlConfig = [System.Text.Encoding]::UTF8.GetString( $response.Content )
@@ -1755,15 +1865,15 @@ param
                                 Add-Member -Membertype NoteProperty -Name $argumentNode.name -value $argumentNode.value -InputObject $objWorkflowDefaultArguments -Force
                             }
                         }
-        
+
                         Add-Member -Membertype NoteProperty -Name 'defaultArguments' -value $objWorkflowDefaultArguments -InputObject $objWorkflowInstruction
-                        # ---------- End: Add job chain node arguments ----------                
+                        # ---------- End: Add job chain node arguments ----------
 
                     # job found for fork branch
                     if ( $forkLevel )
                     {
                         if ( !$forks[$forkStates[$forkLevel]][$node.state] )
-                        {                            
+                        {
                             Write-Debug ".... adding workflow instruction: forks[$($forkStates[$forkLevel])][$($forkBranchState)].workflows"
                             $forks[$forkStates[$forkLevel]][$forkBranchState].workflows += $objWorkflowInstruction
                         } else {
@@ -1773,38 +1883,38 @@ param
                     } else {
                         Write-Debug ".... adding workflow instruction: $($node.state)"
                         $workflowInstructions.Add( $node.state, $objWorkflowInstruction )
-                    }         
-# ---------- End: Create the Workflow Instruction ----------                
+                    }
+# ---------- End: Create the Workflow Instruction ----------
                 }
 
                 $objWorkflowJobs = New-Object PSObject
                 foreach( $workflowJob in $workflowJobs.GetEnumerator() )
                 {
-                    Add-Member -Membertype NoteProperty -Name $workflowJob.Name -value $workflowJob.Value -InputObject $objWorkflowJobs                    
+                    Add-Member -Membertype NoteProperty -Name $workflowJob.Name -value $workflowJob.Value -InputObject $objWorkflowJobs
                 }
 
-                $instructions = Create-JobSchedulerInstructionNodes -Node $workflowNodes.Item( $firstState ) -WorkflowNodes $workflowNodes -WorkflowInstructions $workflowInstructions -Forks $forks -Instructions @()
-                
+                $instructions = New-JobSchedulerInstructionNodes -Node $workflowNodes.Item( $firstState ) -WorkflowNodes $workflowNodes -WorkflowInstructions $workflowInstructions -Forks $forks -Instructions @()
+
                 $objWorkflow = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'instructions' -value ([object[]] $instructions) -InputObject $objWorkflow
                 Add-Member -Membertype NoteProperty -Name 'jobs' -value $objWorkflowJobs -InputObject $objWorkflow
-        
+
                 if ( $jobChainFolder -eq '/' )
                 {
                     $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
                 } else {
-                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($jobChainFolder)".Replace( '\', '/' )            
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($jobChainFolder)".Replace( '\', '/' )
                 }
 
-        
+
                 if ( !(Test-Path -Path $outputFolder) )
                 {
                     New-Item -Path $outputFolder -ItemType Directory | Out-Null
                 }
-            
+
                 Write-Debug ".... writing workflow: $($outputFolder)/$($jobChainName).workflow.json"
-        
-                $jsonWorkflow = $objWorkflow | ConvertTo-Json -Depth 100        
+
+                $jsonWorkflow = $objWorkflow | ConvertTo-Json -Depth 100
                 $jsonWorkflow | Out-File "$($outputFolder)/$($jobChainName).workflow.json"
             } catch {
                 $message = $_.Exception | Format-List -Force | Out-String
@@ -1825,19 +1935,19 @@ function Get-JobSchedulerXmlParamsInclude( [System.Xml.XmlElement] $IncludeNodes
         {
             continue
         }
-        
+
         if ( !$masterUrl )
         {
             $masterUrl = (Get-JobSchedulerMasterCluster -Active).url
         }
-        
+
         if ( $includeNode.file )
         {
             $canonicalPath = Get-CanonicalObjectPath -ObjectName $includeNode.file -ObjectFolder $ObjectFolder
         } else {
             $canonicalPath = Get-CanonicalObjectPath -ObjectName $includeNode.live_file -ObjectFolder $ObjectFolder
         }
-        
+
         $response = Invoke-JobSchedulerWebRequest -Url $masterUrl -Path "/jobscheduler/master/api/live$canonicalPath" -Method 'GET' -Headers @{ 'Accept' = 'application/octet-stream' }
 
         if ( $response.StatusCode -eq 200 )
@@ -1855,7 +1965,7 @@ function Get-JobSchedulerXmlParamsInclude( [System.Xml.XmlElement] $IncludeNodes
             $xmlArguments.SelectSingleNode( '/params' ).AppendChild( $xmlParam )
         }
     }
-    
+
     $xmlArguments
 }
 
@@ -1863,7 +1973,7 @@ function Get-JobSchedulerXmlScriptInclude( [System.Xml.XmlElement] $IncludeNodes
 {
     $scriptCode = $null
     $masterUrl = $null
-    
+
     foreach( $includeNode in $IncludeNodes )
     {
         if ( !$includeNode.file -and !$includeNode.live_file )
@@ -1875,14 +1985,14 @@ function Get-JobSchedulerXmlScriptInclude( [System.Xml.XmlElement] $IncludeNodes
         {
             $masterUrl = (Get-JobSchedulerMasterCluster -Active).url
         }
-        
+
         if ( $includeNode.file )
         {
             $canonicalPath = Get-CanonicalObjectPath -ObjectName $includeNode.file -ObjectFolder $ObjectFolder
         } else {
-            $canonicalPath = Get-CanonicalObjectPath -ObjectName $includeNode.live_file -ObjectFolder $ObjectFolder                                
+            $canonicalPath = Get-CanonicalObjectPath -ObjectName $includeNode.live_file -ObjectFolder $ObjectFolder
         }
-        
+
         $response = Invoke-JobSchedulerWebRequest -Url $masterUrl -Path "/jobscheduler/master/api/live$canonicalPath" -Method 'GET' -Headers @{ 'Accept' = 'application/octet-stream' }
 
         if ( $response.StatusCode -eq 200 )
@@ -1892,43 +2002,53 @@ function Get-JobSchedulerXmlScriptInclude( [System.Xml.XmlElement] $IncludeNodes
             throw ( $response | Format-List -Force | Out-String )
         }
     }
-    
+
     $scriptCode
 }
 
-function Create-JobSchedulerInstructionNodes( $Node, [hashtable] $WorkflowNodes, [hashtable] $WorkflowInstructions, [hashtable] $Forks, [object[]] $Instructions )
+function New-JobSchedulerInstructionNodes
 {
+[cmdletbinding(SupportsShouldProcess)]
+param
+(
+    $Node,
+    [hashtable] $WorkflowNodes,
+    [hashtable] $WorkflowInstructions,
+    [hashtable] $Forks,
+    [object[]] $Instructions
+)
+
     while ( $Node )
     {
         Write-Debug ".... constructing workflow instructions, state: $($Node.state), on_error: $($Node.on_error), job: $($Node.job)"
 
         if ( $Node.on_error -eq 'setback' )
         {
-            Write-Debug "...... setback found, state: $($Node.state), job: $($Node.job)"                    
+            Write-Debug "...... setback found, state: $($Node.state), job: $($Node.job)"
 
             $objTryInstruction = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'instructions' -value @( $WorkflowInstructions.Item( $Node.state ) ) -InputObject $objTryInstruction
 
             $objRetryInstruction = New-Object PSObject
-            Add-Member -Membertype NoteProperty -Name 'TYPE' -value 'Retry' -InputObject $objRetryInstruction                        
+            Add-Member -Membertype NoteProperty -Name 'TYPE' -value 'Retry' -InputObject $objRetryInstruction
 
             $objCatchInstruction = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'instructions' -value @( $objRetryInstruction ) -InputObject $objCatchInstruction
-            
+
             $objWorkflowInstruction = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'TYPE' -value 'Try' -InputObject $objWorkflowInstruction
             Add-Member -Membertype NoteProperty -Name 'try' -value $objTryInstruction -InputObject $objWorkflowInstruction
-            Add-Member -Membertype NoteProperty -Name 'catch' -value $objCatchInstruction -InputObject $objWorkflowInstruction                        
-            
+            Add-Member -Membertype NoteProperty -Name 'catch' -value $objCatchInstruction -InputObject $objWorkflowInstruction
+
             if ( $setbackCount = ( $Node.xmlJob.job.delay_order_after_setback | Where-Object -Property 'is_maximum' -match -value 'true' ).setback_count )
             {
-                Add-Member -Membertype NoteProperty -Name 'maxTries' -value $setbackCount -InputObject $objWorkflowInstruction                        
+                Add-Member -Membertype NoteProperty -Name 'maxTries' -value $setbackCount -InputObject $objWorkflowInstruction
             }
-            
+
             $lastDelay = 1
             $lastSetbackCount = 1
             $setbackDelays = @()
-            $setbacks = ( $Node.xmlJob.job.delay_order_after_setback | Sort-Object -Property @{expression={$_.setback_count -as [int]}} ) 
+            $setbacks = ( $Node.xmlJob.job.delay_order_after_setback | Sort-Object -Property @{expression={$_.setback_count -as [int]}} )
 
             foreach( $setback in $setbacks )
             {
@@ -1936,7 +2056,7 @@ function Create-JobSchedulerInstructionNodes( $Node, [hashtable] $WorkflowNodes,
                 {
                     $setBackDelays += $lastDelay
                 }
-                
+
                 if ( $setback.delay )
                 {
                     if ( ([regex]::Matches($setback.delay, ':' )).count -eq 0 )
@@ -1952,48 +2072,48 @@ function Create-JobSchedulerInstructionNodes( $Node, [hashtable] $WorkflowNodes,
                     $lastDelay = [int] $delay.TotalSeconds
                 }
             }
-            
-            Add-Member -Membertype NoteProperty -Name 'retryDelays' -value $setbackDelays -InputObject $objWorkflowInstruction                        
-            
+
+            Add-Member -Membertype NoteProperty -Name 'retryDelays' -value $setbackDelays -InputObject $objWorkflowInstruction
+
             Write-Debug "...... adding instruction for state (0): $($Node.state)"
             $WorkflowInstructions[$Node.state] = $objWorkflowInstruction
         }
-        
+
         if ( $Node.error_state -and $WorkflowNodes.Item( $Node.error_state ).job )
         {
-            Write-Debug "...... error node found, state: $($Node.error_state), job: $($Node.job)"                    
-            
+            Write-Debug "...... error node found, state: $($Node.error_state), job: $($Node.job)"
+
             $objTryInstruction = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'instructions' -value @( $WorkflowInstructions.Item( $Node.state ) ) -InputObject $objTryInstruction
 
             $catchInstructions = @()
-            
+
             if ( $WorkflowNodes.Item( $Node.error_state ).job )
             {
                 Write-Debug "...... creating catch instruction for state: $($Node.error_state)"
-                $catchInstructions += Create-JobSchedulerInstructionNodes -Node $WorkflowNodes.Item( $Node.error_state ) -WorkflowNodes $WorkflowNodes -WorkflowInstructions $WorkflowInstructions -Forks $Forks -Instructions @()
+                $catchInstructions += New-JobSchedulerInstructionNodes -Node $WorkflowNodes.Item( $Node.error_state ) -WorkflowNodes $WorkflowNodes -WorkflowInstructions $WorkflowInstructions -Forks $Forks -Instructions @()
             }
 
             $objCatchInstruction = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'instructions' -value $catchInstructions -InputObject $objCatchInstruction
-            
+
             $objWorkflowInstruction = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'TYPE' -value "Try" -InputObject $objWorkflowInstruction
             Add-Member -Membertype NoteProperty -Name 'try' -value $objTryInstruction -InputObject $objWorkflowInstruction
-            Add-Member -Membertype NoteProperty -Name 'catch' -value $objCatchInstruction -InputObject $objWorkflowInstruction                        
-            
+            Add-Member -Membertype NoteProperty -Name 'catch' -value $objCatchInstruction -InputObject $objWorkflowInstruction
+
             Write-Debug "...... adding instruction for state (1): $($Node.error_state)"
             $Instructions += $objWorkflowInstruction
         } elseif ( $WorkflowInstructions.Item( $Node.state ) ) {
             Write-Debug "...... adding instruction for state (2): $($Node.state)"
             $Instructions += $WorkflowInstructions.Item( $Node.state )
         }
-        
+
         if ( $Node.next_state -and $Node.next_state -ne $Node.error_state )
         {
             Write-Debug "...... continue with state: $($Node.next_state)"
             $Node = $WorkflowNodes.item( $Node.next_state )
-            
+
             if ( !$Node.job )
             {
                 break
@@ -2003,7 +2123,10 @@ function Create-JobSchedulerInstructionNodes( $Node, [hashtable] $WorkflowNodes,
         }
     }
 
-    $Instructions
+    if ( $PSCmdlet.ShouldProcess( 'Instructions' ) )
+    {
+        $Instructions
+    }
 }
 
 function ConvertFrom-JobSchedulerXmlOrder
@@ -2051,7 +2174,7 @@ param
                 } else {
                     $scheduleName = Get-NormalizedObjectName -ObjectName $order.orderId
                 }
-                
+
                 $scheduleFolder = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetDirectoryName( $order.jobChain ).Replace( '\', '/' ))
                 $objectFolder = $scheduleFolder
 
@@ -2061,17 +2184,17 @@ param
                 }
 
                 [xml] $xmlOrder = Get-JobSchedulerOrderConfiguration -OrderId $order.orderId -JobChain $order.jobChain
-    
+
                 $objSchedule = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'path' -value "$($scheduleFolder)/$($scheduleName)" -InputObject $objSchedule
-                
+
                 if ( $BaseFolder )
                 {
                     Add-Member -Membertype NoteProperty -Name 'workflowPath' -value ($BaseFolder + (Get-NormalizedObjectName -ObjectName $order.jobChain)) -InputObject $objSchedule
                 } else {
-                    Add-Member -Membertype NoteProperty -Name 'workflowPath' -value (Get-NormalizedObjectName -ObjectName $order.jobChain) -InputObject $objSchedule                    
+                    Add-Member -Membertype NoteProperty -Name 'workflowPath' -value (Get-NormalizedObjectName -ObjectName $order.jobChain) -InputObject $objSchedule
                 }
-                
+
                 if ( $xmlOrder.order.title )
                 {
                     Add-Member -Membertype NoteProperty -Name 'title' -value $xmlOrder.order.title -InputObject $objSchedule
@@ -2084,7 +2207,7 @@ param
                 $variables = @()
 
                 # ---------- Begin: Add order variables from <job_chain>.config.xml ----------
-                $masterUrl = (Get-JobSchedulerMasterCluster -Active).url                            
+                $masterUrl = (Get-JobSchedulerMasterCluster -Active).url
                 $canonicalPath = Get-CanonicalObjectPath -ObjectName "$($order.jobChain).config.xml" -ObjectFolder $objectFolder
                 $response = Invoke-JobSchedulerWebRequest -Url $masterUrl -Path "/jobscheduler/master/api/live$canonicalPath" -Method 'GET' -Headers @{ 'Accept' = 'application/octet-stream' }
 
@@ -2108,9 +2231,9 @@ param
                     }
                 }
                 # ---------- End: Add order variables from <job_chain>.config.xml ----------
-                
+
                 # ---------- Begin: Add order variables from <order><params><include> elements in <order>.order.xml ----------
-                $xmlArguments = Get-JobSchedulerXmlParamsInclude -IncludeNodes $xmlOrder.order.params.include -ObjectFolder $objectFolder                        
+                $xmlArguments = Get-JobSchedulerXmlParamsInclude -IncludeNodes $xmlOrder.order.params.include -ObjectFolder $objectFolder
                 foreach( $argumentNode in $xmlArguments.params.param )
                 {
                     $objVariable = New-Object PSObject
@@ -2119,10 +2242,10 @@ param
                     $variables += $objVariable
                 }
                 # ---------- End: Add order variables from <order><params><include> elements in <order>.order.xlm ----------
-                
-                # ---------- End: Add order variables from <order><params><include> elements in <order>.order.xml ----------                
 
-                # ---------- Begin: Add order variables from <order><params><params> elements in <order>.order.xml ----------                
+                # ---------- End: Add order variables from <order><params><include> elements in <order>.order.xml ----------
+
+                # ---------- Begin: Add order variables from <order><params><params> elements in <order>.order.xml ----------
                 $variableNodes = $xmlOrder.order.params.param
                 foreach( $variableNode in $variableNodes )
                 {
@@ -2131,23 +2254,23 @@ param
                     Add-Member -Membertype NoteProperty -Name 'value' -value $variableNode.value -InputObject $objVariable
                     $variables += $objVariable
                 }
-                # ---------- End: Add order variables from <order><params><param> elements in <order>.order.xml ----------                
-                
+                # ---------- End: Add order variables from <order><params><param> elements in <order>.order.xml ----------
+
                 Add-Member -Membertype NoteProperty -Name 'variables' -value $variables -InputObject $objSchedule
 # ---------- End: Add order variables ----------
 
                 $workingDayCalendars = @()
                 $nonWorkingDayCalendars = @()
-                
+
                 if ( $xmlOrder.order.run_time.calendars )
                 {
-                    if ( isPowerShellVersion 6 ) 
+                    if ( isPowerShellVersion 6 )
                     {
                         $jsonCalendars = $xmlOrder.order.run_time.calendars."#cdata-section" | ConvertFrom-Json -Depth 100
                     } else {
-                        $jsonCalendars = $xmlOrder.order.run_time.calendars."#cdata-section" | ConvertFrom-Json                        
+                        $jsonCalendars = $xmlOrder.order.run_time.calendars."#cdata-section" | ConvertFrom-Json
                     }
-    
+
                     if ( $jsonCalendars )
                     {
                         foreach( $calendar in $jsonCalendars.calendars )
@@ -2157,7 +2280,7 @@ param
                                 if ( $period.whenHoliday )
                                 {
                                     if ( $period.whenHoliday -eq 'suppress' )
-                                    {                                
+                                    {
                                         $period.whenHoliday = 'SUPPRESS'
                                     } elseif ( $period.whenHoliday -eq 'next_non_holiday' ) {
                                         $period.whenHoliday = 'NEXTNONWORKINGDAY'
@@ -2168,27 +2291,27 @@ param
                                     }
                                 }
                             }
-                            
+
                             $objCalendar = New-Object PSObject
-                            
+
                             if ( $BaseFolder )
                             {
                                 Add-Member -Membertype NoteProperty -Name 'calendarPath' -value ($BaseFolder + (Get-NormalizedObjectName -ObjectName $calendar.basedOn)) -InputObject $objCalendar
                             } else {
                                 Add-Member -Membertype NoteProperty -Name 'calendarPath' -value (Get-NormalizedObjectName -ObjectName $calendar.basedOn) -InputObject $objCalendar
                             }
-                            
+
                             Add-Member -Membertype NoteProperty -Name 'timeZone' -value $xmlOrder.order.run_time.time_zone -InputObject $objCalendar
                             Add-Member -Membertype NoteProperty -Name 'periods' -value $calendar.periods -InputObject $objCalendar
                             Add-Member -Membertype NoteProperty -Name 'includes' -value $calendar.includes -InputObject $objCalendar
-                            
+
                             if ( $calendar.type -eq 'WORKING_DAYS' )
                             {
                                 $workingDayCalendars += $objCalendar
                             } else {
-                                $nonWorkingDayCalendars += $objCalendar                            
+                                $nonWorkingDayCalendars += $objCalendar
                             }
-                        }                    
+                        }
                     }
                 }
 
@@ -2200,17 +2323,17 @@ param
                 {
                     $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
                 } else {
-                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($scheduleFolder)".Replace( '\', '/' )            
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($scheduleFolder)".Replace( '\', '/' )
                 }
-    
+
                 if ( !(Test-Path -Path $outputFolder) )
                 {
                     New-Item -Path $outputFolder -ItemType Directory | Out-Null
                 }
-            
+
                 Write-Debug ".... writing schedule: $($outputFolder)/$($scheduleName).schedule.json"
-        
-                $jsonSchedule = $objSchedule | ConvertTo-Json -Depth 100        
+
+                $jsonSchedule = $objSchedule | ConvertTo-Json -Depth 100
                 $jsonSchedule | Out-File "$($outputFolder)/$($scheduleName).schedule.json"
             } catch {
                 $message = $_.Exception | Format-List -Force | Out-String
@@ -2250,15 +2373,15 @@ param
             try
             {
                 Write-Verbose ".... processing calendar: $calendar"
-    
+
                 $calendarName = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetFileName( $calendar ))
                 $calendarFolder = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetDirectoryName( $calendar ).Replace( '\', '/' ))
-                
+
                 if ( $BaseFolder )
                 {
                     $calendarFolder = "$($BaseFolder)$($calendarFolder)"
                 }
-    
+
                 $body = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
                 Add-Member -Membertype NoteProperty -Name 'calendars' -value @( $calendar ) -InputObject $body
@@ -2267,7 +2390,7 @@ param
 
                 [string] $requestBody = $body | ConvertTo-Json -Depth 100
                 $response = Invoke-JobSchedulerWebRequest -Path '/calendars/export' -Body $requestBody -Headers $headers
-    
+
                 if ( $response.StatusCode -ne 200 )
                 {
                     throw ( $response | Format-List -Force | Out-String )
@@ -2277,27 +2400,27 @@ param
                 {
                     $jsonCalendars = ([System.Text.Encoding]::UTF8.GetString( $response.Content )) | ConvertFrom-Json -Depth 100
                 } else {
-                    $jsonCalendars = ([System.Text.Encoding]::UTF8.GetString( $response.Content )) | ConvertFrom-Json                
+                    $jsonCalendars = ([System.Text.Encoding]::UTF8.GetString( $response.Content )) | ConvertFrom-Json
                 }
-                
+
                 $jsonCalendar = $jsonCalendars.calendars[0]
-                
+
                 $objCalendar = New-Object PSObject
-                
+
                 if ( $calendarFolder -eq '/' )
                 {
                     Add-Member -Membertype NoteProperty -Name 'path' -value "$calendarFolder$calendarName" -InputObject $objCalendar
                 } else {
                     Add-Member -Membertype NoteProperty -Name 'path' -value "$calendarFolder/$calendarName" -InputObject $objCalendar
                 }
-                
+
                 if ( $jsonCalendar.type -eq 'WORKING_DAYS' )
                 {
                     Add-Member -Membertype NoteProperty -Name 'type' -value 'WORKINGDAYSCALENDAR' -InputObject $objCalendar
                 } elseif ( $jsonCalendar.type -eq 'NON_WORKING_DAYS' ) {
                     Add-Member -Membertype NoteProperty -Name 'type' -value 'NONWORKINGDAYSCALENDAR' -InputObject $objCalendar
                 }
-                
+
                 if ( $jsonCalendar.title )
                 {
                     Add-Member -Membertype NoteProperty -Name 'title' -value $jsonCalendar.title -InputObject $objCalendar
@@ -2318,21 +2441,21 @@ param
                     Add-Member -Membertype NoteProperty -Name 'includes' -value $jsonCalendar.includes -InputObject $objCalendar
                 }
 
-                          
+
                 if ( $calendarFolder -eq '/' )
                 {
                     $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
                 } else {
-                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($calendarFolder)".Replace( '\', '/' )            
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($calendarFolder)".Replace( '\', '/' )
                 }
-    
+
                 if ( !(Test-Path -Path $outputFolder) )
                 {
                     New-Item -Path $outputFolder -ItemType Directory | Out-Null
                 }
-            
+
                 Write-Debug ".... writing calendar: $($outputFolder)/$($calendarName).calendar.json"
-        
+
                 $objCalendar | ConvertTo-Json -Depth 100 | Out-File "$($outputFolder)/$($calendarName).calendar.json"
             } catch {
                 $message = $_.Exception | Format-List -Force | Out-String
@@ -2372,43 +2495,43 @@ param
             try
             {
                 Write-Verbose ".... processing lock: $lock"
-    
+
                 $lockName = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetFileName( $lock ))
                 $lockFolder = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetDirectoryName( $lock ).Replace( '\', '/' ))
-    
+
                 if ( $BaseFolder )
                 {
                     $lockFolder = "$($BaseFolder)$($lockFolder)"
                 }
-    
+
                 [xml] $xmlLock = Get-JobSchedulerLockConfiguration -Lock $lock
-    
+
                 $objLock = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'TYPE' -value "Lock" -InputObject $objLock
                 # TODO: locks with id instead of path
                 Add-Member -Membertype NoteProperty -Name 'path' -value $lock -InputObject $objLock
                 Add-Member -Membertype NoteProperty -Name 'id' -value $lock -InputObject $objLock
-                
+
                 if ( $xmlLock.lock.max_non_exclusive )
                 {
                     Add-Member -Membertype NoteProperty -Name 'limit' -value $xmlLock.lock.max_non_exclusive -InputObject $objLock
                 }
-    
+
                 if ( $lockFolder -eq '/' )
                 {
                     $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
                 } else {
-                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($lockFolder)".Replace( '\', '/' )            
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($lockFolder)".Replace( '\', '/' )
                 }
-    
+
                 if ( !(Test-Path -Path $outputFolder) )
                 {
                     New-Item -Path $outputFolder -ItemType Directory | Out-Null
                 }
-            
+
                 Write-Debug ".... writing lock: $($outputFolder)/$($lockName).lock.json"
-        
-                $jsonLock = $objLock | ConvertTo-Json -Depth 100        
+
+                $jsonLock = $objLock | ConvertTo-Json -Depth 100
                 $jsonLock | Out-File "$($outputFolder)/$($lockName).lock.json"
             } catch {
                 $message = $_.Exception | Format-List -Force | Out-String
@@ -2450,12 +2573,12 @@ param
             try
             {
                 Write-Verbose ".... processing Agent Cluster: $agentCluster"
-    
-                $objAgentCluster = Get-JobSchedulerAgentCluster -AgentCluster $agentCluster 
+
+                $objAgentCluster = Get-JobSchedulerAgentCluster -AgentCluster $agentCluster
 
                 $agentClusterName = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetFileName( $objAgentCluster.AgentCluster ))
                 $agentClusterFolder = Get-NormalizedObjectName -ObjectName ([System.IO.Path]::GetDirectoryName( $objAgentCluster.AgentCluster ).Replace( '\', '/' ))
-                
+
                 if ( $BaseFolder )
                 {
                     $agentClusterFolder = "$($BaseFolder)$($agentClusterFolder)"
@@ -2473,21 +2596,21 @@ param
                     Add-Member -Membertype NoteProperty -Name 'AgentName' -value $item.AgentName -InputObject $objAgentCluster
                 } else {
                     Add-Member -Membertype NoteProperty -Name 'AgentId' -value $agentClusterName -InputObject $objAgentCluster
-                    Add-Member -Membertype NoteProperty -Name 'AgentName' -value $agentClusterName -InputObject $objAgentCluster                    
+                    Add-Member -Membertype NoteProperty -Name 'AgentName' -value $agentClusterName -InputObject $objAgentCluster
                 }
 
                 if ( $objAgentCluster.Agents.count )
                 {
-                    Add-Member -Membertype NoteProperty -Name 'Url' -value $objAgentCluster.Agents[0] -InputObject $objAgentCluster                    
+                    Add-Member -Membertype NoteProperty -Name 'Url' -value $objAgentCluster.Agents[0] -InputObject $objAgentCluster
                 }
-                
+
                 if ( $agentClusterFolder -eq '/' )
                 {
                     $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))".Replace( '\', '/' )
                 } else {
-                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($agentClusterFolder)".Replace( '\', '/' )            
+                    $outputFolder = "$([System.IO.Path]::GetFullPath($OutputDirectory))$($agentClusterFolder)".Replace( '\', '/' )
                 }
-    
+
                 if ( !(Test-Path -Path $outputFolder) )
                 {
                     New-Item -Path $outputFolder -ItemType Directory | Out-Null
@@ -2507,7 +2630,7 @@ param
 function Get-CanonicalObjectPath( [string] $ObjectName, [string] $ObjectFolder )
 {
     $objectFolders = $ObjectFolder.split( '/' )
-    
+
     if ( $ObjectName.startsWith( '/' ) )
     {
         # absolute reference, nothing to do
@@ -2529,14 +2652,14 @@ function Get-CanonicalObjectPath( [string] $ObjectName, [string] $ObjectFolder )
             }
             $index++
         } while ( $ObjectName.startsWith( '../' ) )
-        
+
         $ObjectName = "$($ObjectFolder)$($ObjectName)"
     } else {
         if ( $ObjectFolder -ne '/' )
-        {                    
-            $ObjectName = "$($ObjectFolder)/$($ObjectName)"                        
+        {
+            $ObjectName = "$($ObjectFolder)/$($ObjectName)"
         } else {
-            $ObjectName = "/$($ObjectName)"                                                
+            $ObjectName = "/$($ObjectName)"
         }
     }
 
@@ -2552,16 +2675,16 @@ function Get-NormalizedObjectName( [string] $ObjectName )
 # Main
 # ----------------------------------------------------------------------
 
-$js = Create-JSObject
-$jsWebService = Create-WebServiceObject
+$script:js = New-JobSchedulerObject
+$script:jsWebService = New-JobSchedulerWebServiceObject
 
 <#
-if ( $jsOperations )
+if ( $script:jsOperations )
 {
     # no addtional connection to Master required
-    $js.Url = "http://$($spooler.hostname()):$($spooler.tcp_port())"
-    $js.Id = $spooler.id()
-    $js.Local = $false
-    $jsWebService.JobSchedulerId = $js.Id
+    $script:js.Url = "http://$($spooler.hostname()):$($spooler.tcp_port())"
+    $script:js.Id = $spooler.id()
+    $script:js.Local = $false
+    $script:jsWebService.JobSchedulerId = $js.Id
 }
 #>

@@ -9,7 +9,7 @@ The cmdlet returns the version of the JobScheduler Master.
 
 .PARAMETER NoCache
 Specifies that the cache for JobScheduler objects is ignored.
-This results in the fact that for each Get-JobScheduler* cmdlet execution the response is 
+This results in the fact that for each Get-JobScheduler* cmdlet execution the response is
 retrieved directly from the JobScheduler Master and is not resolved from the cache.
 
 .EXAMPLE
@@ -28,28 +28,28 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch        
+        $stopWatch = Start-JobSchedulerStopWatch
     }
-    
+
     Process
-    {    
+    {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest '/jobscheduler/p' $requestBody
-    
+
         if ( $response.StatusCode -eq 200 )
         {
             $returnStatus = ( $response.Content | ConvertFrom-JSON ).jobscheduler
-            $returnStatus.version            
+            $returnStatus.version
         } else {
             throw ( $response | Format-List -Force | Out-String )
-        }    
+        }
     }
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
-    }    
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
+    }
 }

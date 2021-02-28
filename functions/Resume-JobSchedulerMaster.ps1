@@ -12,7 +12,7 @@ When JobScheduler Master is continued then
 
 .PARAMETER MasterHost
 Should the operation to terminate or to restart a Master not be applied to a standalone Master instance
-or to the active Master instance in a cluster, but to a specific Master instance in a cluster 
+or to the active Master instance in a cluster, but to a specific Master instance in a cluster
 then the respective Master's hostname has to be specified.
 Use of this parameter requires to specify the corresponding -MasterPort parameter.
 
@@ -20,7 +20,7 @@ This information is returned by the Get-JobSchedulerStatus cmdlet with the "Clus
 
 .PARAMETER MasterPort
 Should the operation to terminate or to restart a Master not be applied to a standalone Master instance
-or to the active Master instance in a cluster, but to a specific Master instance in a cluster 
+or to the active Master instance in a cluster, but to a specific Master instance in a cluster
 then the respective Master's port has to be specified.
 Use of this parameter requires to specify the corresponding -MasterHost parameter.
 
@@ -41,7 +41,7 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .EXAMPLE
@@ -76,7 +76,7 @@ param
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
@@ -90,7 +90,7 @@ param
         {
             throw "$($MyInvocation.MyCommand.Name): either both or none of the parameters -MasterHost, -MasterPort have to be specified"
         }
-    
+
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
@@ -119,12 +119,12 @@ param
         }
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
-        $response = Invoke-JobSchedulerWebRequest '/jobscheduler/continue' $requestBody
-        
+        $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/continue' -Body $requestBody
+
         if ( $response.StatusCode -eq 200 )
         {
             $requestResult = ( $response.Content | ConvertFrom-JSON )
-            
+
             if ( !$requestResult.ok )
             {
                 throw ( $response | Format-List -Force | Out-String )
@@ -133,7 +133,11 @@ param
             throw ( $response | Format-List -Force | Out-String )
         }
 
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objJobChainss.count) JobScheduler Master resumed"                                
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): JobScheduler Master resumed"
+    }
+
+    End
+    {
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
-

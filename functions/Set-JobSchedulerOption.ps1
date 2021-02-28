@@ -11,7 +11,7 @@ console window if their size does not exceed the max. output size.
 
 Should the max. output size be exceeded then XML responses are written to temporary
 files and a console debug message indicates the location of the respective file.
- 
+
 This cmdlet allows to set the max. output size to an individual value.
 
 Default: 1000 Byte
@@ -22,7 +22,7 @@ With the timeout being exceeded an exception is raised.
 
 Default: 15000 ms
 #>
-[cmdletbinding()]
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -30,16 +30,22 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $WebRequestTimeout=30
 )
-    Process 
+    Process
     {
 		if ( $DebugMaxOutputSize )
 		{
-			$script:jsOptionDebugMaxOutputSize = $DebugMaxOutputSize
+            if ( $PSCmdlet.ShouldProcess( 'jsOptionDebugMaxOutputSize' ) )
+            {
+                $script:jsOptionDebugMaxOutputSize = $DebugMaxOutputSize
+            }
 		}
 
 		if ( $WebRequestTimeout )
 		{
-			$script:jsOptionWebRequestTimeout = $WebRequestTimeout
+            if ( $PSCmdlet.ShouldProcess( 'jsOptionWebRequestTimeout' ) )
+            {
+                $script:jsOptionWebRequestTimeout = $WebRequestTimeout
+            }
 		}
 	}
 }

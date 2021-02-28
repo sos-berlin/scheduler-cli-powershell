@@ -27,7 +27,7 @@ Removes the Windows service for a JobScheduler backup instance in a passive clus
 about_jobscheduler
 
 #>
-[cmdletbinding()]
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -41,24 +41,24 @@ param
     Process
     {
         $service = $null
-        
-        $serviceName = $js.Service.ServiceName
-        $serviceDisplayName = $js.Service.ServiceDisplayName
+
+        $serviceName = $script:js.Service.ServiceName
+        $serviceDisplayName = $script:js.Service.ServiceDisplayName
 
         if ( $Backup )
         {
             $serviceName += '_backup'
             $serviceDisplayName += ' -backup'
         }
-        
+
         # Check an existing service
-        try 
+        try
         {
             $service = Get-Service $serviceName -ErrorAction SilentlyContinue
         } catch {
             throw "$($MyInvocation.MyCommand.Name): could not find existing service: $($_.Exception.Message)"
         }
-        
+
         # Remove an existing service
         try
         {
@@ -66,20 +66,30 @@ param
             {
                 if ( $service -and $service.Status -eq "running" )
                 {
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): stop existing JobScheduler service: $($serviceName)"       
-                    $result = Stop-Service -Name $serviceName
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): stop existing JobScheduler service: $($serviceName)"
+                    if ( $PSCmdlet.ShouldProcess( 'Master', 'Stop-Service' ) )
+                    {
+                        Stop-Service -Name $serviceName | Out-Null
+                    }
+
                     Start-Sleep -s 3
                 }
 
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): remove existing JobScheduler service: $($serviceName)"       
-                $wmiService = Get-WmiObject -Class Win32_Service -Filter "Name='$($serviceName)'"
-                $wmiService.Delete()
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): remove existing JobScheduler service: $($serviceName)"
+                if ( $PSCmdlet.ShouldProcess( 'Master', 'Remove-CimInstance' ) )
+                {
+                    # $wmiService = Get-WmiObject -Class Win32_Service -Filter "Name='$($serviceName)'"
+                    # $wmiService.Delete()
+                    $cimService = Get-CimInstance win32_service -Filter "name='$($serviceName)'"
+                    Remove-CimInstance -InputObject $cimService
+                }
+
                 Start-Sleep -s 5
             }
         } catch {
             throw "$($MyInvocation.MyCommand.Name): could not remove existing service: $($_.Exception.Message)"
         }
-                
+
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): JobScheduler service removed: $($serviceName)"
     }
 }

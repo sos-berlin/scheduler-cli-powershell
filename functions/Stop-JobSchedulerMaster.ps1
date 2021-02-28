@@ -1,11 +1,11 @@
 function Stop-JobSchedulerMaster
-{ 
+{
 <#
 .SYNOPSIS
 Stops a JobScheduler Master or a Master Cluster
 
 .DESCRIPTION
-The stop of a Master or Master Cluster can be performed in a graceful manner leaving some time to 
+The stop of a Master or Master Cluster can be performed in a graceful manner leaving some time to
 running tasks for completion. In addition more immediate operations for aborting
 or killing a Master are available and Master instances can be restarted.
 
@@ -53,7 +53,7 @@ Carries out the operation -Action "terminate" for a JobScheduler Master Cluster:
 
 .PARAMETER MasterHost
 Should the operation to terminate or to restart a Master not be applied to a standalone Master instance
-or to the active Master instance in a cluster, but to a specific Master instance in a cluster 
+or to the active Master instance in a cluster, but to a specific Master instance in a cluster
 then the respective Master's hostname has to be specified.
 Use of this parameter requires to specify the corresponding -MasterPort parameter.
 
@@ -61,7 +61,7 @@ This information is returned by the Get-JobSchedulerStatus cmdlet with the "Clus
 
 .PARAMETER MasterPort
 Should the operation to terminate or to restart a Master not be applied to a standalone Master instance
-or to the active Master instance in a cluster, but to a specific Master instance in a cluster 
+or to the active Master instance in a cluster, but to a specific Master instance in a cluster
 then the respective Master's port has to be specified.
 Use of this parameter requires to specify the corresponding -MasterHost parameter.
 
@@ -71,11 +71,11 @@ This information is returned by the Get-JobSchedulerStatus cmdlet with the "Clus
 A timeout is applied for the operation -Action "terminate" that affects running tasks:
 
 * For shell jobs
-** in a Unix environment the task is sent a SIGTERM signal and - in case of the timeout parameter being used - 
+** in a Unix environment the task is sent a SIGTERM signal and - in case of the timeout parameter being used -
 after expiration of the timeout a SIGKILL signal is sent.
 ** in a Windows environment the task is killed immediately.
 * For API jobs
-** the method spooler_process() of the respective job will not be called by JobScheduler any more. 
+** the method spooler_process() of the respective job will not be called by JobScheduler any more.
 ** the task is expected to terminate normally after completion of its spooler_process() method.
 
 The timeout is applied when shutting down or restarting (-Restart switch) invidual instances or clustered instances (-Cluster switch).
@@ -108,7 +108,7 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .EXAMPLE
@@ -139,7 +139,7 @@ After shutdown the JobScheduler Master instance is restarted.
 .EXAMPLE
 Stop-JobSchedulerMaster -Action kill -MasterHost localhost -MasterPort 40444
 
-Kills the specific JobScheduler Master instance that is a member in a cluster 
+Kills the specific JobScheduler Master instance that is a member in a cluster
 and kills any tasks without proper cleanup.
 
 .EXAMPLE
@@ -162,6 +162,7 @@ After termination all cluster members will be restarted.
 about_jobscheduler
 
 #>
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -190,7 +191,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
@@ -204,33 +205,33 @@ param
         {
             throw "$($MyInvocation.MyCommand.Name): either both or none of the parameters -MasterHost, -MasterPort have to be specified"
         }
-    
+
         if ( $Service )
         {
             $serviceInstance = $null
-            $serviceName = $js.Service.ServiceName
+            $serviceName = $script:js.Service.ServiceName
 
             # Check an existing service
-            try 
+            try
             {
                 $serviceInstance = Get-Service $serviceName -ErrorAction SilentlyContinue
             } catch {
                 throw "$($MyInvocation.MyCommand.Name): could not find service: $($_.Exception.Message)"
             }
-        
+
             # stop an existing service
             try
             {
                 if ( $serviceInstance -and $serviceInstance.Status -eq "running" )
                 {
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): stop JobScheduler service: $($serviceName)"       
-                    $result = Stop-Service -Name $serviceName
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): stop JobScheduler service: $($serviceName)"
+                    Stop-Service -Name $serviceName | Out-Null
                     Start-Sleep -s 3
                 }
             } catch {
                 throw "$($MyInvocation.MyCommand.Name): could not stop service: $($_.Exception.Message)"
             }
-                
+
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): JobScheduler service stopped: $($serviceName)"
         } else {
             $resource = $null
@@ -239,7 +240,7 @@ param
 
             switch ( $Action )
             {
-                'terminate' 
+                'terminate'
                 {
                     if ( $Cluster )
                     {
@@ -262,8 +263,8 @@ param
                         } else {
                             $resource = '/jobscheduler/terminate'
                         }
-                    } 
-                
+                    }
+
                     if ( $Timeout )
                     {
                         Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
@@ -272,7 +273,7 @@ param
                 'terminate-fail-safe'
                 {
                     $resource = '/jobscheduler/cluster/terminate_failsafe'
-                
+
                     if ( $Timeout )
                     {
                         Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
@@ -281,7 +282,7 @@ param
                 'reactivate'
                 {
                     $resource = '/jobscheduler/cluster/reactivate'
-                
+
                     if ( $Timeout )
                     {
                         Add-Member -Membertype NoteProperty -Name 'timeout' -value $Timeout -InputObject $body
@@ -289,20 +290,20 @@ param
                 }
                 'abort'
                 {
-                    if ( $Restart ) 
+                    if ( $Restart )
                     {
                         $resource = '/jobscheduler/abort_and_restart'
                     } else {
                         $resource = '/jobscheduler/abort'
-                    }    
+                    }
                 }
-                'kill' 
+                'kill'
                 {
-                    if ( !$js.Install )
+                    if ( !$script:js.Install )
                     {
                         throw "$($MyInvocation.MyCommand.Name): kill operation is available for local Master installation only, use -UseJobSchedulerMaster cmdlet"
                     }
-                
+
                     if ( $Pid )
                     {
                         Write-Verbose ".. $($MyInvocation.MyCommand.Name): killing JobScheduler Master from process list with PID $Pid"
@@ -311,49 +312,57 @@ param
                         Write-Verbose ".. $($MyInvocation.MyCommand.Name): killing JobScheduler Master from process list with PID file"
                         $arguments = "-kill -pid-file=$($js.Install.PidFile)"
                     }
-                    
+
                     Write-Debug ".. $($MyInvocation.MyCommand.Name): kill by command: $($arguments)"
-                    $process = Start-Process -FilePath "$($js.Install.ExecutableFile)" "$($arguments)" -PassThru
+                    Start-Process -FilePath "$($js.Install.ExecutableFile)" "$($arguments)" -PassThru | Out-Null
                 }
             }
-            
+
             if ( $resource )
             {
                 if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
                 {
                     $objAuditLog = New-Object PSObject
                     Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
-        
+
                     if ( $AuditTimeSpent )
                     {
                         Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
                     }
-        
+
                     if ( $AuditTicketLink )
                     {
                         Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
                     }
-        
+
                     Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
                 }
-        
-                [string] $requestBody = $body | ConvertTo-Json -Depth 100
-                $response = Invoke-JobSchedulerWebRequest -Path $resource -Body $requestBody
-                
-                if ( $response.StatusCode -eq 200 )
+
+                if ( $PSCmdlet.ShouldProcess( $resource ) )
                 {
-                    $requestResult = ( $response.Content | ConvertFrom-JSON )
-                    
-                    if ( !$requestResult.ok )
+                    [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                    $response = Invoke-JobSchedulerWebRequest -Path $resource -Body $requestBody
+
+                    if ( $response.StatusCode -eq 200 )
                     {
+                        $requestResult = ( $response.Content | ConvertFrom-JSON )
+
+                        if ( !$requestResult.ok )
+                        {
+                            throw ( $response | Format-List -Force | Out-String )
+                        }
+
+                        Write-Verbose ".. $($MyInvocation.MyCommand.Name): command resource for JobScheduler Master: $resource"
+                    } else {
                         throw ( $response | Format-List -Force | Out-String )
                     }
-
-                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): command resource for JobScheduler Master: $resource"
-                } else {
-                    throw ( $response | Format-List -Force | Out-String )
-                }        
+                }
             }
         }
+    }
+
+    End
+    {
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

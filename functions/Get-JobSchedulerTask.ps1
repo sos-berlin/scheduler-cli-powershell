@@ -76,33 +76,33 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $tasks = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, Job=$Job"
-    
+
         if ( !$Directory -and !$Job )
         {
             throw "$($MyInvocation.MyCommand.Name): no directory and no job specified, use -Directory or -Job"
         }
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
-        if ( $Job ) 
+
+        if ( $Job )
         {
             if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
             {
@@ -121,14 +121,14 @@ param
         {
             $Recursive = $true
         }
-        
+
         if ( !$Runnning -and !$Enqueued )
         {
             $Running = $true
         }
 
         $task = ( Get-JobSchedulerJob -Job $Job -JobChain $JobChain -Directory $Directory -Recursive:$Recursive -Running:$Running -Enqueued:$Enqueued )
-        
+
         if ( $task )
         {
             $tasks += $task
@@ -145,6 +145,6 @@ param
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no tasks found"
         }
 
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

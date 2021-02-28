@@ -65,6 +65,7 @@ JOE has been installed independently from a JobScheduler Master installation.
 about_jobscheduler
 
 #>
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -100,15 +101,15 @@ param
             {
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler Editor (JOE) installation path not found: $($InstallPath)"
             }
-            
+
             if ( !$Id )
             {
                 $Id = Get-DirectoryName $InstallPath
             }
-        
+
             $isLocal = $true
         } elseif ( $Id ) {
-            try 
+            try
             {
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): checking implicit installation path: $($InstallBasePath)\$($Id)"
                 $isLocal = Test-Path "$($InstallBasePath)\$($Id)" -PathType Container
@@ -126,19 +127,19 @@ param
         {
             # standalone instance or included with Master
             $editorInstallPath = $InstallPath
-        } elseif ( $SCRIPT:js.Local ) {		
+        } elseif ( $script:js.Local ) {
             # instance included with Master
-            $editorInstallPath = $SCRIPT:js.Install.Directory
+            $editorInstallPath = $script:js.Install.Directory
         } elseif ( $InstallBasePath ) {
             # standalone instance without Master
             $editorInstallPath = (Split-Path -Path $InstallBasePath -Parent) + '/JOE'
         }
-        
+
         if ( !$editorInstallPath )
         {
             throw "$($MyInvocation.MyCommand.Name): no installation path specified, use -Id or -InstallPath parameter or Use-JobSchedulerMaster -InstallPath cmdlet"
         }
-        
+
         if ( !(Test-Path $editorInstallPath -PathType Container) )
         {
             throw "$($MyInvocation.MyCommand.Name): JobScheduler Editor (JOE) installation path not found: $($editorInstallPath)"
@@ -148,9 +149,9 @@ param
         {
             # standalone instance or included with Master
             $editorConfigPath = $ConfigPath
-        } elseif ( $SCRIPT:js.Local ) {
+        } elseif ( $script:js.Local ) {
             # instance included with Master
-            $editorConfigPath = $SCRIPT:js.Config.Directory
+            $editorConfigPath = $script:js.Config.Directory
         } elseif ( $ConfigBasePath -and $Id ) {
             # instance included with Master
             $editorConfigPath = $ConfigBasePath + '/' + $Id
@@ -163,7 +164,7 @@ param
         {
             throw "$($MyInvocation.MyCommand.Name): no configuration path specified, use -ConfigPath parameter or Use-JobSchedulerMaster cmdlet"
         }
-        
+
         if ( !(Test-Path $editorConfigPath -PathType Container) )
         {
             throw "$($MyInvocation.MyCommand.Name): JobScheduler Editor (JOE) configuration path not found: $($editorConfigPath)"
@@ -175,49 +176,49 @@ param
             Write-Debug ".. $($MyInvocation.MyCommand.Name): importing settings from $($environmentVariablesScriptPath)"
             Invoke-CommandScript $environmentVariablesScriptPath
         }
-        
+
         $environmentVariablesScriptPath = $editorInstallPath + '/user_bin/' + $EditorEnvironmentVariablesScript
         if ( Test-Path $environmentVariablesScriptPath -PathType Leaf )
         {
             Write-Debug ".. $($MyInvocation.MyCommand.Name): importing settings from $($environmentVariablesScriptPath)"
             Invoke-CommandScript $environmentVariablesScriptPath
         }
-        
-        $envSchedulerHome = if ( $SCRIPT:jsEnv['SCHEDULER_HOME'] ) { $SCRIPT:jsEnv['SCHEDULER_HOME'] } else { $editorInstallPath }
 
-        $envSchedulerData = if ( $SCRIPT:jsEnv['SCHEDULER_DATA'] ) { $SCRIPT:jsEnv['SCHEDULER_DATA'] } else { $editorConfigPath }
+        $envSchedulerHome = if ( $script:jsEnv['SCHEDULER_HOME'] ) { $script:jsEnv['SCHEDULER_HOME'] } else { $editorInstallPath }
 
-        $envSchedulerHotFolder = if ( $SCRIPT:jsEnv['SCHEDULER_HOT_FOLDER'] ) { $SCRIPT:jsEnv['SCHEDULER_HOT_FOLDER'] } else { "$($envSchedulerData)/config/live" }
+        $envSchedulerData = if ( $script:jsEnv['SCHEDULER_DATA'] ) { $script:jsEnv['SCHEDULER_DATA'] } else { $editorConfigPath }
 
-        $envSosJoeHome = if ( $SCRIPT:jsEnv['SOS_JOE_HOME'] ) { $SCRIPT:jsEnv['SOS_JOE_HOME'] } else { $editorConfigPath }
+        $envSchedulerHotFolder = if ( $script:jsEnv['SCHEDULER_HOT_FOLDER'] ) { $script:jsEnv['SCHEDULER_HOT_FOLDER'] } else { "$($envSchedulerData)/config/live" }
 
-        $envJavaHome = if ( $SCRIPT:jsEnv['JAVA_HOME'] ) { $SCRIPT:jsEnv['JAVA_HOME'] } else { "$($env:ProgramFiles)\Java\jre8" }
+        # $envSosJoeHome = if ( $script:jsEnv['SOS_JOE_HOME'] ) { $script:jsEnv['SOS_JOE_HOME'] } else { $editorConfigPath }
 
-        $envJavaOptions = if ( $SCRIPT:jsEnv['JAVA_OPTIONS'] ) { $SCRIPT:jsEnv['JAVA_OPTIONS'] }
+        $envJavaHome = if ( $script:jsEnv['JAVA_HOME'] ) { $script:jsEnv['JAVA_HOME'] } else { "$($env:ProgramFiles)\Java\jre8" }
 
-        $envLogBridge = if ( $SCRIPT:jsEnv['LOG_BRIDGE'] ) { $SCRIPT:jsEnv['LOG_BRIDGE'] }
+        $envJavaOptions = if ( $script:jsEnv['JAVA_OPTIONS'] ) { $script:jsEnv['JAVA_OPTIONS'] }
 
-        if ( !$SCRIPT:jsEnv['LOG4JPROP'] -and ( Test-Path -Path "$($editorInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
+        $envLogBridge = if ( $script:jsEnv['LOG_BRIDGE'] ) { $script:jsEnv['LOG_BRIDGE'] }
+
+        if ( !$script:jsEnv['LOG4JPROP'] -and ( Test-Path -Path "$($editorInstallPath)\lib\JOE-log4j.properties" -PathType Leaf ) )
         {
             $envLog4JProp = "-Dlog4j.configuration=`"file:///$($editorInstallPath -replace "\\","/")/lib/JOE-log4j.properties`""
         } else {
-            $envLog4JProp = $SCRIPT:jsEnv['LOG4JPROP']
+            $envLog4JProp = $script:jsEnv['LOG4JPROP']
         }
 
-        $envCairoJavaOptions = if ( $SCRIPT:jsEnv['CAIRO_JAVA_OPTION'] ) { $SCRIPT:jsEnv['CAIRO_JAVA_OPTION'] } else { '-Dorg.eclipse.swt.internal.gtk.cairoGraphics=false' }
-        
+        # $envCairoJavaOptions = if ( $script:jsEnv['CAIRO_JAVA_OPTION'] ) { $script:jsEnv['CAIRO_JAVA_OPTION'] } else { '-Dorg.eclipse.swt.internal.gtk.cairoGraphics=false' }
+
         if ( $DebugPreferences -eq "Continue" )
         {
             $javaExecutableFile = "$($envJavaHome)\bin\java.exe"
         } else {
             $javaExecutableFile = "$($envJavaHome)\bin\javaw.exe"
         }
-        
+
         if ( -Not (Test-Path -Path "$($javaExecutableFile)" -PathType Leaf) )
         {
             $javaExecutableFile = Split-Path -Path "$($javaExecutableFile)" -Leaf
         }
-        
+
         $javaClassPath = "patches/*;user_lib/*;log/$($envLogBridge)/*;3rd-party/*;sos/*"
         $javaArguments = "-classpath `"$($javaClassPath)`" $($envLog4JProp) $($envJavaOptions) -DSCHEDULER_HOME=`"$($envSchedulerHome)`" -DSCHEDULER_DATA=`"$($envSchedulerData)`" -DSCHEDULER_HOT_FOLDER=`"$envSchedulerHotFolder`" sos.scheduler.editor.app.Editor"
 
@@ -227,7 +228,12 @@ param
         $command = """$($javaExecutableFile)"" $($javaArguments)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler Editor: $($command)"
-        Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)"
+
+
+        if ( $PSCmdlet.ShouldProcess( 'job editor' ) )
+        {
+            Start-Process -FilePath "$($javaExecutableFile)" "$($javaArguments)"
+        }
 
         Set-Location -Path $currentLocation
     }

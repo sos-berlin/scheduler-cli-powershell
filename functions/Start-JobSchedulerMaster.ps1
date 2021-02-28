@@ -39,7 +39,7 @@ to further starts, e.g. carried out by the Windows service panel.
 .PARAMETER PauseAfterFailure
 Specifies that the JobScheduler Master will pause on start-up if it has previously been terminated with an error.
 
-When used with -Service then this behavior will apply to each start of the Windows service, 
+When used with -Service then this behavior will apply to each start of the Windows service,
 e.g. by use of the Windows service panel.
 
 .EXAMPLE
@@ -56,6 +56,7 @@ Starts the JobScheduler Master Windows service.
 about_jobscheduler
 
 #>
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -72,7 +73,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$isWindows )
         {
@@ -84,7 +85,7 @@ param
     {
         if ( $Backup -and $Cluster -ne 'passive' )
         {
-            throw "$($MyInvocation.MyCommand.Name): Parameter -Backup requires use of a passive cluster, use -Cluster"               
+            throw "$($MyInvocation.MyCommand.Name): Parameter -Backup requires use of a passive cluster, use -Cluster"
         }
 
         if ( $Service )
@@ -93,23 +94,29 @@ param
             {
                 throw "$($MyInvocation.MyCommand.Name): parameters -Service and -Cluster not compatible, use Install-JobSchedulerService cmdlet to run the service with -Cluster"
             }
-            
+
             if ( $PauseAfterFailure )
             {
                 throw "$($MyInvocation.MyCommand.Name): parameters -Service and -PauseAfterFailure not compatible, use Install-JobSchedulerService cmdlet to run the service with -PauseAfterFailure"
             }
-            
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler service with ID '$($js.Id)' at '$($js.Url)'"
-            $serviceInstance = Start-Service -Name $js.Service.serviceName -PassThru
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler service with ID '$($script:js.Id)' at '$($script:js.Url)'"
+            if ( $PSCmdlet.ShouldProcess( 'Master' ) )
+            {
+                $serviceInstance = Start-Service -Name $script:js.Service.serviceName -PassThru
+            }
 
             if ( $Pause )
             {
                 Start-Sleep -Seconds 3
-                $result = $serviceInstance.Pause()
+                if ( $PSCmdlet.ShouldProcess( 'Master' ) )
+                {
+                    $serviceInstance.Pause() | Out-Null
+                }
             }
         } else {
             $startOptions = ''
-        
+
             if ( $Cluster )
             {
                 if ( $Cluster -eq 'active' )
@@ -122,37 +129,41 @@ param
                         $startOptions += ' -backup'
                     }
                 }
-            } elseif ( $SCRIPT:js.Install.ClusterOptions ) {
-                $startOptions += " $($SCRIPT:js.Install.ClusterOptions)"
+            } elseif ( $script:js.Install.ClusterOptions ) {
+                $startOptions += " $($script:js.Install.ClusterOptions)"
             }
 
             if ( $PauseAfterFailure )
             {
                 $startOptions += ' -pause-after-failure'
-            } else {
             }
 
-            $command = """$($js.Install.ExecutableFile)"" $($js.Install.StartParams)$($startOptions)"
+            $command = """$($script:js.Install.ExecutableFile)"" $($script:js.Install.StartParams)$($startOptions)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): start by command: $command"
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler instance with ID '$($js.Id)' at '$($js.Url)'"
-            $process = Start-Process -FilePath "$($js.Install.ExecutableFile)" "$($js.Install.StartParams)$($startOptions)" -PassThru
-            
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): starting JobScheduler instance with ID '$($script:js.Id)' at '$($script:js.Url)'"
+            if ( $PSCmdlet.ShouldProcess( 'Master', 'Start-Process' ) )
+            {
+                Start-Process -FilePath "$($script:js.Install.ExecutableFile)" "$($script:js.Install.StartParams)$($startOptions)" -PassThru | Out-Null
+            }
+
             if ( $Pause )
             {
                 Start-Sleep -Seconds 3
                 $command = "<modify_spooler cmd='pause'/>"
 
-                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($js.Url)"
+                Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($script:js.Url)"
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $command"
-        
-                # $result = Send-JobSchedulerXMLCommand $js.Url $command
-                Invoke-JobSchedulerWebRequestXmlCommand -Command $command -Headers @{'Accept' = 'application/xml'}
+
+                if ( $PSCmdlet.ShouldProcess( $command, 'Invoke-JobSchedulerWebRequestXmlCommand' ) )
+                {
+                    Invoke-JobSchedulerWebRequestXmlCommand -Command $command -Headers @{'Accept' = 'application/xml'}
+                }
             }
         }
     }
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

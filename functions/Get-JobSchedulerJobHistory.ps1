@@ -45,15 +45,15 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-    }        
-        
+    }
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain, Job=$Job"
-    
+
         Get-JobSchedulerTaskHistory -Job $Job -JobChain $JobChain -OrderId $OrderId -Directory $Directory -Recursive:$Recursive -State $State -DateFrom $DateFrom -DateTo $DateTo -Timezone $Timezone -Limit $Limit -Successful:$Successful -Failed:$Failed -Incomplete:$Incomplete
     }
-    
+
     End
     {
     }

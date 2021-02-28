@@ -67,8 +67,8 @@ $lastHistory = Get-JobSchedulerOrderHistory -RelativeDateFrom -8h | Sort-Object 
 # execute by interval
 Get-JobSchedulerOrderHistory -DateFrom $lastHistory[0].startTime | Tee-Object -Variable lastHistory | Get-JobSchedulerOrderLog | Select-Object @{name='path'; expression={ "/tmp/history/$(Get-Date $_.startTime -f 'yyyyMMdd-hhmmss')-$([io.path]::GetFileNameWithoutExtension($_.jobChain))-$($_.orderId).log"}}, @{name='value'; expression={ $_.log }} | Set-Content
 
-Provides a mechanism to subsequently retrieve previous logs. Starting from initial execution of the Get-JobSchedulerOrderHistory cmdlet the resulting $lastHistory object is used for any subsequent calls. 
-Consider use of the Tee-Object cmdlet in the pipeline that updates the $lastHistory object that can be used for later executions of the same pipeline. 
+Provides a mechanism to subsequently retrieve previous logs. Starting from initial execution of the Get-JobSchedulerOrderHistory cmdlet the resulting $lastHistory object is used for any subsequent calls.
+Consider use of the Tee-Object cmdlet in the pipeline that updates the $lastHistory object that can be used for later executions of the same pipeline.
 The pipeline can e.g. be executed in a cyclic job.
 
 .LINK
@@ -102,9 +102,9 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
     }
-    
+
     Process
     {
         $body = New-Object PSObject
@@ -115,11 +115,11 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/order/log/info' -Body $requestBody
-            
+
         if ( $response.StatusCode -eq 200 )
         {
             $requestResult = ( $response.Content | ConvertFrom-JSON )
-                
+
             if ( !$requestResult.log )
             {
                 throw ( $response | Format-List -Force | Out-String )
@@ -127,19 +127,19 @@ param
         } else {
             throw ( $response | Format-List -Force | Out-String )
         }
-        
-        
+
+
         Write-Verbose ".. log file: size=$($requestResult.log.size), filename=$($requestResult.log.filename), download=$($requestResult.log.download)"
         Add-Member -Membertype NoteProperty -Name 'filename' -value $requestResult.log.filename -InputObject $body
-        
+
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/order/log/download' -Body $requestBody
-            
+
         if ( $response.StatusCode -ne 200 )
         {
             throw ( $response | Format-List -Force | Out-String )
         }
-        
+
         $objResult = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'endTime' -value $EndTime -InputObject $objResult
         Add-Member -Membertype NoteProperty -Name 'exitCode' -value $ExitCode -InputObject $objResult
@@ -152,12 +152,12 @@ param
         Add-Member -Membertype NoteProperty -Name 'state' -value $State -InputObject $objResult
         Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objResult
         Add-Member -Membertype NoteProperty -Name 'log' -value ([System.Text.Encoding]::UTF8.GetString( $response.Content )) -InputObject $objResult
-        
+
         $objResult
     }
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

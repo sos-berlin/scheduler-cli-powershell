@@ -5,7 +5,7 @@ function Get-JobSchedulerOrderHistory
 Returns the order execution history for job chains.
 
 .DESCRIPTION
-History information is returned for orders from a JobScheduler Master. 
+History information is returned for orders from a JobScheduler Master.
 Order executions can be selected by job chain, order ID, folder, history status etc.
 
 The history information retured includes start time, end time, return code etc.
@@ -26,7 +26,7 @@ Optionally specifies the folder for which jobs should be returned. The directory
 from the root folder, i.e. the "live" directory.
 
 .PARAMETER Recursive
-Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
+Specifies that any sub-folders should be looked up when used with the -Directory parameter.
 By default no sub-folders will be looked up for jobs.
 
 .PARAMETER ExcludeOrder
@@ -50,7 +50,7 @@ Consider that a UTC date has to be provided.
 Default: End of the current day as a UTC date
 
 .PARAMETER RelativeDateFrom
-Specifies a relative date starting from which history items should be returned, e.g. 
+Specifies a relative date starting from which history items should be returned, e.g.
 
 * -1s, -2s: one second ago, two seconds ago
 * -1m, -2m: one minute ago, two minutes ago
@@ -67,7 +67,7 @@ for the timezone that is specified with the -Timezone parameter.
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER RelativeDateTo
-Specifies a relative date until which history items should be returned, e.g. 
+Specifies a relative date until which history items should be returned, e.g.
 
 * -1s, -2s: one second ago, two seconds ago
 * -1m, -2m: one minute ago, two minutes ago
@@ -85,7 +85,7 @@ This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER Timezone
 Specifies the timezone to which dates should be converted in the history information.
-A timezone can e.g. be specified like this: 
+A timezone can e.g. be specified like this:
 
   Get-JSOrderHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
 
@@ -229,35 +229,35 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $orders = @()
         $folders = @()
         $historyStates = @()
         $excludeOrders = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain, OrderId=$OrderId"
-    
+
         if ( !$Directory -and !$JobChain )
         {
             throw "$($MyInvocation.MyCommand.Name): no directory or job chain specified, use -Directory or -JobChain"
         }
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
+
         if ( $JobChain )
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
@@ -272,7 +272,7 @@ param
                 }
             }
         }
-        
+
         if ( $OrderId )
         {
             if ( (Get-JobSchedulerObject-Basename $OrderId) -ne $OrderId ) # order id includes a directory
@@ -285,7 +285,7 @@ param
         {
             $Recursive = $true
         }
-        
+
         if ( $Successful )
         {
             $historyStates += 'SUCCESSFUL'
@@ -305,12 +305,12 @@ param
         {
             $objOrder = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
-            
+
             if ( $OrderId )
             {
                 Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
             }
-            
+
             $orders += $objOrder
         }
 
@@ -339,7 +339,7 @@ param
             }
         }
     }
-    
+
     End
     {
         # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
@@ -350,7 +350,7 @@ param
         {
             $timezoneOffsetHours += 1
         }
-                    
+
         [string] $timezoneOffset = "$($timezoneOffsetPrefix)$($timezoneOffsetHours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
 
         $body = New-Object PSObject
@@ -416,7 +416,7 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest '/orders/history' $requestBody
-        
+
         if ( $response.StatusCode -eq 200 )
         {
             $returnHistoryItems = ( $response.Content | ConvertFrom-JSON ).history
@@ -427,7 +427,7 @@ param
         if ( $Timezone.Id -eq 'UTC' )
         {
             $returnHistoryItems
-        } else {            
+        } else {
             $returnHistoryItems | Select-Object -Property `
                                            jobschedulerId, `
                                            historyId, `
@@ -448,7 +448,7 @@ param
         } else {s
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no history items found"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

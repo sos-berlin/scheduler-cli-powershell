@@ -31,7 +31,7 @@ Optionally specifies the folder for which jobs should be returned. The directory
 from the root folder, i.e. the "live" directory.
 
 .PARAMETER Recursive
-Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
+Specifies that any sub-folders should be looked up when used with the -Directory parameter.
 By default no sub-folders will be looked up for jobs.
 
 .PARAMETER Compact
@@ -39,7 +39,7 @@ Specifies that a smaller subset of information is provided, e.g. no task queues 
 By default all information available for jobs is returned.
 
 .PARAMETER WithHistory
-Specifies the task history to be returned. 
+Specifies the task history to be returned.
 The parameter -MaxLastHstoryitems specifies the number of history items returned.
 
 This operation is time-consuming and should be restricted to selecting individual jobs.
@@ -131,33 +131,33 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
-        
+        $stopWatch = Start-JobSchedulerStopWatch
+
         $locks = @()
         $folders = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, Recursive=$Recursive, Lock=$Lock"
-    
+
         if ( !$Directory -and !$Lock )
         {
             throw "$($MyInvocation.MyCommand.Name): no directory or lock specified, use -Directory or -Lock"
         }
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( !$Directory.startsWith( '/' ) ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.endsWith( '/' ) )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-            
+
         if ( $Lock )
         {
             if ( (Get-JobSchedulerObject-Basename $Lock) -ne $Lock ) # lock name includes a directory
@@ -172,12 +172,12 @@ param
                 }
             }
         }
-        
+
         if ( $Directory -eq '/' -and !$Lock -and !$Recursive )
         {
             $Recursive = $true
         }
-        
+
         if ( $Lock )
         {
             $locks += $Lock
@@ -192,7 +192,7 @@ param
             $folders += $objFolder
         }
     }
-        
+
     End
     {
         $body = New-Object PSObject
@@ -210,10 +210,10 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/locks/p' -Body $requestBody
-        
+
         if ( $response.StatusCode -eq 200 )
         {
-            $returnLocks = ( $response.Content | ConvertFrom-JSON ).locks
+            $returnLocks = ( $response.Content | ConvertFrom-Json ).locks
         } else {
             throw ( $response | Format-List -Force | Out-String )
         }
@@ -223,7 +223,7 @@ param
                                             @{name='lock'; expression={ $_.path }}, `
                                             path, `
                                             maxNonExclusive, `
-                                            configurationDate, ` 
+                                            configurationDate, `
                                             surveyDate
 
         if ( $returnLocks.count )
@@ -232,7 +232,7 @@ param
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no locks found"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

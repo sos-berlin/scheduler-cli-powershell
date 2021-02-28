@@ -1,4 +1,4 @@
-function Get-JobSchedulerEvent
+﻿function Get-JobSchedulerEvent
 {
 <#
 .SYNOPSIS
@@ -19,7 +19,7 @@ events, e.g. remove all events of a particular event class.
 .PARAMETER EventId
 An identifier for an event. Allows event handlers to react to events having a particular ID.
 
-Specifies a unique identifier when used together with the -EventClass parameter. An event id is required to be unique 
+Specifies a unique identifier when used together with the -EventClass parameter. An event id is required to be unique
 for the same event class.
 
 .PARAMETER MasterUrl
@@ -39,14 +39,14 @@ event handler and starts jobs and job chains for registered JobScheduler Master 
 
 The URL consists of the protocol, host name and port, e.g. http://localhost:4454.
 
-Default: If used with a job then the CLI will by default assign the JobScheduler Supervisor that the 
+Default: If used with a job then the CLI will by default assign the JobScheduler Supervisor that the
 current JobScheduler Master is registered for and otherwise assign the JobScheduler Master.
-
-.PARAMETER SupervisorJobChain
-Specifies the path of the job chain in the JobScheduler Master or Supervisor instance that implements the event
-processor. 
-
-Default: /sos/events/scheduler_event_service
+#
+# .PARAMETER SupervisorJobChain
+# Specifies the path of the job chain in the JobScheduler Master or Supervisor instance that implements the event
+# processor.
+#
+# Default: /sos/events/scheduler_event_service
 
 .PARAMETER XPath
 All events corresponding to the XPath expression specified when this parameter is set. Complex expressions
@@ -86,8 +86,8 @@ param
     [int] $ExitCode = 0,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [Uri] $MasterUrl,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $SupervisorJobChain = '/sos/events/scheduler_event_service',
+#   [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+#   [string] $SupervisorJobChain = '/sos/events/scheduler_event_service',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $XPath
 )
@@ -95,12 +95,12 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        
+
         if ( $XPath -and ( $EventClass -or $EventId ) )
         {
             throw "$($MyInvocation.MyCommand.Name): only one of the parameters -EventClass, -EventId, -XPath can be specified"
         }
-                
+
         $eventCount = 0
     }
 
@@ -108,10 +108,10 @@ param
     {
         if ( !$MasterUrl )
         {
-            $MasterUrl = $SCRIPT:js.Url
+            $MasterUrl = $script:js.Url
         }
-<#            
-        if ( $SCRIPT:jsOperations )
+<#
+        if ( $script:jsOperations )
         {
             if ( !$SupervisorUrl )
             {
@@ -130,40 +130,40 @@ param
         }
 #>
         [xml] $xmlDoc  = "<params.get name='JobSchedulerEventJob.events'/>"
-        
+
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
         Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($xmlDoc.innerXml)"
-        
+
         $responseXml = Invoke-JobSchedulerWebRequestXmlCommand -Command $xmlDoc.innerXml
-        
+
         $responseNode = Select-XML -XML $responseXml -XPath "//param[@name='JobSchedulerEventJob.events']/@value"
-        
+
         if ( $responseNode )
-        {        
+        {
             if ( !$XPath )
             {
                 $XPath = '//events/event'
                 $cond = ''
                 $and = ''
-                
+
                 if ( $EventClass )
                 {
                     $cond += "$($and) @event_class='$($EventClass)'"
                     $and = 'and'
                 }
-                
+
                 if ( $EventId )
                 {
                     $cond += " $($and) @event_id='$($EventId)'"
                     $and = 'and'
                 }
-        
+
                 if ( $ExitCode )
                 {
                     $cond += " $($and) @exit_code='$($ExitCode)'"
                     $and = 'and'
                 }
-                
+
                 if ( $cond )
                 {
                     $XPath += "[$($cond)]"
@@ -175,17 +175,17 @@ param
             Write-Debug ".. $($MyInvocation.MyCommand.Name): using events document: $($eventsXml)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): using XPath: $($XPath)"
             $eventNodes = Select-XML -Content $eventsXml -XPath $XPath
-                
+
             if ( $eventNodes )
-            {    
+            {
                 foreach( $eventNode in $eventNodes )
                 {
                     if ( !$eventNode.Node.event_class -And !$eventNode.Node.event_id )
                     {
                         continue
                     }
-            
-                    $e = Create-EventObject
+
+                    $e = New-JobSchedulerEventObject
                     $e.EventClass = $eventNode.Node.event_class
                     $e.EventId = $eventNode.Node.event_id
                     $e.ExitCode = $eventNode.Node.exit_code
@@ -195,17 +195,17 @@ param
                     $e.ExpirationDate = $eventNode.Node.expires
                     $e.Created = $eventNode.Node.created
                     # $e.MasterUrl = "http://$($eventNode.Node.remote_scheduler_host):$($eventNode.Node.remote_scheduler_port)"
-                    
+
                     $e
                     $eventCount++
                 }
             }
         }
     }
-        
+
     End
     {
         Write-Verbose ".. $($MyInvocation.MyCommand.Name): $eventCount events found"
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

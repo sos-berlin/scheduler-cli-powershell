@@ -56,8 +56,8 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
-        
+        $stopWatch = Start-JobSchedulerStopWatch
+
         $allAgents = @()
     }
 
@@ -68,9 +68,9 @@ param
             $allAgents += $agent
         }
     }
-    
+
     End
-    {    
+    {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
@@ -91,14 +91,14 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/report/agents' -Body $requestBody
-    
+
         if ( $response.StatusCode -eq 200 )
         {
             $returnReport = ( $response.Content | ConvertFrom-JSON )
         } else {
             throw ( $response | Format-List -Force | Out-String )
-        }    
- 
+        }
+
         if ( $Display -and $returnReport.agents )
         {
 
@@ -115,7 +115,7 @@ ________________________________________________________________________
                     "
                 Write-Output $output
             }
-            
+
             $output = "
 ________________________________________________________________________
 ........... Total Jobs:  $($returnReport.totalNumOfJobs)
@@ -134,6 +134,6 @@ ________________________________________________________________________
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no Agents found"
         }
 
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -18,11 +18,11 @@ param
     Process
     {
         $response = Invoke-JobSchedulerWebRequest -Path '/security/logout' -Body ""
-        
+
         if ( $response.StatusCode -eq 200 )
         {
             $requestResult = ( $response.Content | ConvertFrom-JSON )
-            
+
             if ( $requestResult.isAuthenticated -ne $false )
             {
                 throw ( $response | Format-List -Force | Out-String )
@@ -31,8 +31,8 @@ param
             throw ( $response | Format-List -Force | Out-String )
         }
 
-        $script:js = Create-JSObject
+        $script:js = New-JobSchedulerObject
         $script:jsWebService = Create-WebServiceObject
         $script:jsWebServiceCredential = $null
-    }    
+    }
 }

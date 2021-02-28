@@ -9,7 +9,7 @@ Optionally applies settings from a JobScheduler Master location. A Master is ide
 by its JobScheduler ID and URL for which it is operated.
 
 .DESCRIPTION
-During installation of a JobScheduler Master a number of settings are specified. 
+During installation of a JobScheduler Master a number of settings are specified.
 Such settings are imported for use with subsequent cmdlets.
 
 * For a Master that is installed on the local Windows computer the cmdlet reads
@@ -27,7 +27,7 @@ If JobScheduler Master is operated for the Jetty web server then the URLs for th
 * JOC GUI: https://localhost:40444/jobscheduler/operations_gui/
 * XML Command Interface: http://localhost:40444/jobscheduler/engine/command/
 
-For use with Jetty specify the URL for the XML Command Interface. 
+For use with Jetty specify the URL for the XML Command Interface.
 The cmdlet will convert the above JOC GUI path automatically to the XML Command Interface path.
 
 .PARAMETER Id
@@ -120,14 +120,14 @@ param
 )
     Begin
     {
-        $stopWatch = Start-StopWatch
-        
+        $stopWatch = Start-JobSchedulerStopWatch
+
         if ( !$isWindows )
         {
             throw "$($MyInvocation.MyCommand.Name): cmdlet can be used with Windows OS only"
         }
     }
-        
+
     Process
     {
         if ( !$InstallPath -and !$Id -and !$Url )
@@ -148,7 +148,7 @@ param
             {
                 throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -Url parameter, e.g. -Url http://localhost:4444: $($Url.OriginalString)"
             }
-            
+
             # replace GUI Url with Command URl for operations with Jetty
             if ( $Url.AbsolutePath -eq '/jobscheduler/operations_gui/' )
             {
@@ -168,7 +168,7 @@ param
             if ( [System.Uri]::CheckHostName( $ProxyUrl.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
             {
                 throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -ProxyUrl parameter, e.g. -ProxyUrl http://localhost:3128: $($Url.OriginalString)"
-            }            
+            }
         }
 
         if ( $Credentials )
@@ -176,27 +176,27 @@ param
             $script:jsOptionWebRequestUseDefaultCredentials = $false
             $script:jsCredentials = $Credentials
         }
-        
+
         if ( $ProxyCredentials )
         {
             $script:jsOptionWebRequestProxyUseDefaultCredentials = $false
             $script:jsProxyCredentials = $ProxyCredentials
         }
-        
+
         $script:jsEnv = @{}
-        
-        $script:js = Create-JSObject
+
+        $script:js = New-JobSchedulerObject
         $script:js.Url = $Url
         $script:js.Id = $Id
         $script:js.Local = $false
 
 		$script:jsWebService = $null
-		
+
         if ( $ProxyUrl )
         {
             $script:js.ProxyUrl = $ProxyUrl
-        }        
-        
+        }
+
         if ( $InstallPath )
         {
             if ( $InstallPath.Substring( $InstallPath.Length-1 ) -eq '/' -or $InstallPath.Substring( $InstallPath.Length-1 ) -eq '\' )
@@ -208,15 +208,15 @@ param
             {
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler Master installation path not found: $($InstallPath)"
             }
-            
+
             if ( !$Id )
             {
                 $script:js.Id = Get-DirectoryName $InstallPath
             }
-        
+
             $script:js.Local = $true
         } elseif ( $Id ) {
-            try 
+            try
             {
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): checking implicit installation path: $($BasePath)\$($Id)"
                 $script:js.Local = Test-Path "$($BasePath)\$($Id)" -PathType Container
@@ -229,9 +229,9 @@ param
                 $InstallPath = "$($BasePath)\$($Id)"
             }
         }
-            
+
         if ( $script:js.Local )
-        {            
+        {
             $environmentVariablesScriptPath = $InstallPath + '/bin/' + $EnvironmentVariablesScript
             if ( Test-Path $environmentVariablesScriptPath -PathType Leaf )
             {
@@ -240,61 +240,61 @@ param
             } else {
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler installation path not found: $($InstallPath)"
             }
-            
+
             $environmentVariablesScriptPath = $InstallPath + '/user_bin/' + $EnvironmentVariablesScript
             if ( Test-Path $environmentVariablesScriptPath -PathType Leaf )
             {
                 Write-Debug ".. $($MyInvocation.MyCommand.Name): importing settings from $($environmentVariablesScriptPath)"
                 Invoke-CommandScript $environmentVariablesScriptPath
-            }    
-        
+            }
+
             $script:js.Install.Directory = $InstallPath
-            
+
             if ( $script:jsEnv['SCHEDULER_ID'] )
-            {            
+            {
                 $script:js.Id = $script:jsEnv['SCHEDULER_ID']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_HOME'] )
             {
                 $script:js.Install.Directory = $script:jsEnv['SCHEDULER_HOME']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_DATA'] )
             {
                 $script:js.Config.Directory = $script:jsEnv['SCHEDULER_DATA']
             }
-        
+
             if ( $script:jsEnv['SOS_INI'] )
             {
                 $script:js.Config.SosIni = $script:jsEnv['SOS_INI']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_INI'] )
             {
                 $script:js.Config.FactoryIni = $script:jsEnv['SCHEDULER_INI']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_PID'] )
             {
                 $script:js.Install.PidFile = $script:jsEnv['SCHEDULER_PID']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_CLUSTER_OPTIONS'] )
             {
                 $script:js.Install.ClusterOptions = $script:jsEnv['SCHEDULER_CLUSTER_OPTIONS']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_PARAMS'] )
             {
                 $script:js.Install.Params = $script:jsEnv['SCHEDULER_PARAMS']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_START_PARAMS'] )
             {
                 $script:js.Install.StartParams = $script:jsEnv['SCHEDULER_START_PARAMS']
             }
-        
+
             if ( $script:jsEnv['SCHEDULER_BIN'] )
             {
                 $script:js.Install.ExecutableFile = $script:jsEnv['SCHEDULER_BIN']
@@ -304,7 +304,7 @@ param
             if ( Test-Path $schedulerXmlPath -PathType Leaf )
             {
                 $configResponse = ( Select-XML -Path $schedulerXmlPath -Xpath '/spooler/config' ).Node
-        
+
                 $script:js.Config.SchedulerXml = $schedulerXmlPath
                 if ( !$script:js.Url )
                 {
@@ -313,17 +313,17 @@ param
             } else {
                 throw "$($MyInvocation.MyCommand.Name): JobScheduler configuration file not found: $($schedulerXmlPath)"
             }
-            
+
             $script:js.Service.ServiceName = "sos_scheduler_$($script:js.Id)"
             $script:js.Service.ServiceDisplayName = "SOS JobScheduler -id=$($script:js.Id)"
             $script:js.Service.ServiceDescription = 'JobScheduler'
         }
-        
+
         $script:js
     }
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

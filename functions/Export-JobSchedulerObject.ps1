@@ -14,7 +14,7 @@ Specifies the name of the object, e.g. a job name.
 Specifies the directory in JOC Cockpit in which the object is available.
 
 .PARAMETER Type
-Specifies the object type which is one of: 
+Specifies the object type which is one of:
 
 * JOB
 * JOBCHAIN
@@ -31,7 +31,7 @@ Specifies the object type which is one of:
 Specifies the XML file that the exported configuration object is written to.
 
 .PARAMETER ForeLive
-Specifies that the XML configuration object is not used from JOC Cockpit but is retrieved from the Master's "live" folder. 
+Specifies that the XML configuration object is not used from JOC Cockpit but is retrieved from the Master's "live" folder.
 This option can be used to ensure that no draft versions of configurations objects are exported but objects only that
 have been deployed to a Master.
 
@@ -50,7 +50,7 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
@@ -78,7 +78,7 @@ param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Name,
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [ValidateSet('JOB','JOBCHAIN','ORDER','PROCESSCLASS','AGENTCLUSTER','LOCK','SCHEDULE','WORKINGDAYSCALENDAR','NONWORKINGDAYSCALENDAR','FOLDER','JOBSCHEDULER','DOCUMENTATION','MONITOR','NODEPARAMS','HOLIDAYS','JOE','OTHER')]
@@ -92,33 +92,33 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $AuditTicketLink    
+    [Uri] $AuditTicketLink
 )
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
             throw "$($MyInvocation.MyCommand.Name): Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
     }
-    
+
     Process
     {
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
+
         if ( $Name )
         {
             if ( (Get-JobSchedulerObject-Basename $Name) -ne $Name ) # name includes a directory
@@ -130,28 +130,28 @@ param
 
             $body = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-            
+
             if ( $Directory.endsWith('/') )
             {
                 Add-Member -Membertype NoteProperty -Name 'path' -value "$($Directory)$($Name)" -InputObject $body
             } else {
                 Add-Member -Membertype NoteProperty -Name 'path' -value "$($Directory)/$($Name)" -InputObject $body
             }
-            
+
             Add-Member -Membertype NoteProperty -Name 'objectType' -value $Type -InputObject $body
 
             if ( $ForceLive )
             {
                 Add-Member -Membertype NoteProperty -Name 'forceLive' -value $True -InputObject $body
             }
-    
+
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
             $response = Invoke-JobSchedulerWebRequest -Path '/joe/read/file' -Body $requestBody
-            
+
             if ( $response.StatusCode -eq 200 )
             {
                 $objCustom = ( $response.Content | ConvertFrom-JSON ).configuration
-                
+
                 if ( !$objCustom )
                 {
                     throw ( $response | Format-List -Force | Out-String )
@@ -162,11 +162,11 @@ param
 
             [string] $requestBody = $objCustom | ConvertTo-Json -Depth 100
             $response = Invoke-JobSchedulerWebRequest -Path "/joe/$Type/toxml" -Body $requestBody
-            
+
             if ( $response.StatusCode -eq 200 )
             {
                 [XML] $objXml = $response.Content
-                
+
                 if ( !$objXml )
                 {
                     throw ( $response | Format-List -Force | Out-String )
@@ -174,7 +174,7 @@ param
             } else {
                 throw ( $response | Format-List -Force | Out-String )
             }
-            
+
             if ( $File )
             {
                 [System.XML.XmlWriterSettings] $xmlWriterSettings = New-Object System.XML.XmlWriterSettings
@@ -185,17 +185,17 @@ param
                 $objXml.WriteTo( $XmlWriter )
                 $xmlWriter.Close()
             }
-            
+
             $objXml
 
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): object exported"                
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): object exported"
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no object exported"                
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no object exported"
         }
     }
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

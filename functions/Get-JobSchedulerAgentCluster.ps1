@@ -7,7 +7,7 @@ Returns Agent Clusters from the JobScheduler Master.
 .DESCRIPTION
 Agent Clusters are retrieved from a JobScheduler Master.
 
-Agent Clusters can be selected either by the folder of the Agent Cluster location including sub-folders 
+Agent Clusters can be selected either by the folder of the Agent Cluster location including sub-folders
 or by an individual Agent Cluster.
 
 Resulting Agent Clusters can be forwarded to cmdlets, such as Get-JobSchedulerAgentStatus, for pipelined bulk operations.
@@ -68,22 +68,22 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $objAgentClusters = @()
         $objFolders = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, AgentCluster=$AgentCluster"
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
@@ -95,7 +95,7 @@ param
             $Recursive = $true
         }
 
-        if ( $AgentCluster ) 
+        if ( $AgentCluster )
         {
             if ( (Get-JobSchedulerObject-Basename $AgentCluster) -ne $AgentCluster ) # Agent Cluster name includes a path
             {
@@ -122,27 +122,27 @@ param
             $objFolders += $objFolder
         }
     }
-    
+
     End
     {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-        
+
         if ( $Compact )
         {
             Add-Member -Membertype NoteProperty -Name 'compact' -value ( $Compact -eq $true ) -InputObject $body
         }
-        
+
         if ( $objAgentClusters )
         {
             Add-Member -Membertype NoteProperty -Name 'agentClusters' -value $objAgentClusters -InputObject $body
         }
-        
+
         if ( $State )
         {
             Add-Member -Membertype NoteProperty -Name 'state' -value $State -InputObject $body
         }
-        
+
         if ( $objFolders )
         {
             Add-Member -Membertype NoteProperty -Name 'folders' -value $objFolders -InputObject $body
@@ -150,31 +150,31 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/agent_clusters' -Body $requestBody
-    
+
         if ( $response.StatusCode -eq 200 )
         {
             $volatileAgentClusters = ( $response.Content | ConvertFrom-JSON ).agentClusters
         } else {
             throw ( $response | Format-List -Force | Out-String )
-        }    
+        }
 
         $returnAgentClusters = @()
-        
+
         foreach( $volatileAgentCluster in $volatileAgentClusters )
         {
             $returnAgentCluster = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'AgentCluster' -value $volatileAgentCluster.path -InputObject $returnAgentCluster
             Add-Member -Membertype NoteProperty -Name 'Directory' -value $volatileAgentCluster.path -InputObject $returnAgentCluster
             $agents = @()
-            
+
             foreach( $agent in $volatileAgentCluster.Agents )
             {
                 $agents += $agent.url
             }
-            
+
             Add-Member -Membertype NoteProperty -Name 'Agents' -value $agents -InputObject $returnAgentCluster
             Add-Member -Membertype NoteProperty -Name 'Volatile' -value $volatileAgentCluster -InputObject $returnAgentCluster
-            
+
             $returnAgentClusters += $returnAgentCluster
         }
 
@@ -190,7 +190,7 @@ param
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no Agent Clusters found"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

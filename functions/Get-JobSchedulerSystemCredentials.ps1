@@ -5,7 +5,7 @@ function Get-JobSchedulerSystemCredentials
 Gets a credentials object (PSCredential) from the Windows Credential Manager
 
 .DESCRIPTION
-This cmdlet will return a [PSCredential] object from a credential stored in Windows Credential Manager. 
+This cmdlet will return a [PSCredential] object from a credential stored in Windows Credential Manager.
 This cmdlet can only access Generic Credentials.
 
 .PARAMETER TargetName
@@ -22,7 +22,7 @@ ap                                   System.Security.SecureString
 System.Management.Automation.PSCredential
 
 .NOTES
-To add credentials open up Control Panel>User Accounts>Credential Manager and click "Add a gereric credential". 
+To add credentials open up Control Panel>User Accounts>Credential Manager and click "Add a gereric credential".
 The "Internet or network address" field will be the Name required by the Get-JobSchedulerSystemCredentials cmdlet.
 
 Forked from https://gist.github.com/toburger/2947424 which was adapted from
@@ -36,7 +36,7 @@ Operations
 
 .FUNCTIONALITY
 Security
-    
+
 #>
 [cmdletbinding()]
 [OutputType([System.Management.Automation.PSCredential])]
@@ -45,28 +45,14 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [ValidateNotNullOrEmpty()]
     [Alias("Address", "Location", "Name")]
-    [string]$TargetName
+    [string] $TargetName
 )
 
-    End
+    Begin
     {
-        $nCredPtr= New-Object IntPtr
-
-        $success = [ADVAPI32.Util]::CredRead($TargetName,1,0,[ref] $nCredPtr)
-
-        if ($success) {
-            $critCred = New-Object ADVAPI32.Util+CriticalCredentialHandle $nCredPtr
-            $cred = $critCred.GetCredential()
-            $username = $cred.UserName
-            $securePassword = $cred.CredentialBlob | ConvertTo-SecureString -AsPlainText -Force
-            $cred = $null
-            Write-Output (New-Object System.Management.Automation.PSCredential $username, $securePassword)
-        } else {
-            throw "$($MyInvocation.MyCommand.Name): No credentials found in Windows Credential Manager for TargetName: $($TargetName)"
-        }
     }
 
-    Begin
+    Process
     {
         $sig = @"
 
@@ -188,6 +174,27 @@ public static extern bool CredFree([In] IntPtr cred);
             Add-Type -MemberDefinition $sig -Namespace "ADVAPI32" -Name 'Util' -ErrorAction Stop
         } catch {
             Write-Error "$($MyInvocation.MyCommand.Name): Could not load custom type. $($_.Exception.Message)"
+        }
+    }
+
+    End
+    {
+        $nCredPtr= New-Object IntPtr
+
+        $success = [ADVAPI32.Util]::CredRead($TargetName,1,0,[ref] $nCredPtr)
+
+        if ($success) {
+            $critCred = New-Object ADVAPI32.Util+CriticalCredentialHandle $nCredPtr
+            $cred = $critCred.GetCredential()
+            $username = $cred.UserName
+
+            # $securePassword = $cred.CredentialBlob | ConvertTo-SecureString -AsPlainText -Force
+            $securePassword = New-Object Security.SecureString
+            $cred.CredentialBlob.ToCharArray() | ForEach-Object { $securePassword.AppendChar($_) }
+            $cred = $null
+            Write-Output (New-Object System.Management.Automation.PSCredential $username, $securePassword)
+        } else {
+            throw "$($MyInvocation.MyCommand.Name): No credentials found in Windows Credential Manager for TargetName: $($TargetName)"
         }
     }
 }

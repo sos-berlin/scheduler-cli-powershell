@@ -15,7 +15,7 @@ Specifies the name of the object, e.g. a job name.
 Specifies the directory in JOC Cockpit to which the object should be stored.
 
 .PARAMETER Type
-Specifies the object type which is one of: 
+Specifies the object type which is one of:
 
 * JOB
 * JOBCHAIN
@@ -49,7 +49,7 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
@@ -72,7 +72,7 @@ param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Name,
-    [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [ValidateSet('JOB','JOBCHAIN','ORDER','PROCESSCLASS','AGENTCLUSTER','LOCK','SCHEDULE','WORKINGDAYSCALENDAR','NONWORKINGDAYSCALENDAR','FOLDER','JOBSCHEDULER','DOCUMENTATION','MONITOR','NODEPARAMS','HOLIDAYS','JOE','OTHER')]
@@ -86,33 +86,33 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $AuditTicketLink    
+    [Uri] $AuditTicketLink
 )
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
             throw "$($MyInvocation.MyCommand.Name): Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
     }
-    
+
     Process
     {
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
+
         if ( $Name )
         {
             if ( (Get-JobSchedulerObject-Basename $Name) -ne $Name ) # name includes a directory
@@ -131,11 +131,11 @@ param
         {
             $requestBody = Get-Content $File
             $response = Invoke-JobSchedulerWebRequest -Path '/joe/tojson' -Body $requestBody -ContentType 'application/xml'
-            
+
             if ( $response.StatusCode -eq 200 )
             {
                 $objCustom = ( $response.Content | ConvertFrom-JSON )
-                
+
                 if ( !$objCustom )
                 {
                     throw ( $response | Format-List -Force | Out-String )
@@ -147,14 +147,14 @@ param
 
             $body = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-            
+
             if ( $Directory.endsWith('/') )
             {
                 Add-Member -Membertype NoteProperty -Name 'path' -value "$($Directory)$($Name)" -InputObject $body
             } else {
                 Add-Member -Membertype NoteProperty -Name 'path' -value "$($Directory)/$($Name)" -InputObject $body
             }
-            
+
             Add-Member -Membertype NoteProperty -Name 'objectType' -value $Type -InputObject $body
             Add-Member -Membertype NoteProperty -Name 'configuration' -value $objCustom -InputObject $body
 
@@ -162,14 +162,14 @@ param
             {
                 Add-Member -Membertype NoteProperty -Name 'docPath' -value $DocPath -InputObject $body
             }
-    
+
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
             $response = Invoke-JobSchedulerWebRequest -Path '/joe/store' -Body $requestBody
-            
+
             if ( $response.StatusCode -eq 200 )
             {
                 $requestResult = ( $response.Content | ConvertFrom-JSON )
-                
+
                 if ( !$requestResult.ok )
                 {
                     throw ( $response | Format-List -Force | Out-String )
@@ -177,15 +177,15 @@ param
             } else {
                 throw ( $response | Format-List -Force | Out-String )
             }
-        
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): object imported"                
+
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): object imported"
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no object imported"                
-        }        
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no object imported"
+        }
     }
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

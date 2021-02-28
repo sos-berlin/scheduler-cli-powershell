@@ -64,6 +64,7 @@ about_jobscheduler
 
 #>
 [cmdletbinding()]
+[OutputType([System.Object[]])]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -82,13 +83,13 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $volatileJobChains = @()
-        $returnJobChains = @()        
+        $returnJobChains = @()
         $states = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain"
@@ -99,11 +100,11 @@ param
         }
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
@@ -114,8 +115,8 @@ param
         {
             $Recursive = $true
         }
-        
-        if ( $JobChain ) 
+
+        if ( $JobChain )
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a path
             {
@@ -144,7 +145,7 @@ param
 
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-        
+
         if ( $Compact )
         {
             Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
@@ -169,53 +170,53 @@ param
 
         if ( $states )
         {
-            Add-Member -Membertype NoteProperty -Name 'states' -value $states -InputObject $body            
+            Add-Member -Membertype NoteProperty -Name 'states' -value $states -InputObject $body
         }
-        
+
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest '/job_chains' $requestBody
-        
+
         if ( $response.StatusCode -eq 200 )
         {
             $volatileJobChains += ( $response.Content | ConvertFrom-JSON ).jobChains
         } else {
             throw ( $response | Format-List -Force | Out-String )
-        }        
+        }
     }
-    
+
     End
     {
         if ( $volatileJobChains )
         {
             foreach( $volatileJobChain in $volatileJobChains )
             {
-                $returnJobChain = Create-JobChainObject
+                $returnJobChain = New-JobSchedulerJobChainObject
                 $returnJobChain.JobChain = $volatileJobChain.path
                 $returnJobChain.Path = $volatileJobChain.path
                 $returnJobChain.Directory = Get-JobSchedulerObject-Parent $volatileJobChain.path
                 $returnJobChain.Volatile = $volatileJobChain
-    
+
                 # JOB CHAINS PERMANENT API
-    
+
                 $body = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
                 Add-Member -Membertype NoteProperty -Name 'jobChain' -value $volatileJobChain.path -InputObject $body
-            
+
                 if ( $Compact )
                 {
                     Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
                 }
-            
+
                 [string] $requestBody = $body | ConvertTo-Json -Depth 100
                 $response = Invoke-JobSchedulerWebRequest '/job_chain/p' $requestBody
-                
+
                 if ( $response.StatusCode -eq 200 )
                 {
                     $returnJobChain.Permanent = ( $response.Content | ConvertFrom-JSON ).jobChain
                 } else {
                     throw ( $response | Format-List -Force | Out-String )
                 }
-    
+
                 $returnJobChains += $returnJobChain
             }
 
@@ -223,10 +224,10 @@ param
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job chains found"
         }
-        
+
         $returnJobChains
 
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }
 

@@ -41,12 +41,12 @@ event handler and starts jobs and job chains for registered JobScheduler Master 
 
 The URL consists of the protocol, host name and port, e.g. http://localhost:4454.
 
-Default: If used with a job then the CLI will assign by default the JobScheduler Supervisor that the 
+Default: If used with a job then the CLI will assign by default the JobScheduler Supervisor that the
 current JobScheduler Master is registered for and otherwise assign the JobScheduler Master.
 
 .PARAMETER SupervisorJobChain
 Specifies the path of the job chain in the JobScheduler Master or Supervisor instance that implements the event
-processor. 
+processor.
 
 Default: /sos/events/scheduler_event_service
 
@@ -67,7 +67,7 @@ Removes all events that are assigned the specified event class.
 about_jobscheduler
 
 #>
-[cmdletbinding()]
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -83,7 +83,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $tmpEventsLocation = "$env:TEMP\jobscheduler.events.log"
 
@@ -104,11 +104,11 @@ param
     {
         if ( !$MasterUrl )
         {
-            $MasterUrl = $SCRIPT:js.Url
+            $MasterUrl = $script:js.Url
         }
-            
-<#        
-        if ( $SCRIPT:jsOperations )
+
+<#
+        if ( $script:jsOperations )
         {
             if ( !$SupervisorUrl )
             {
@@ -125,28 +125,28 @@ param
                 $SupervisorUrl = $MasterUrl
             }
         }
-#>            
+#>
 
         $orderNode = $xmlDoc.CreateElement( 'add_order' )
         $orderNode.SetAttribute( 'job_chain', $SupervisorJobChain )
-        
+
         $paramsNode = $xmlDoc.CreateElement( 'params' )
-                
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'action' -Value 'remove' ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_host' -Value $MasterUrl.Host ) ) | Out-Null
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_port' -Value $MasterUrl.Port ) ) | Out-Null
-    
-        $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'event_class' -Value $EventClass ) ) | Out-Null
-        
+
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'action' -Value 'remove' ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_host' -Value $MasterUrl.Host ) ) | Out-Null
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'remote_scheduler_port' -Value $MasterUrl.Port ) ) | Out-Null
+
+        $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'event_class' -Value $EventClass ) ) | Out-Null
+
         if ( $EventId )
         {
-            $paramsNode.AppendChild( ( Create-ParamNode -XmlDoc $xmlDoc -Name 'event_id' -Value $EventId ) ) | Out-Null
+            $paramsNode.AppendChild( ( New-JobSchedulerParamNode -XmlDoc $xmlDoc -Name 'event_id' -Value $EventId ) ) | Out-Null
         }
-            
+
         $orderNode.AppendChild( $paramsNode ) | Out-Null
         $commandsNode.AppendChild( $orderNode ) | Out-Null
 
-        $e = Create-EventObject
+        $e = New-JobSchedulerEventObject
         $e.EventClass = $EventClass
         $e.EventId = $EventId
         # $e.MasterUrl = $MasterUrl
@@ -167,18 +167,21 @@ param
 <#
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command to JobScheduler $($SupervisorUrl)"
             Write-Debug ".. $($MyInvocation.MyCommand.Name): sending command: $($commandsNode.outerXml)"
-  #>
+#>
             try
             {
-                $response = Invoke-JobSchedulerWebRequestXmlCommand -Command $commandsNode.outerXml
-
-                if ( Test-Path $tmpEventsLocation -PathType Leaf )
+                if ( $PSCmdlet.ShouldProcess( $commandsNode.outerXml ) )
                 {
-                    Remove-Item $tmpEventsLocation -Force
+                    $response = Invoke-JobSchedulerWebRequestXmlCommand -Command $commandsNode.outerXml
+
+                    if ( Test-Path $tmpEventsLocation -PathType Leaf )
+                    {
+                        Remove-Item $tmpEventsLocation -Force
+                    }
+
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events removed"
                 }
-                
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($eventCount) events removed"                
-            } catch {                
+            } catch {
                 if ( Test-Path $tmpEventsLocation -PathType Leaf )
                 {
                     Remove-Item $tmpEventsLocation -Force
@@ -192,11 +195,11 @@ param
 
                 Write-Warning ".. $($MyInvocation.MyCommand.Name): could not forward $($eventCount) events to JobScheduler, events are stored for later dequeueing in $($tmpEventsLocation): $($_.Exception.Message)"
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): response: $($response)"
-            }            
+            }
         } else {
             Write-Warning "$($MyInvocation.MyCommand.Name): no events found to remove"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch                
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -32,9 +32,9 @@ Specifies the point in time when the job should start:
 
 .PARAMETER Timezone
 Specifies the time zone to be considered for the start time that is indicated with the -At parameter.
-Without this parameter the time zone of the JobScheduler Master is assumed. 
+Without this parameter the time zone of the JobScheduler Master is assumed.
 
-This parameter should be used if the JobScheduler Master runs in a time zone different to the environment 
+This parameter should be used if the JobScheduler Master runs in a time zone different to the environment
 that makes use of this cmdlet.
 
 Find the list of time zone names from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -54,7 +54,7 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
@@ -88,7 +88,7 @@ Starts the job with parameter 'par1' and 'par2' and respective values.
 about_jobscheduler
 
 #>
-[cmdletbinding()]
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -108,12 +108,12 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $AuditTimeSpent,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [Uri] $AuditTicketLink    
+    [Uri] $AuditTicketLink
 )
 	Begin
 	{
 		Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
@@ -122,21 +122,21 @@ param
 
         $objJobs = @()
     }
-    
+
     Process
     {
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
+
         if ( $Job )
         {
             if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
@@ -146,7 +146,7 @@ param
                 $Job = $Directory + '/' + $Job
             }
         }
-        
+
         if ( !$Timezone -and $At -match "^\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01]) (\d{2}):(\d{2})(:(\d{2}))?$" )
         {
             $At = ( Get-Date (Get-Date $At).ToUniversalTime() -Format 'yyyy-MM-dd HH:mm:ss' )
@@ -176,7 +176,7 @@ param
             Add-Member -Membertype NoteProperty -Name 'environment' -value $Environment -InputObject $objJob
         }
 
-        $objJobs += $objJob    
+        $objJobs += $objJob
     }
 
     End
@@ -186,52 +186,55 @@ param
             $body = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
             Add-Member -Membertype NoteProperty -Name 'jobs' -value $objJobs -InputObject $body
-    
+
             if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
             {
                 $objAuditLog = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
-    
+
                 if ( $AuditTimeSpent )
                 {
                     Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
                 }
-    
+
                 if ( $AuditTicketLink )
                 {
                     Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
                 }
-    
+
                 Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
             }
-    
-            [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest '/jobs/start' $requestBody
-            
-            if ( $response.StatusCode -eq 200 )
+
+            if ( $PSCmdlet.ShouldProcess( $Service, '/jobs/start' ) )
             {
-                $requestResult = ( $response.Content | ConvertFrom-JSON )
-                
-                if ( !$requestResult.ok )
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest -Path '/jobs/start' -Body $requestBody
+
+                if ( $response.StatusCode -eq 200 )
                 {
+                    $requestResult = ( $response.Content | ConvertFrom-JSON )
+
+                    if ( !$requestResult.ok )
+                    {
+                        throw ( $response | Format-List -Force | Out-String )
+                    }
+                } else {
                     throw ( $response | Format-List -Force | Out-String )
                 }
-            } else {
-                throw ( $response | Format-List -Force | Out-String )
+
+                $requestResult.tasks
+
+                if ( $requestResult.tasks.count -ne $objJobs.count )
+                {
+                    Write-Error "$($MyInvocation.MyCommand.Name): not all tasks could be started, $($objJobs.count) jobs requested, $($requestResult.tasks.count) tasks started"
+                }
+
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.tasks.count) tasks started"
             }
-        
-            $requestResult.tasks
-            
-            if ( $requestResult.tasks.count -ne $objJobs.count )
-            {
-                Write-Error "$($MyInvocation.MyCommand.Name): not all tasks could be started, $($objJobs.count) jobs requested, $($requestResult.tasks.count) tasks started"
-            }
-            
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.tasks.count) tasks started"                
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no jobs found"                
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no jobs found"
         }
 
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

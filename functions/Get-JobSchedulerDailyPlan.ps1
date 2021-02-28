@@ -24,7 +24,7 @@ Otherwise the -Job parameter is assumed to include the full path and name of the
 
 .PARAMETER JobStream
 Optionally specifies the name of a job stream for which daily plan items should be returned.
-Job streams are unique across folders and are specified by name. 
+Job streams are unique across folders and are specified by name.
 Therefore the -Directory parameter is ignored if this parameter is used.
 
 .PARAMETER Directory
@@ -51,7 +51,7 @@ Consider that a UTC date has to be provided.
 Default: End of the current day as a UTC date
 
 .PARAMETER RelativeDateFrom
-Specifies a relative date starting from which daily plan items should be returned, e.g. 
+Specifies a relative date starting from which daily plan items should be returned, e.g.
 
 * -1d, -2d: one day ago, two days ago
 * +1d, +2d: one day later, two days later
@@ -69,7 +69,7 @@ for the timezone that is specified with the -Timezone parameter.
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER RelativeDateTo
-Specifies a relative date until which daily plan items should be returned, e.g. 
+Specifies a relative date until which daily plan items should be returned, e.g.
 
 * -1d, -2d: one day ago, two days ago
 * +1d, +2d: one day later, two days later
@@ -88,7 +88,7 @@ This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER Timezone
 Specifies the time zone to which dates should be converted in the daily plan information.
-A time zone can e.g. be specified like this: 
+A time zone can e.g. be specified like this:
 
   Get-JSDailyPlan -Timezone (Get-Timezone -Id 'GMT Standard Time')
 
@@ -235,7 +235,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $jobs = @()
         $jobChains = @()
@@ -243,7 +243,6 @@ param
         $jobStreams = @()
         $folders = @()
         $states = @()
-        $returnPlans = @()        
     }
 
     Process
@@ -251,18 +250,18 @@ param
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain, OrderId=$OrderId"
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
-        if ( $JobChain ) 
+
+        if ( $JobChain )
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
             {
@@ -276,7 +275,7 @@ param
                 }
             }
         }
-        
+
         if ( $OrderId )
         {
             if ( (Get-JobSchedulerObject-Basename $OrderId) -ne $OrderId ) # order if includes a directory
@@ -297,7 +296,7 @@ param
             $Recursive = $true
         }
 
-   
+
         if ( $Successful )
         {
             $states += 'SUCCESSFUL'
@@ -341,7 +340,7 @@ param
 
         if ( $Directory -ne '/' )
         {
-            $folders += $Directory        
+            $folders += $Directory
         }
     }
 
@@ -355,7 +354,7 @@ param
         {
             $timezoneOffsetHours += 1
         }
-                    
+
         [string] $timezoneOffset = "$($timezoneOffsetPrefix)$($timezoneOffsetHours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
 
         $body = New-Object PSObject
@@ -404,7 +403,7 @@ param
         {
             Add-Member -Membertype NoteProperty -Name 'late' -value ( $Late -eq $true ) -InputObject $body
         }
-        
+
         if ( $folders )
         {
             $objFolders = @()
@@ -415,8 +414,8 @@ param
                 Add-Member -Membertype NoteProperty -Name 'recursive' -value ( $Recursive -eq $true ) -InputObject $objFolder
                 $objFolders += $objFolder
             }
-            
-            Add-Member -Membertype NoteProperty -Name 'folders' -value $objFolders -InputObject $body            
+
+            Add-Member -Membertype NoteProperty -Name 'folders' -value $objFolders -InputObject $body
         }
 
         if ( $jobs )
@@ -441,7 +440,7 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest '/plan' $requestBody
-        
+
         if ( $response.StatusCode -eq 200 )
         {
             $returnDailyPlanItems = ( $response.Content | ConvertFrom-JSON ).planItems
@@ -480,7 +479,7 @@ param
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no Daily Plan items found"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

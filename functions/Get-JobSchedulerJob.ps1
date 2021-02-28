@@ -31,7 +31,7 @@ Optionally specifies the folder for which jobs should be returned. The directory
 from the root folder, i.e. the "live" directory.
 
 .PARAMETER Recursive
-Specifies that any sub-folders should be looked up when used with the -Directory parameter. 
+Specifies that any sub-folders should be looked up when used with the -Directory parameter.
 By default no sub-folders will be looked up for jobs.
 
 .PARAMETER Compact
@@ -39,7 +39,7 @@ Specifies that a smaller subset of information is provided, e.g. no task queues 
 By default all information available for jobs is returned.
 
 .PARAMETER WithHistory
-Specifies the task history to be returned. 
+Specifies the task history to be returned.
 The parameter -MaxLastHstoryitems specifies the number of history items returned.
 
 This operation is time-consuming and should be restricted to selecting individual jobs.
@@ -155,39 +155,39 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( $isOrderJob -and $isStsandaloneJob )
         {
             throw "$($MyInvocation.MyCommand.Name): only one of the parameters -IsOrderJob or -IsStandaloneJob can be specified"
         }
-        
+
         $volatileJobChainJobs = @()
-        $returnJobs = @()        
+        $returnJobs = @()
         $states = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobChain=$JobChain Job=$Job"
-    
+
         if ( !$Directory -and !$JobChain -and !$Job )
         {
             throw "$($MyInvocation.MyCommand.Name): no directory, job chain or job specified, use -Directory, -JobChain or -Job"
         }
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
+
         if ( $JobChain )
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
@@ -202,7 +202,7 @@ param
                 }
             }
         }
-        
+
         if ( $Job )
         {
             if ( (Get-JobSchedulerObject-Basename $Job) -ne $Job ) # job name includes a directory
@@ -217,12 +217,12 @@ param
                 }
             }
         }
-        
+
         if ( $Directory -eq '/' -and !$JobChain -and !$Job -and !$Recursive )
         {
             $Recursive = $true
         }
-        
+
         if ( $WithLog )
         {
             $WithHistory = $true
@@ -257,14 +257,14 @@ param
         if ( $JobChain )
         {
             # JOB CHAIN VOLATILE API
-    
+
             $body = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
             Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $body
-    
+
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
             $response = Invoke-JobSchedulerWebRequest '/job_chain' $requestBody
-            
+
             if ( $response.StatusCode -eq 200 )
             {
                 $volatileJobChainJobs = ( $response.Content | ConvertFrom-JSON ).jobchain.nodes
@@ -272,18 +272,18 @@ param
                 throw ( $response | Format-List -Force | Out-String )
             }
         }
-        
+
 
         # JOBS VOLATILE API
 
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-        
+
         if ( $Compact )
         {
             Add-Member -Membertype NoteProperty -Name 'compact' -value $true -InputObject $body
         }
-        
+
         if ( !$JobChain -and $Directory )
         {
             $objFolder = New-Object PSObject
@@ -292,7 +292,7 @@ param
 
             Add-Member -Membertype NoteProperty -Name 'folders' -value @( $objFolder ) -InputObject $body
         }
-        
+
         if ( $VolatileJobChainJobs )
         {
             $tmpJobs = @()
@@ -302,7 +302,7 @@ param
                 Add-Member -Membertype NoteProperty -Name 'job' -value $volatileJobChainJob.job.path -InputObject $objJob
                 $tmpJobs += $objJob
             }
-            
+
             Add-Member -Membertype NoteProperty -Name 'jobs' -value $tmpJobs -InputObject $body
         } elseif ( $Job ) {
             $objJob = New-Object PSObject
@@ -310,14 +310,14 @@ param
 
             Add-Member -Membertype NoteProperty -Name 'jobs' -value @( $objJob ) -InputObject $body
         }
-        
+
         if ( $IsOrderJob )
         {
             Add-Member -Membertype NoteProperty -Name 'isOrderJob' -value $true -InputObject $body
         } elseif ( $isStandaloneJob ) {
             Add-Member -Membertype NoteProperty -Name 'isOrderJob' -value $false -InputObject $body
         }
-        
+
         if ( $states.count -gt 0 )
         {
             Add-Member -Membertype NoteProperty -Name 'states' -value $states -InputObject $body
@@ -325,7 +325,7 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest '/jobs' $requestBody
-        
+
         if ( $response.StatusCode -eq 200 )
         {
             $volatileJobs = ( $response.Content | ConvertFrom-JSON ).jobs
@@ -335,13 +335,13 @@ param
 
         foreach( $volatileJob in $volatileJobs )
         {
-            $returnJob = Create-JobObject
+            $returnJob = New-JobSchedulerJobObject
             $returnJob.Job = $volatileJob.name
             $returnJob.Path = $volatileJob.path
             $returnJob.Directory = Get-JobSchedulerObject-Parent $volatileJob.path
             $returnJob.Volatile = $volatileJob
             $returnJob.Tasks = $volatileJob.runningTasks
-            
+
             # additional properties for use with Get-JobSchedulerTask and Stop-JobSchedulerTask
             for ( $i=0; $i -lt $returnJob.Tasks.count; $i++ )
             {
@@ -350,7 +350,7 @@ param
                 Add-Member -Membertype NoteProperty -Name 'directory' -value (Get-JobSchedulerObject-Parent $volatileJob.path) -InputObject $returnJob.Tasks[$i]
             }
 
-        
+
             # JOBS PERMANENT API
 
             $body = New-Object PSObject
@@ -368,7 +368,7 @@ param
 
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
             $response = Invoke-JobSchedulerWebRequest '/jobs/p' $requestBody
-        
+
             if ( $response.StatusCode -eq 200 )
             {
                 $returnJob.Permanent = ( $response.Content | ConvertFrom-JSON ).jobs
@@ -379,7 +379,7 @@ param
             if ( $WithHistory )
             {
                 # JOB HISTORY API
-        
+
                 $body = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
                 Add-Member -Membertype NoteProperty -Name 'job' -value $volatileJob.path -InputObject $body
@@ -387,11 +387,11 @@ param
 
                 [string] $requestBody = $body | ConvertTo-Json -Depth 100
                 $response = Invoke-JobSchedulerWebRequest '/job/history' $requestBody
-        
+
                 if ( $response.StatusCode -eq 200 )
                 {
                     $requestHistoryEntries = ( $response.Content | ConvertFrom-JSON ).history
-                    $taskHistory = @()                    
+                    $taskHistory = @()
                 } else {
                     throw ( $response | Format-List -Force | Out-String )
                 }
@@ -411,7 +411,7 @@ param
 
                         [string] $requestBody = $body | ConvertTo-Json -Depth 100
                         $response = Invoke-JobSchedulerWebRequest '/task/log' $requestBody
-        
+
                         if ( $response.StatusCode -eq 200 )
                         {
                             Add-Member -Membertype NoteProperty -Name 'log' -value $response.Content -InputObject $task
@@ -419,19 +419,19 @@ param
                             throw ( $response | Format-List -Force | Out-String )
                         }
                     }
-                    
+
                     $taskHistory += $task
                 }
 
                 $returnJob.TaskHistory = $taskHistory
             }
-            
+
             $returnJobs += $returnJob
         }
 
         $returnJobs
     }
-    
+
     End
     {
         if ( $returnJobs.count )
@@ -440,7 +440,7 @@ param
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no jobs found"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

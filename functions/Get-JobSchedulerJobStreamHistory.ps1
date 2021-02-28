@@ -5,7 +5,7 @@ function Get-JobSchedulerJobStreamHistory
 Returns the execution history for job streams.
 
 .DESCRIPTION
-History information is returned for job streams from a JobScheduler Master. 
+History information is returned for job streams from a JobScheduler Master.
 Job stream executions can be selected by job stream name, history status etc.
 
 The history information returned includes start time, end time, tasks etc.
@@ -27,7 +27,7 @@ Consider that a UTC date has to be provided.
 Default: End of the current day as a UTC date
 
 .PARAMETER RelativeDateFrom
-Specifies a relative date starting from which history items should be returned, e.g. 
+Specifies a relative date starting from which history items should be returned, e.g.
 
 * -1d, -2d: one day ago, two days ago
 * -1w, -2w: one week ago, two weeks ago
@@ -41,7 +41,7 @@ for the timezone that is specified with the -Timezone parameter.
 This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER RelativeDateTo
-Specifies a relative date until which history items should be returned, e.g. 
+Specifies a relative date until which history items should be returned, e.g.
 
 * -1d, -2d: one day ago, two days ago
 * -1w, -2w: one week ago, two weeks ago
@@ -56,7 +56,7 @@ This parameter takes precedence over the -DateFrom parameter.
 
 .PARAMETER Timezone
 Specifies the timezone to which dates should be converted in the history information.
-A timezone can e.g. be specified like this: 
+A timezone can e.g. be specified like this:
 
   Get-JSJobStreamHistory -Timezone (Get-Timezone -Id 'GMT Standard Time')
 
@@ -148,8 +148,6 @@ param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobStream,
-    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $State,
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
     [DateTime] $DateFrom = (Get-Date -Hour 0 -Minute 0 -Second 0).ToUniversalTime(),
     [Parameter(Mandatory=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -174,12 +172,11 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
-        $jobStreams = @()
         $historyStates = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter JobStream=$JobStream"
@@ -188,7 +185,7 @@ param
         {
             throw "Parameters -Successful and -Failed are currently not supported"
         }
-    
+
         if ( $Successful )
         {
             $historyStates += 'SUCCESSFUL'
@@ -204,7 +201,7 @@ param
             $historyStates += 'RUNNING'
         }
     }
-    
+
     End
     {
         # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
@@ -215,7 +212,7 @@ param
         {
             $timezoneOffsetHours += 1
         }
-                    
+
         [string] $timezoneOffset = "$($timezoneOffsetPrefix)$($timezoneOffsetHours.ToString().PadLeft( 2, '0' )):$($Timezone.BaseUtcOffset.Minutes.ToString().PadLeft( 2, '0' ))"
 
         $body = New-Object PSObject
@@ -266,7 +263,7 @@ param
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest '/jobstreams/sessions' $requestBody
-        
+
         if ( $response.StatusCode -eq 200 )
         {
             $returnHistoryItems = ( $response.Content | ConvertFrom-JSON ).jobstreamSessions
@@ -339,7 +336,7 @@ param
                                                 surveyDate
             }
         } else {
-            $resultHistoryItems 
+            $resultHistoryItems
         }
 
         if ( $returnHistoryItems.count )
@@ -348,7 +345,7 @@ param
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no history items found"
         }
-        
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

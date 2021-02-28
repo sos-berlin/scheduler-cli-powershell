@@ -56,11 +56,11 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         $returnMasterClusters = @()
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Id=$Id"
@@ -72,20 +72,20 @@ param
 
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $Id -InputObject $body
-        
+
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/cluster/members' -Body $requestBody
-    
+
         if ( $response.StatusCode -eq 200 )
         {
             $returnMasterClusters = ( $response.Content | ConvertFrom-JSON ).masters
         } else {
             throw ( $response | Format-List -Force | Out-String )
-        }    
+        }
 
         if ( ( $Active -and $Passive ) -or ( !$Active -and !$Passive ) )
         {
-            $returnMasterClusters        
+            $returnMasterClusters
         } elseif ( $Active ) {
             $returnMasterClusters | Where-Object { $_.jobschedulerId -eq $Id -and $_.state.severity -eq 0 }
         } elseif ( $Passive ) {
@@ -102,6 +102,6 @@ param
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

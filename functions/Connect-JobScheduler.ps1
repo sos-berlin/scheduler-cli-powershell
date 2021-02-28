@@ -1,4 +1,4 @@
-function Connect-JobScheduler
+﻿function Connect-JobScheduler
 {
 <#
 .SYNOPSIS
@@ -10,12 +10,12 @@ A connection to the JOC Cockpit Web Service is established including support for
 The cmdlet authenticates a user and returns an access token in case of successful authentication
 that is used for subsequent requests to the Web Service.
 
-Caveat: 
-* This cmdlet calls the Invoke-WebRequest cmdlet that may throw an error "The response content cannot be parsed because the Internet Explorer engine 
+Caveat:
+* This cmdlet calls the Invoke-WebRequest cmdlet that may throw an error "The response content cannot be parsed because the Internet Explorer engine
 is not available, or Internet Explorer’s first-launch configuration is not complete. Specify the UseBasicParsing parameter and try again."
 
-* This problem is limited to Windows. The reason for this error is a weird PowerShell dependency on IE assemblies. 
-* If Internet Explorer is not configured then it prompts the user for configuration when being launched. 
+* This problem is limited to Windows. The reason for this error is a weird PowerShell dependency on IE assemblies.
+* If Internet Explorer is not configured then it prompts the user for configuration when being launched.
 
 * To disable IE's first launch configuration window you can modify the Windows registry
 ** by running a PowerShell script: Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2
@@ -88,27 +88,27 @@ protocol version.
 
 .PARAMETER Certificate
 This parameter can be used for client authentication if JOC Cockpit is configured for mutual authentication with HTTPS (SSL).
-If JOC Cockpit is configured to accept one-factor authentication then the certificate specified with this parameter replaces 
+If JOC Cockpit is configured to accept one-factor authentication then the certificate specified with this parameter replaces
 the password for login. If JOC Cockpit requires two-factor authentication then a certificate is required
 in addition to specifying a password for login.
 
 Consider that this parameter expects a certificate with the data type [System.Security.Cryptography.X509Certificates.X509Certificate2].
-This parameter can be used for Windows only. For other operating systems use the -KekyStorePath parameter.
+This parameter can be used for Windows only. For other operating systems use the -KeyStorePath parameter.
 
-Use of this parameter requires that the certificate object includes the private key and the certificate chain, i.e. the certificate 
+Use of this parameter requires that the certificate object includes the private key and the certificate chain, i.e. the certificate
 and any intermediate/root certificates required for validation of the certificate.
 
 This parameter cannot be used with the -CertificateThumbprint parameter or -KeyStorePath parameter.
 
 .PARAMETER CertificateThumbprint
 This parameter can be used for client authentication if JOC Cockpit is configured for mutual authentication with HTTPS (SSL).
-If JOC Cockpit is configured to accept one-factor authentication then the certificate identified with this parameter replaces 
+If JOC Cockpit is configured to accept one-factor authentication then the certificate identified with this parameter replaces
 the password for login. If JOC Cockpit requires two-factor authentication then a certificate is required
 in addition to specifying a password for login.
 
-This parameter can be used for Windows only. For other operating sysems use the -KekyStorePath parameter.
+This parameter can be used for Windows only. For other operating sysems use the -KeyStorePath parameter.
 
-Use of this parameter requires a certificate store to be in place that holds the private key and certificate chain, i.e. the same certificate 
+Use of this parameter requires a certificate store to be in place that holds the private key and certificate chain, i.e. the same certificate
 and any intermediate/root certificates required for validation of the certificate. Consider this parameter a reference
 to a certificate entry in your Windows certificate store that includes the private key and certificate chain.
 
@@ -116,7 +116,7 @@ This parameter cannot be used with the -Certificate parameter or -KeyStorePath p
 
 .PARAMETER KeyStorePath
 This parameter can be used for client authentication if JOC Cockpit is configured for mutual authentication with HTTPS (SSL).
-If JOC Cockpit is configured to accept one-factor authentication then the certificate from the keystore specified with this parameter replaces 
+If JOC Cockpit is configured to accept one-factor authentication then the certificate from the keystore specified with this parameter replaces
 the password for login. If JOC Cockpit requires two-factor authentication then a certificate is required
 in addition to specifying a password for login.
 
@@ -130,9 +130,9 @@ This parameter cannot be used with the -Certificate parameter or -CertificateThu
 
 .PARAMETER AddRootCertificate
 Specifies the location of a file that holds the root certificate that was when signing the JOC Cockpit
-SSL certificate. 
+SSL certificate.
 
-* For Windows environments the root certificate by default is looked up in the Windows Certificate Store, however, 
+* For Windows environments the root certificate by default is looked up in the Windows Certificate Store, however,
   this parameter can be used to apply a root certificate from a location in the file system.
 * For Linux environments a path is specified to the root certificate file.
 
@@ -212,7 +212,7 @@ param
 )
     Begin
     {
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( ($Certificate -and $KeyStorePath) -or ( $Certificate -and $CertificateThumbprint) -or ($KeyStorePath -and $CertificateThumbprint) )
         {
@@ -256,7 +256,7 @@ param
             if ( [System.Uri]::CheckHostName( $ProxyUrl.DnsSafeHost ).equals( [System.UriHostNameType]::Unknown ) )
             {
                 throw "$($MyInvocation.MyCommand.Name): no valid hostname specified, check use of -ProxyUrl parameter, e.g. -ProxyUrl http://localhost:3128: $($Url.OriginalString)"
-            }            
+            }
 
             $script:jsWebService.ProxyUrl = $ProxyUrl
         }
@@ -265,7 +265,7 @@ param
         {
             $script:jsWebService.JobSchedulerId = $Id
         }
-        
+
         if ( $Base )
         {
             $script:jsWebService.Base = $Base
@@ -273,12 +273,12 @@ param
 
         if ( $AskForCredentials )
         {
-            Write-Host '* ***************************************************** *'
-            Write-Host '* JobScheduler Web Service credentials                  *'
-            Write-Host '* enter account and password for authentication         *'
-            Write-Host '* ***************************************************** *'
+            Write-Output '* ***************************************************** *'
+            Write-Output '* JobScheduler Web Service credentials                  *'
+            Write-Output '* enter account and password for authentication         *'
+            Write-Output '* ***************************************************** *'
             $account = Read-Host 'Enter account for JobScheduler Web Service '
-            
+
             if ( $account )
             {
                 $password = Read-Host 'Enter password for JobScheduler Web Service: ' -AsSecureString
@@ -293,7 +293,7 @@ param
         } elseif ( $script:jsWebService ) {
             $Credentials = $script:jsWebServiceCredential
         }
-        
+
         if ( $ProxyCredentials )
         {
             $script:jsWebServiceOptionWebRequestProxyUseDefaultCredentials = $false
@@ -315,22 +315,22 @@ param
             $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]
             $openFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]
             $store = [System.Security.Cryptography.X509Certificates.X509Store]::new( $storeName::My, $storeLocation::CurrentUser )
-            
+
             $store.Open( $openFlags::ReadOnly )
-            $certCollection = $store.Certificates.Find( [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint, $CertificateThumbprint, $false )            
+            $certCollection = $store.Certificates.Find( [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint, $CertificateThumbprint, $false )
 
             if ( $certCollection.count -eq 0 )
             {
                 throw "$($MyInvocation.MyCommand.Name): could not find certificate for thumbprint: $CertificateThumbprint"
             }
-                        
+
             if ( $certCollection.count -gt 1 )
             {
                 throw "$($MyInvocation.MyCommand.Name): more than one certificate found for thumbprint: $CertificateThumbprint"
             }
-                        
+
             $Certificate = $certCollection[0]
-            $store.Close()        
+            $store.Close()
         }
 
         if ( $KeyStorePath )
@@ -339,13 +339,13 @@ param
             $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]
             $openFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]
             $store = [System.Security.Cryptography.X509Certificates.X509Store]::new( $storeName::My, $storeLocation::CurrentUser )
-            
+
             $certPath = ( Resolve-Path $KeyStorePath ).Path
             $Certificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2( $certPath )
-            
+
             $store.Open( $openFlags::ReadWrite )
             $store.Add( $Certificate )
-            $store.Close()        
+            $store.Close()
         }
 
         if ( $AddRootCertificate )
@@ -357,13 +357,13 @@ param
             $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]
             $openFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]
             $store = [System.Security.Cryptography.X509Certificates.X509Store]::new( $storeName::Root, $storeLocation::CurrentUser )
-            
+
             $certPath = ( Resolve-Path $RootCertificate ).Path
             $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2( $certPath )
-            
+
             $store.Open( $openFlags::ReadWrite )
             $store.Add( $cert )
-            $store.Close()        
+            $store.Close()
         }
 
         $requestParams = @{}
@@ -375,7 +375,7 @@ param
 
         if ( isPowerShellVersion 6 )
         {
-            $requestParams.Add( 'AllowUnencryptedAuthentication', $true )            
+            $requestParams.Add( 'AllowUnencryptedAuthentication', $true )
         }
 
         if ( isPowerShellVersion 7 )
@@ -426,7 +426,7 @@ param
             $requestParams.Add( 'SkipCertificateCheck', $true )
             $script:jsWebService.SkipCertificateCheck = $true
         }
-        
+
         if ( $SSLProtocol )
         {
             # $requestParams.Add( 'SSLProtocol', 'Tls' )
@@ -446,12 +446,12 @@ param
         try {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service $($authenticationUrl)"
             Write-Debug ".... Invoke-WebRequest Uri: $($requestParams.Uri)"
-        
-            $requestParams.Keys | % {
+
+            $requestParams.Keys | ForEach-Object {
                 if ( $_ -eq 'Headers' )
                 {
                     $item = $_
-                    $requestParams.Item($_).Keys | % {
+                    $requestParams.Item($_).Keys | ForEach-Object {
                         Write-Debug "...... Headers $_ : $($requestParams.Item($item).Item($_))"
                     }
                 } else {
@@ -471,7 +471,7 @@ param
             } else {
                 $message = $response | Format-List -Force | Out-String
                 throw $message
-            }        
+            }
 
 
             $body = New-Object PSObject
@@ -495,22 +495,22 @@ param
             if ( $MasterDetails )
             {
                 $body = New-Object PSObject
-    
+
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service /jobscheduler/cluster/members"
                 Write-Debug ".... Invoke-WebRequest Uri: /jobscheduler/cluster/members"
-    
+
                 [string] $requestBody = $body | ConvertTo-Json -Depth 100
                 $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/cluster/members' -Body $requestBody
-    
+
                 Write-Debug ".... Invoke-WebRequest response:`n$response"
-    
+
                 if ( $response.StatusCode -eq 200 )
                 {
                     $returnMasterItems = ( $response.Content | ConvertFrom-JSON ).masters
                 } else {
                     throw ( $response | Format-List -Force | Out-String )
                 }
-    
+
                 if ( $returnMasterItems )
                 {
                     $script:jsWebService.Masters = $returnMasterItems
@@ -521,11 +521,11 @@ param
         } catch {
             $message = $_.Exception | Format-List -Force | Out-String
             throw $message
-        }        
+        }
     }
 
     End
     {
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -50,17 +50,17 @@ This information is returned by the Get-JobSchedulerStatus cmdlet with the "Clus
 A timeout is applied for the operation -Action "terminate" that affects running tasks:
 
 * For shell jobs
-** in a Unix environment the task is sent a SIGTERM signal and - in case of the timeout parameter being used - 
+** in a Unix environment the task is sent a SIGTERM signal and - in case of the timeout parameter being used -
 after expiration of the timeout a SIGKILL signal is sent.
 ** in a Windows environment the task is killed immediately.
 * For API jobs
-** the method spooler_process() of the respective job will not be called by JobScheduler any more. 
+** the method spooler_process() of the respective job will not be called by JobScheduler any more.
 ** the task is expected to terminate normally after completion of its spooler_process() method.
 
 .PARAMETER Service
 Retarts the JobScheduler Windows service.
 
-Without this parameter being specified JobScheduler will be started in 
+Without this parameter being specified JobScheduler will be started in
 its respective operating mode, i.e. service mode or dialog mode.
 
 .PARAMETER AuditComment
@@ -78,13 +78,13 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .EXAMPLE
 Restart-JobSchedulerMaster
 
-Terminates and restarts the JobScheduler Master. Any running tasks can complete before 
+Terminates and restarts the JobScheduler Master. Any running tasks can complete before
 the Master will restart.
 
 .EXAMPLE
@@ -101,6 +101,7 @@ Retarts the JobScheduler Master Cluster and allows running tasks 20s for complet
 about_jobscheduler
 
 #>
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
@@ -130,11 +131,19 @@ param
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
             throw "$($MyInvocation.MyCommand.Name): Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
-        }        
+        }
 	}
 
     Process
-    {        
-        Stop-JobSchedulerMaster -Action $Action -Cluster:$Cluster -MasterHost $MasterHost -MasterPort $MasterPort -Timeout $Timeout -Service:$Service -Restart -AuditComment $AuditComment -AuditTimeSpent $AuditTimeSpent -AuditTicketLink $AuditTicketLink
+    {
+        if ( $PSCmdlet.ShouldProcess( 'Master' ) )
+        {
+            Stop-JobSchedulerMaster -Action $Action -Cluster:$Cluster -MasterHost $MasterHost -MasterPort $MasterPort -Timeout $Timeout -Service:$Service -Restart -AuditComment $AuditComment -AuditTimeSpent $AuditTimeSpent -AuditTicketLink $AuditTicketLink
+        }
+    }
+
+    End
+    {
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

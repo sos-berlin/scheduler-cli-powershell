@@ -17,7 +17,7 @@ Specifies the path and name of a job chain for which orders should be started.
 Optionally specifies the folder where the job chain is located. The directory is determined
 from the root folder, i.e. the "live" directory.
 
-If the -JobChain parameter specifies the name of job chain then the location specified from the 
+If the -JobChain parameter specifies the name of job chain then the location specified from the
 -Directory parameter is added to the job chain location.
 
 .PARAMETER Parameters
@@ -41,9 +41,9 @@ Default: now
 
 .PARAMETER Timezone
 Specifies the time zone to be considered for the start time that is indicated with the -At parameter.
-Without this parameter the time zone of the JobScheduler Master is assumed. 
+Without this parameter the time zone of the JobScheduler Master is assumed.
 
-This parameter should be used if the JobScheduler Master runs in a time zone different to the environment 
+This parameter should be used if the JobScheduler Master runs in a time zone different to the environment
 that makes use of this cmdlet.
 
 Find the list of time zone names from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
@@ -71,7 +71,7 @@ with a ticket system that logs the time spent on interventions with JobScheduler
 .PARAMETER AuditTicketLink
 Specifies a URL to a ticket system that keeps track of any interventions performed for JobScheduler.
 
-This information is visible with the Audit Log view of JOC Cockpit. 
+This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
@@ -110,7 +110,7 @@ parameters from the specified hashmap.
 about_jobscheduler
 
 #>
-[cmdletbinding()]
+[cmdletbinding(SupportsShouldProcess)]
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -141,8 +141,8 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
-        
+        $stopWatch = Start-JobSchedulerStopWatch
+
         if ( !$AuditComment -and ( $AuditTimeSpent -or $AuditTicketLink ) )
         {
             throw "$($MyInvocation.MyCommand.Name): Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
@@ -150,21 +150,21 @@ param
 
         $objOrders = @()
     }
-    
+
     Process
     {
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( $Directory.Substring( 0, 1) -ne '/' ) {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
-    
+
         if ( $JobChain )
         {
             if ( (Get-JobSchedulerObject-Basename $JobChain) -ne $JobChain ) # job chain name includes a directory
@@ -179,7 +179,7 @@ param
                 }
             }
         }
-    
+
         if ( $OrderId )
         {
             if ( (Get-JobSchedulerObject-Basename $OrderId) -ne $OrderId ) # order id includes a directory
@@ -245,7 +245,7 @@ param
             if ( $RunTime.startsWith( '<' ) )
             {
                 $response = Invoke-JobSchedulerWebRequest -Path '/joe/tojson' -Body $RunTime -ContentType 'application/xml'
-            
+
                 if ( $response.StatusCode -eq 200 )
                 {
                     $runTimeJson = ( $response.Content | ConvertFrom-JSON )
@@ -269,47 +269,50 @@ param
             $body = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
             Add-Member -Membertype NoteProperty -Name 'orders' -value $objOrders -InputObject $body
-    
+
             if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
             {
                 $objAuditLog = New-Object PSObject
                 Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
-    
+
                 if ( $AuditTimeSpent )
                 {
                     Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
                 }
-    
+
                 if ( $AuditTicketLink )
                 {
                     Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
                 }
-    
+
                 Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
             }
-    
-            [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest '/orders/start' $requestBody
-            
-            if ( $response.StatusCode -eq 200 )
+
+            if ( $PSCmdlet.ShouldProcess( '/orders/start' ) )
             {
-                $requestResult = ( $response.Content | ConvertFrom-JSON )
-                
-                if ( !$requestResult.ok )
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest -Path '/orders/start' -Body $requestBody
+
+                if ( $response.StatusCode -eq 200 )
                 {
+                    $requestResult = ( $response.Content | ConvertFrom-Json )
+
+                    if ( !$requestResult.ok )
+                    {
+                        throw ( $response | Format-List -Force | Out-String )
+                    }
+                } else {
                     throw ( $response | Format-List -Force | Out-String )
                 }
-            } else {
-                throw ( $response | Format-List -Force | Out-String )
-            }
-        
-            $requestResult
 
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objOrders.count) orders started"                
+                $requestResult
+
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($objOrders.count) orders started"
+            }
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"                
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no orders found"
         }
 
-        Log-StopWatch $MyInvocation.MyCommand.Name $stopWatch
+        Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

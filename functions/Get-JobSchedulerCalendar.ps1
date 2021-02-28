@@ -94,7 +94,7 @@ param
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
-        $stopWatch = Start-StopWatch
+        $stopWatch = Start-JobSchedulerStopWatch
 
         if ( $WorkingDays -and $NonWorkingDays )
         {
@@ -106,11 +106,11 @@ param
         $folders = @()
         $type = $null
     }
-        
+
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, CalendarPath=$CalendarPath"
-    
+
         if ( $CalendarPath.endsWith( '/') )
         {
             throw "$($MyInvocation.MyCommand.Name): the -CalendarPath parameter has to specify the folder and name of a calendar"
@@ -132,12 +132,12 @@ param
         }
 
         if ( $Directory -and $Directory -ne '/' )
-        { 
+        {
             if ( !$Directory.StartsWith( '/' ) )
             {
                 $Directory = '/' + $Directory
             }
-        
+
             if ( $Directory.EndsWith( '/' ) )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
@@ -187,12 +187,12 @@ param
             {
                 Add-Member -Membertype NoteProperty -Name 'calendars' -value $calendarPaths -InputObject $body
             }
-    
+
             if ( $folders.count )
             {
-                Add-Member -Membertype NoteProperty -Name 'folders' -value $folders -InputObject $body    
+                Add-Member -Membertype NoteProperty -Name 'folders' -value $folders -InputObject $body
             }
-            
+
             if ( $type )
             {
                 Add-Member -Membertype NoteProperty -Name 'type' -value $type -InputObject $body
@@ -205,14 +205,14 @@ param
 
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
             $response = Invoke-JobSchedulerWebRequest -Path '/calendars' -Body $requestBody
-        
+
             if ( $response.StatusCode -eq 200 )
             {
                 $returnCalendars = ( $response.Content | ConvertFrom-JSON ).calendars
             } else {
                 throw ( $response | Format-List -Force | Out-String )
             }
-        
+
             $returnCalendars | Select-Object -Property `
                                @{name='calendarPath'; expression={$_.path}}, `
                                from, `
@@ -231,7 +231,7 @@ param
         } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no calendars found"
         }
-        
-        Log-StopWatch -CommandName $MyInvocation.MyCommand.Name -StopWatch $stopWatch
+
+        Trace-JobSchedulerStopWatch -CommandName $MyInvocation.MyCommand.Name -StopWatch $stopWatch
     }
 }
