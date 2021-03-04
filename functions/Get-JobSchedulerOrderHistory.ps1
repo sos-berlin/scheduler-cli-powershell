@@ -344,7 +344,7 @@ param
     {
         # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
         $timezoneOffsetPrefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
-        $timezoneOffsetHours = $Timezone.BaseUtcOffset.Hours
+        $timezoneOffsetHours = [Math]::Abs($Timezone.BaseUtcOffset.hours)
 
         if ( $Timezone.SupportsDaylightSavingTime -and $Timezone.IsDaylightSavingTime( (Get-Date) ) )
         {
@@ -415,7 +415,7 @@ param
         }
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
-        $response = Invoke-JobSchedulerWebRequest '/orders/history' $requestBody
+        $response = Invoke-JobSchedulerWebRequest -Path '/orders/history' -Body $requestBody
 
         if ( $response.StatusCode -eq 200 )
         {
@@ -445,7 +445,7 @@ param
         if ( $returnHistoryItems.count )
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($returnHistoryItems.count) history items found"
-        } else {s
+        } else {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): no history items found"
         }
 

@@ -391,7 +391,7 @@ param
     {
         # PowerShell/.NET does not create date output in the target timezone but with the local timezone only, let's work around this:
         $timezoneOffsetPrefix = if ( $Timezone.BaseUtcOffset.toString().startsWith( '-' ) ) { '-' } else { '+' }
-        $timezoneOffsetHours = $Timezone.BaseUtcOffset.Hours
+        $timezoneOffsetHours = [Math]::Abs($Timezone.BaseUtcOffset.hours)
 
         if ( $Timezone.SupportsDaylightSavingTime -and $Timezone.IsDaylightSavingTime( (Get-Date) ) )
         {
