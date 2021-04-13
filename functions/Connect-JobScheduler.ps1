@@ -12,14 +12,14 @@ that is used for subsequent requests to the Web Service.
 
 Caveat:
 * This cmdlet calls the Invoke-WebRequest cmdlet that may throw an error "The response content cannot be parsed because the Internet Explorer engine
-is not available, or Internet Explorer’s first-launch configuration is not complete. Specify the UseBasicParsing parameter and try again."
+is not available, or Internet Explorer's first-launch configuration is not complete. Specify the UseBasicParsing parameter and try again."
 
 * This problem is limited to Windows. The reason for this error is a weird PowerShell dependency on IE assemblies.
 * If Internet Explorer is not configured then it prompts the user for configuration when being launched.
 
 * To disable IE's first launch configuration window you can modify the Windows registry
-** by running a PowerShell script: Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 2
-** by using the "regedit" utility and navigating in the HKLM hive to the above key "DisableFirstRunCustomize" and assigning the value "2".
+** by running a PowerShell script: Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main' -Name 'DisableFirstRunCustomize' -Value 2
+** by using the 'regedit' utility and navigating in the HKLM hive to the above key 'DisableFirstRunCustomize' and assigning the value '2'.
 ** this operation requires administrative permissions.
 
 .PARAMETER Url
@@ -387,18 +387,34 @@ param
         {
             # Windows only
             $requestParams.Add( 'UseDefaultCredentials', $true )
-        } elseif ( $Credentials ) {
-            if ( isPowerShellVersion 6 )
+        } else {
+            if ( !$Credentials -and $Certificate )
             {
-                $requestParams.Add( 'Authentication', 'Basic' )
-            } else {
-                $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
-                $requestParams['Headers'].Add( 'Authorization', "Basic $($basicAuthentication)" )
+                $cn = $Certificate.Subject.split(',') | Where-Object -FilterScript { $_ -match "CN\s*=" }
+                $parts = $cn.split( '=' )
+                if ( $parts.count -gt 1 )
+                {
+                    $Credentials = New-Object System.Management.Automation.PSCredential( $parts[1].Trim(), (New-Object System.Security.SecureString) )
+                } else {
+                    throw "no credentials specified and no CN identified from specified certificate, use -Credentials and -Certificate parameter"
+                }
             }
 
-            $requestParams.Add( 'Credential', $Credentials )
-        } else {
-            throw "no credentials specified, use -Credentials parameter"
+            if ( $Credentials ) {
+                if ( isPowerShellVersion 6 )
+                {
+                    $requestParams.Add( 'Authentication', 'Basic' )
+                } else {
+                    $basicAuthentication = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes( $Credentials.GetNetworkCredential().UserName + ':' + $Credentials.GetNetworkCredential().Password ))
+                    $requestParams['Headers'].Add( 'Authorization', "Basic $($basicAuthentication)" )
+                }
+
+                $requestParams.Add( 'Credential', $Credentials )
+                $script:jsWebServiceOptionWebRequestUseDefaultCredentials = $false
+                $script:jsWebServiceCredential = $Credentials
+            } else {
+               throw "no credentials and no certificate specified, use -Credentials or -Certificate parameter"
+            }
         }
 
         if ( $ProxyUrl )

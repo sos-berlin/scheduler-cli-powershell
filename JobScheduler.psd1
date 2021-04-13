@@ -31,6 +31,7 @@ FunctionsToExport = @(
 	'Connect-JobScheduler',
 	'ConvertFrom-JobSchedulerXml',
     'Disconnect-JobScheduler',
+    'Export-JobSchedulerJobStream',
     'Export-JobSchedulerObject',
     'Get-JobSchedulerAgentCluster',
     'Get-JobSchedulerAgentReport',
@@ -41,6 +42,7 @@ FunctionsToExport = @(
     'Get-JobSchedulerJob',
     'Get-JobSchedulerJobChain',
     'Get-JobSchedulerJobHistory',
+    'Get-JobSchedulerJobStream',
     'Get-JobSchedulerJobStreamHistory',
     'Get-JobSchedulerLock',
     'Get-JobSchedulerMasterCluster',
@@ -53,6 +55,7 @@ FunctionsToExport = @(
     'Get-JobSchedulerTaskHistory',
     'Get-JobSchedulerTaskLog',
     'Get-JobSchedulerVersion',
+    'Import-JobSchedulerJobStream',
     'Import-JobSchedulerObject',
     'Install-JobSchedulerService',
     'New-JobSchedulerHolidays',
@@ -73,6 +76,7 @@ FunctionsToExport = @(
     'Start-JobSchedulerExecutableFile',
     'Start-JobSchedulerJob',
     'Start-JobSchedulerJobEditor',
+    'Start-JobSchedulerJobStream',
     'Start-JobSchedulerMaster',
     'Start-JobSchedulerOrder',
     'Stop-JobSchedulerMaster',
@@ -109,7 +113,7 @@ PrivateData = @{
         Category = "Scripting Techniques"
 
         # Keyword tags to help users find this module via navigations and search.
-        Tags = @('PSEdition_Desktop','PSEdition_Core','Windows','Linux','MacOS','Cmdlet','Workflow','JobScheduler','Scheduling','Workload Automation')
+        Tags = @('PSEdition_Desktop','PSEdition_Core','Windows','Linux','MacOS','Cmdlet','Workflow','JobScheduler','Scheduling','Workload-Automation')
 
         # The web address of an icon which can be used in galleries to represent this module
         IconUri = "https://kb.sos-berlin.com/download/attachments/3638359/JobScheduler_logo_wiki.jpg?version=1&modificationDate=1413144531000&api=v2"
