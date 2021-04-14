@@ -7,8 +7,9 @@ Imports job streams to the JOC Cockpit inventory.
 .DESCRIPTION
 This cmdlet imports job streams to the JOC Cockpit inventory.
 
-.PARAMETER FilePath
-Specifies the path to the archive file that includes objects for import to the JOC Cockpit inventory.
+.PARAMETER JobStreams
+Specifies the customer object for a list of previously exported job streams.
+This parameter accespts the output that is crated from the -Export-JobSchedulerJobStream cmdlet.
 
 .PARAMETER AuditComment
 Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
@@ -29,25 +30,16 @@ This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
-This cmdlet accepts no inputs.
+This cmdlet accepts a custom object with a list of job streams as provided by the Export-JobSchedulerJobStream cmdlet.
 
 .OUTPUTS
 This cmdlet returns no output.
 
 .EXAMPLE
-Import-JobSchedulerJobStream -JobStream /sos/some_starter
+$jsExport = Export-JobSchedulerJobStream -JobStream some_job_stream
+Import-JobSchedulerJobStream -JobStreams $jsExport
 
-Starts the indicated job stream starter.
-
-.EXAMPLE
-Start-JobSchedulerJobStream -JobStreamStarter /sos/some_starter
-
-Starts the indicated job stream starter.
-
-.EXAMPLE
-Start-JobSchedulerJobStream -JobStreamStarter /some_path/some_starter -Parameters ${ 'par1' = 'val1'; 'par2' = 'val2' }
-
-Starts the job stream starter with parameters 'par1', 'par2' and respective values.
+Imports a previously exported list of job streams.
 
 .LINK
 about_jobscheduler
@@ -57,7 +49,7 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $FilePath,
+    [PSCustomObject] $JobStreams,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -78,83 +70,50 @@ param
 
     Process
     {
-        try
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+        Add-Member -Membertype NoteProperty -Name 'jobstreams' -value @( $JobStreams.jobstreams ) -InputObject $body
+
+        if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
         {
-            # see https://get-powershellblog.blogspot.com/2017/09/multipartform-data-support-for-invoke.html
-            # requires PowerShell > 6.0, version before 6.0 do not support MultipartFormDataContent in a POST bodys
-            $multipartContent = [System.Net.Http.MultipartFormDataContent]::new()
+            $objAuditLog = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'comment' -value $AuditComment -InputObject $objAuditLog
 
-            $multipartFile = $FilePath
-            $fileStream = [System.IO.FileStream]::new($multipartFile, [System.IO.FileMode]::Open)
-            $fileHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
-            $fileHeader.Name = 'file'
-            $fileHeader.FileName = [System.IO.Path]::GetFileName( $FilePath )
-            $fileContent = [System.Net.Http.StreamContent]::new( $fileStream )
-            $fileContent.Headers.ContentDisposition = $fileHeader
-            $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("application/octet-stream")
-            $multipartContent.Add( $fileContent )
-
-            $stringHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
-            $stringHeader.Name = "format"
-            $stringContent = [System.Net.Http.StringContent]::new( $Format )
-            $stringContent.Headers.ContentDisposition = $stringHeader
-            $multipartContent.Add( $stringContent )
-
-            $stringHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
-            $stringHeader.Name = "targetFolder"
-            $stringContent = [System.Net.Http.StringContent]::new( $TargetFolder )
-            $stringContent.Headers.ContentDisposition = $stringHeader
-            $multipartContent.Add( $stringContent )
-
-            $stringHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
-            $stringHeader.Name = "overwrite"
-            $StringContent = [System.Net.Http.StringContent]::new( ($Overwrite -eq $True) )
-            $stringContent.Headers.ContentDisposition = $stringHeader
-            $multipartContent.Add( $stringContent )
-
-            if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
+            if ( $AuditTimeSpent )
             {
-                $stringHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
-                $stringHeader.Name = "comment"
-                $stringContent = [System.Net.Http.StringContent]::new( $AuditComment )
-                $stringContent.Headers.ContentDisposition = $stringHeader
-                $multipartContent.Add( $stringContent )
-
-                $stringHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
-                $stringHeader.Name = "timeSpent"
-                $stringContent = [System.Net.Http.StringContent]::new( $AuditComment )
-                $stringContent.Headers.ContentDisposition = $stringHeader
-                $multipartContent.Add( $stringContent )
-
-                $stringHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
-                $stringHeader.Name = "ticketLink"
-                $stringContent = [System.Net.Http.StringContent]::new( $AuditComment )
-                $stringContent.Headers.ContentDisposition = $stringHeader
-                $multipartContent.Add( $stringContent )
+                Add-Member -Membertype NoteProperty -Name 'timeSpent' -value $AuditTimeSpent -InputObject $objAuditLog
             }
 
-            $response = Invoke-JobSchedulerWebRequest -Path '/inventory/import' -Body $multipartContent -Method 'POST' -ContentType $Null
-
-            if ( $response.StatusCode -ne 200 )
+            if ( $AuditTicketLink )
             {
+                Add-Member -Membertype NoteProperty -Name 'ticketLink' -value $AuditTicketLink -InputObject $objAuditLog
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
+        }
+
+        if ( $PSCmdlet.ShouldProcess( $Service, '/jobstreams/import' ) )
+        {
+            [string] $requestBody = $body | ConvertTo-Json -Depth 100
+            $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/import' -Body $requestBody
+
+            if ( $response.StatusCode -eq 200 )
+            {
+                $requestResult = ( $response.Content | ConvertFrom-Json )
+
+                if ( !$requestResult )
+                {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            } else {
                 throw ( $response | Format-List -Force | Out-String )
-            }
-
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): file imported: $FilePath"
-        } catch {
-            $message = $_.Exception | Format-List -Force | Out-String
-            throw $message
-        } finally {
-            if ( $fileStream )
-            {
-                $fileStream.Close()
-                $fileStream.Dispose()
             }
         }
     }
 
     End
     {
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): job streams imported"
         Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

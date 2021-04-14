@@ -654,7 +654,10 @@ function Invoke-JobSchedulerWebRequest( [string] $Path, [string] $Body, [string]
                     Write-Debug "...... Header: $_ : $($requestParams.Item($item).Item($_))"
                 }
             } else {
-                Write-Debug "...... Argument: $_  $($requestParams.Item($_))"
+                if ( $_ -ne 'Certificate' )
+                {
+                    Write-Debug "...... Argument: $_  $($requestParams.Item($_))"
+                }
             }
         }
 

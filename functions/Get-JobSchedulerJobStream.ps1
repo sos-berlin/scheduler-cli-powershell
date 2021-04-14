@@ -20,17 +20,12 @@ from the root folder, i.e. the "live" directory.
 This cmdlet returns an array of job streams.
 
 .EXAMPLE
-$jobStreams = Get-JobSchedulerJobStreams
-
-Returns all job streams from any directories recursively.
-
-.EXAMPLE
 $jobStreams = Get-JobSchedulerJobStream -Directory /test
 
 Returns all job streams that are configured with the folder "test".
 
 .EXAMPLE
-$jobStreams = Get-JobSchedulerJobStream -JobStream SampleJobStream
+$jobStream = Get-JobSchedulerJobStream -JobStream SampleJobStream
 
 Returns the job stream with the indicated name.
 
@@ -50,55 +45,45 @@ param
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-JobSchedulerStopWatch
-
-        $jobStreams = @()
-        $folders = @()
     }
 
     Process
     {
         Write-Debug ".. $($MyInvocation.MyCommand.Name): parameter Directory=$Directory, JobStream=$JobStream"
 
+        if ( !$JobStream -and !$Directory )
+        {
+            throw "$($MyInvocation.MyCommand.Name): Job Stream specification required, one of the parameters -JobStream or -Directory has to be used"
+        }
+
         if ( $Directory -and $Directory -ne '/' )
         {
-            if ( $Directory.Substring( 0, 1) -ne '/' ) {
+            if ( !$Directory.startsWith( '/' ) ) {
                 $Directory = '/' + $Directory
             }
 
-            if ( $Directory.Length -gt 1 -and $Directory.LastIndexOf( '/' )+1 -eq $Directory.Length )
+            if ( $Directory.endsWith( '/' ) )
             {
                 $Directory = $Directory.Substring( 0, $Directory.Length-1 )
             }
         }
 
+
+        $body = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
+
         if ( $JobStream )
         {
-            $jobStreams += $JobStream
+            Add-Member -Membertype NoteProperty -Name 'jobStream' -value $JobStream -InputObject $body
         }
 
         if ( $Directory )
         {
-            $folders += $Directory
-        }
-    }
-
-    End
-    {
-        $body = New-Object PSObject
-        Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-
-        if ( $jobStreams.count )
-        {
-            Add-Member -Membertype NoteProperty -Name 'jobStream' -value $jobStreams[0] -InputObject $body
-        }
-
-        if ( $folders.count )
-        {
-            Add-Member -Membertype NoteProperty -Name 'folder' -value $folders[0] -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $body
         }
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
-        $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/list_jobstreams' -Body $requestBody
+        $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/list' -Body $requestBody
 
         if ( $response.StatusCode -eq 200 )
         {
@@ -111,14 +96,17 @@ param
         } else {
             throw ( $response | Format-List -Force | Out-String )
         }
-        
-        $requestResult.jobstreams
 
-        if ( $requestResult.count )
+        $requestResult.jobstreams
+    }
+
+    End
+    {
+        if ( $requestResult.jobstreams.count )
         {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.count) job streams found"
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.jobstreams.count) job streams found"
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job streams found"
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job stream found"
         }
 
         Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch

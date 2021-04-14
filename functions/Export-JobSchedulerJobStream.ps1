@@ -26,12 +26,12 @@ This cmdlet accepts pipelined job stream names.
 This cmdlet returns an array of job streams.
 
 .EXAMPLE
-Export-JobSchedulerJobStream -JobStream my_jobstream
+$jsExport = Export-JobSchedulerJobStream -JobStream my_jobstream
 
 Exports the indicated job stream.
 
 .EXAMPLE
-Export-JobSchedulerJobStream -Directory /sos/some_folder
+$jsExport = Export-JobSchedulerJobStream -Directory /sos/some_folder
 
 Exports any job streams from the indicated job stream folder.
 
@@ -64,7 +64,7 @@ param
 
         if ( $JobStream )
         {
-            Add-Member -Membertype NoteProperty -Name 'jobstream' -value $JobStream -InputObject $objJobStream
+            Add-Member -Membertype NoteProperty -Name 'jobStream' -value $JobStream -InputObject $objJobStream
             $objJobStreams += $objJobStream
         }
 
@@ -78,7 +78,7 @@ param
     {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-        
+
         if ( $objJobStreams.count )
         {
             Add-Member -Membertype NoteProperty -Name 'jobStreams' -value $objJobStreams -InputObject $body
@@ -91,29 +91,24 @@ param
 
         if ( $Limit )
         {
-            Add-Member -Membertype NoteProperty -Name 'limit' -value $Limit -InputObject $body            
+            Add-Member -Membertype NoteProperty -Name 'limit' -value $Limit -InputObject $body
         }
 
         if ( $PSCmdlet.ShouldProcess( $Service, '/jobstreams/export' ) )
         {
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/export' -Body $requestBody
+            $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/export' -Body $requestBody -Headers @{ 'Accept' = 'application/octet-stream' }
 
             if ( $response.StatusCode -eq 200 )
             {
                 $requestResult = ( $response.Content | ConvertFrom-Json )
-
-                if ( !$requestResult.jobSchedulerId )
-                {
-                    throw ( $response | Format-List -Force | Out-String )
-                }
             } else {
                 throw ( $response | Format-List -Force | Out-String )
             }
 
-            $requestResult.jobstreams
+            ( [System.Text.Encoding]::UTF8.GetString( $requestResult ) | ConvertFrom-Json -Depth 100 )
 
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.jobStreams.count) job streams exported"
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): job streams exported"
         }
 
         Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch

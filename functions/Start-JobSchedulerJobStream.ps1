@@ -2,7 +2,7 @@ function Start-JobSchedulerJobStream
 {
 <#
 .SYNOPSIS
-Starts job streams in the JobScheduler Master.
+Starts job streams with the JobScheduler Master.
 
 .DESCRIPTION
 This cmdlet starts job streams with the JobScheduler Master.
@@ -10,10 +10,6 @@ Job streams are started by indicated a Starter and optionally start parameters.
 
 .PARAMETER JobStreamStarter
 Specifies the full path and name of a job stream starter.
-
-.PARAMETER Directory
-Optionally specifies the directory of a job stream should the -JobStreamStarter parameter
-not be provided with the full path and name of the job stream.
 
 .PARAMETER Parameters
 Specifies the parameters for the job stream. Parameters are created from a hashmap,
@@ -38,23 +34,18 @@ This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
-This cmdlet accepts pipelined job objects.
+This cmdlet accepts pipelined job sream starter names.
 
 .OUTPUTS
-This cmdlet returns an array of job objects.
+This cmdlet returns an array of items indicating the job stream start including parameters, session ID etc.
 
 .EXAMPLE
-Start-JobSchedulerJobStream -JobStream /sos/some_starter
+$jsStart = Start-JobSchedulerJobStream -JobStreamStarter some_starter
 
 Starts the indicated job stream starter.
 
 .EXAMPLE
-Start-JobSchedulerJobStream -JobStreamStarter /sos/some_starter
-
-Starts the indicated job stream starter.
-
-.EXAMPLE
-Start-JobSchedulerJobStream -JobStreamStarter /some_path/some_starter -Parameters ${ 'par1' = 'val1'; 'par2' = 'val2' }
+$jsStart = Start-JobSchedulerJobStream -JobStreamStarter some_starter -Parameters @{ 'par1' = 'val1'; 'par2' = 'val2' }
 
 Starts the job stream starter with parameters 'par1', 'par2' and respective values.
 
@@ -86,29 +77,36 @@ param
             throw "$($MyInvocation.MyCommand.Name): Audit Log comment required, use parameter -AuditComment if one of the parameters -AuditTimeSpent or -AuditTicketLink is used"
         }
 
-        $objJobStreamStarters = @()
+        $jobStreamStarters = @()
     }
 
     Process
     {
-
         $objJobStreamStarter = New-Object PSObject
+        Add-Member -Membertype NoteProperty -Name 'starterName' -value $JobStreamStarter -InputObject $objJobStreamStarter
 
-        if ( $JobStreamStarter )
+        if ( $Parameters )
         {
-            Add-Member -Membertype NoteProperty -Name 'title' -value $JobStreamStarter -InputObject $objJobStreamStarter
+            $objParameters = @()
+            $Parameters.GetEnumerator() | Foreach-Object {
+                $objParameter = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'name' -value $_.name -InputObject $objParameter
+                Add-Member -Membertype NoteProperty -Name 'value' -value $_.value -InputObject $objParameter
+                $objParameters += $objParameter
+            }
+            Add-Member -Membertype NoteProperty -Name 'params' -value $objParameters -InputObject $objJobStreamStarter
         }
 
-        $objJobStreamStarters += $objJobStreamStarter
+        $jobStreamStarters += $objJobStreamStarter
     }
 
     End
     {
-        if ( $objJobStreamStarter.count )
+        if ( $jobStreamStarters.count )
         {
             $body = New-Object PSObject
             Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-            Add-Member -Membertype NoteProperty -Name 'jobstreamStarters' -value $objJobStreamStarters -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'jobstreamStarters' -value $jobStreamStarters -InputObject $body
 
             if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
             {
@@ -128,10 +126,10 @@ param
                 Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
             }
 
-            if ( $PSCmdlet.ShouldProcess( $Service, '/jobstreams/start_jobstream' ) )
+            if ( $PSCmdlet.ShouldProcess( $Service, '/jobstreams/start' ) )
             {
                 [string] $requestBody = $body | ConvertTo-Json -Depth 100
-                $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/start_jobstream' -Body $requestBody
+                $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/start' -Body $requestBody
 
                 if ( $response.StatusCode -eq 200 )
                 {
@@ -145,17 +143,17 @@ param
                     throw ( $response | Format-List -Force | Out-String )
                 }
 
-                $requestResult.jobStreamStarters
+                $requestResult
 
-                if ( $requestResult.jobStreamStarters.count -ne $objJobStreamStarters.count )
+                if ( $jobStreamStarters.count )
                 {
-                    Write-Error "$($MyInvocation.MyCommand.Name): not all job stream starters could be started, $($objJobStreamStarters.count) job stream starters requested, $($requestResult.jobStreamStarters.count) job streams starters started"
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.jobStreamStarters.count) job stream starters started"
+                } else {
+                    Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job stream starters specified"
                 }
-
-                Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.jobStreamStarters.count) job stream starters started"
             }
         } else {
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job stream starters found"
+            Write-Verbose ".. $($MyInvocation.MyCommand.Name): no job stream starters specified"
         }
 
         Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch

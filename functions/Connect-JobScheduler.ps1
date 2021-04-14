@@ -459,7 +459,8 @@ param
             $script:jsWebService.Certificate = $Certificate
         }
 
-        try {
+        try
+        {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service $($authenticationUrl)"
             Write-Debug ".... Invoke-WebRequest Uri: $($requestParams.Uri)"
 
@@ -481,7 +482,7 @@ param
 
             if ( $response -and $response.StatusCode -eq 200 -and $response.Content )
             {
-                $content = $response.Content | ConvertFrom-JSON
+                $content = $response.Content | ConvertFrom-Json
                 $script:jsWebService.AccessToken = $content.AccessToken
                 Write-Verbose ".. $($MyInvocation.MyCommand.Name): access token: $($content.accessToken)"
             } else {
@@ -490,23 +491,25 @@ param
             }
 
 
-            $body = New-Object PSObject
-
-            Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service /jobscheduler/ids"
-            Write-Debug ".... Invoke-WebRequest Uri: /jobscheduler/ids"
-
-            [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/ids' -Body $requestBody
-
-            Write-Debug ".... Invoke-WebRequest response:`n$response"
-
-            if ( $response.StatusCode -eq 200 )
+            if ( !$Id )
             {
-                $script:jsWebService.JobSchedulerId = ( $response.Content | ConvertFrom-JSON ).selected
-            } else {
-                throw ( $response | Format-List -Force | Out-String )
-            }
+                $body = New-Object PSObject
 
+                Write-Verbose ".. $($MyInvocation.MyCommand.Name): sending request to JobScheduler Web Service /jobscheduler/ids"
+                Write-Debug ".... Invoke-WebRequest Uri: /jobscheduler/ids"
+
+                [string] $requestBody = $body | ConvertTo-Json -Depth 100
+                $response = Invoke-JobSchedulerWebRequest -Path '/jobscheduler/ids' -Body $requestBody
+
+                Write-Debug ".... Invoke-WebRequest response:`n$response"
+
+                if ( $response.StatusCode -eq 200 )
+                {
+                    $script:jsWebService.JobSchedulerId = ( $response.Content | ConvertFrom-Json ).selected
+                } else {
+                    throw ( $response | Format-List -Force | Out-String )
+                }
+            }
 
             if ( $MasterDetails )
             {
