@@ -13,6 +13,10 @@ Specifies the name of a job stream for export.
 .PARAMETER Directory
 Optionally specifies the directory for job streams that should be exported.
 
+.PARAMETER Recursive
+Specifies that any sub-folders should be looked up if the -Directory parameter is used.
+By default no sub-folders will be searched for job streams.
+
 .PARAMETER Limit
 Limits the number of job streams exported.
 
@@ -35,6 +39,11 @@ $jsExport = Export-JobSchedulerJobStream -Directory /sos/some_folder
 
 Exports any job streams from the indicated job stream folder.
 
+.EXAMPLE
+$jsExport = Export-JobSchedulerJobStream -Directory / -Recursive
+
+Exports all job streams.
+
 .LINK
 about_jobscheduler
 
@@ -45,7 +54,9 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobStream,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory,
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $Recursive,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $Limit
 )
@@ -55,11 +66,34 @@ param
         $stopWatch = Start-JobSchedulerStopWatch
 
         $objJobStreams = @()
-        $folders = @()
+        $objFolders = @()
     }
 
     Process
     {
+        if ( $Directory -and $Directory -ne '/' -and $JobStream )
+        {
+            throw "$($MyInvocation.MyCommand.Name): only on of the parameterrs -jobStream or -Directory can be used"
+        }
+
+        if ( $Directory -and $Directory -ne '/' )
+        {
+            if ( !$Directory.StartsWith( '/' ) )
+            {
+                $Directory = '/' + $Directory
+            }
+
+            if ( $Directory.EndsWith( '/' ) )
+            {
+                $Directory = $Directory.Substring( 0, $Directory.Length-1 )
+            }
+        }
+
+        if ( $Directory -eq '/' -and !$JobStream -and !$Recursive )
+        {
+            $Recursive = $True
+        }
+
         $objJobStream = New-Object PSObject
 
         if ( $JobStream )
@@ -70,7 +104,10 @@ param
 
         if ( $Directory )
         {
-            $folders += $Directory
+            $objFolder = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $objFolder
+            Add-Member -Membertype NoteProperty -Name 'recursive' -value ($Recursive -eq $True) -InputObject $objFolder
+            $objFolders += $objFolder
         }
     }
 
@@ -84,9 +121,9 @@ param
             Add-Member -Membertype NoteProperty -Name 'jobStreams' -value $objJobStreams -InputObject $body
         }
 
-        if ( $folders.count )
+        if ( $objFolders.count )
         {
-            Add-Member -Membertype NoteProperty -Name 'folders' -value $folders -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'folders' -value $objFolders -InputObject $body
         }
 
         if ( $Limit )

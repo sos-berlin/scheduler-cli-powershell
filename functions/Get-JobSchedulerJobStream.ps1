@@ -16,6 +16,10 @@ One of the parameters -Directory or -JobStream has to be specified.
 Optionally specifies the folder for which job streams should be returned. The directory is determined
 from the root folder, i.e. the "live" directory.
 
+.PARAMETER Recursive
+Specifies that any sub-folders should be looked up if the -Directory parameter is used.
+By default no sub-folders will be searched for job streams.
+
 .OUTPUTS
 This cmdlet returns an array of job streams.
 
@@ -23,6 +27,11 @@ This cmdlet returns an array of job streams.
 $jobStreams = Get-JobSchedulerJobStream -Directory /test
 
 Returns all job streams that are configured with the folder "test".
+
+.EXAMPLE
+$jobStreams = Get-JobSchedulerJobStream
+
+Returns all job streams.
 
 .EXAMPLE
 $jobStream = Get-JobSchedulerJobStream -JobStream SampleJobStream
@@ -39,12 +48,16 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $JobStream,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [string] $Directory
+    [string] $Directory = '/',
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$False)]
+    [switch] $Recursive
 )
     Begin
     {
         Approve-JobSchedulerCommand $MyInvocation.MyCommand
         $stopWatch = Start-JobSchedulerStopWatch
+
+        $objFolders = @()
     }
 
     Process
@@ -58,7 +71,8 @@ param
 
         if ( $Directory -and $Directory -ne '/' )
         {
-            if ( !$Directory.startsWith( '/' ) ) {
+            if ( !$Directory.startsWith( '/' ) )
+            {
                 $Directory = '/' + $Directory
             }
 
@@ -68,7 +82,22 @@ param
             }
         }
 
+        if ( $Directory -eq '/' -and !$JobStream -and !$Recursive )
+        {
+            $Recursive = $True
+        }
 
+        if ( $Directory )
+        {
+            $objFolder = New-Object PSObject
+            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $objFolder
+            Add-Member -Membertype NoteProperty -Name 'recursive' -value ($Recursive -eq $True) -InputObject $objFolder
+            $objFolders += $objFolder
+        }
+    }
+
+    End
+    {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
 
@@ -77,10 +106,11 @@ param
             Add-Member -Membertype NoteProperty -Name 'jobStream' -value $JobStream -InputObject $body
         }
 
-        if ( $Directory )
+        if ( $objFolders.count )
         {
-            Add-Member -Membertype NoteProperty -Name 'folder' -value $Directory -InputObject $body
+            Add-Member -Membertype NoteProperty -Name 'folders' -value $objFolders -InputObject $body
         }
+
 
         [string] $requestBody = $body | ConvertTo-Json -Depth 100
         $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/list' -Body $requestBody
@@ -98,10 +128,7 @@ param
         }
 
         $requestResult.jobstreams
-    }
 
-    End
-    {
         if ( $requestResult.jobstreams.count )
         {
             Write-Verbose ".. $($MyInvocation.MyCommand.Name): $($requestResult.jobstreams.count) job streams found"
