@@ -32,7 +32,7 @@ param
         }
 
         $script:js = New-JobSchedulerObject
-        $script:jsWebService = Create-WebServiceObject
+        $script:jsWebService = New-JobSchedulerWebServiceObject
         $script:jsWebServiceCredential = $null
     }
 }

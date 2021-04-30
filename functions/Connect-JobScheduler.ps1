@@ -224,7 +224,7 @@ param
     {
         if ( !$jsWebService )
         {
-            $script:jsWebService = Create-WebServiceObject
+            $script:jsWebService = New-JobSchedulerWebServiceObject
         }
 
         if ( $Url )
