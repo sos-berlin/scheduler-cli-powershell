@@ -79,8 +79,7 @@ Get-JobSchedulerJob -Directory /some_path -Recursive | Start-JobSchedulerJob
 Starts all jobs from the specified directory and sub-folders.
 
 .EXAMPLE
-$params = ${ 'par1' = 'val1'; 'par2' = 'val2' }
-Start-JobSchedulerJob -Job /some_path/some_job -Parameters $params
+Start-JobSchedulerJob -Job /some_path/some_job -Parameters @{'par1' = 'val1'; 'par2' = 'val2'}
 
 Starts the job with parameter 'par1' and 'par2' and respective values.
 
@@ -168,7 +167,15 @@ param
 
         if ( $Parameters )
         {
-            Add-Member -Membertype NoteProperty -Name 'params' -value $Parameters -InputObject $objJob
+            $params = @()
+            $Parameters.Keys | ForEach-Object {
+                $objParam = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'name' -value $_ -InputObject $objParam
+                Add-Member -Membertype NoteProperty -Name 'value' -value $Parameters.Item($_) -InputObject $objParam
+                $params += $objParam
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'params' -value $params -InputObject $objJob
         }
 
         if ( $Environment )

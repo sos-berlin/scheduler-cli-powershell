@@ -24,6 +24,21 @@ from the root folder, i.e. the "live" directory.
 If the -JobChain parameter specifies the name of job chain then the location specified from the
 -Directory parameter is added to the job chain location.
 
+.PARAMETER Parameters
+Specifies the parameters for the order. Parameters are created from a hashmap,
+i.e. a list of names and values.
+
+Example:
+$orderParams = @{ 'param1' = 'value1'; 'param2' = 'value2' }
+
+.PARAMETER State
+Specifies that the order should resume the job chain at the job chain node that
+is assigend the specified state.
+
+.PARAMETER EndState
+Specifies that the order should leave the job chain at the job chain node that
+is assigend the specified state.
+
 .PARAMETER AuditComment
 Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
 
@@ -83,6 +98,12 @@ param
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $Directory = '/',
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [hashtable] $Parameters,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $State,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
+    [string] $EndState,
+    [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [int] $AuditTimeSpent,
@@ -134,6 +155,31 @@ param
         $objOrder = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'orderId' -value $OrderId -InputObject $objOrder
         Add-Member -Membertype NoteProperty -Name 'jobChain' -value $JobChain -InputObject $objOrder
+
+        if ( $State )
+        {
+            Add-Member -Membertype NoteProperty -Name 'state' -value $State -InputObject $objOrder
+        }
+
+        if ( $EndState )
+        {
+            Add-Member -Membertype NoteProperty -Name 'endState' -value $EndState -InputObject $objOrder
+        }
+
+        if ( $Parameters )
+        {
+            $objParams = @()
+            foreach( $parameter in $Parameters.GetEnumerator() )
+            {
+                $objParam = New-Object PSObject
+                Add-Member -Membertype NoteProperty -Name 'name' -value $parameter.key -InputObject $objParam
+                Add-Member -Membertype NoteProperty -Name 'value' -value $parameter.value -InputObject $objParam
+                $objParams += $objParam
+            }
+
+            Add-Member -Membertype NoteProperty -Name 'params' -value $objParams -InputObject $objOrder
+        }
+
 
         $objOrders += $objOrder
     }
