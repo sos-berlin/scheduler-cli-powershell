@@ -1,15 +1,15 @@
-function Import-JobSchedulerJobStream
+function Import-JobSchedulerCalendar
 {
 <#
 .SYNOPSIS
-Imports job streams to the JOC Cockpit inventory.
+Imports calendars to the JOC Cockpit inventory.
 
 .DESCRIPTION
-This cmdlet imports job streams to the JOC Cockpit inventory.
+This cmdlet imports calendars to the JOC Cockpit inventory.
 
-.PARAMETER JobStreams
-Specifies the custom object for a list of previously exported job streams.
-This parameter accespts the output that is crated from the -Export-JobSchedulerJobStream cmdlet.
+.PARAMETER Calendars
+Specifies the custom object for a list of previously exported calendars.
+This parameter accespts the output that is crated from the -Export-JobSchedulerCalendar cmdlet.
 
 .PARAMETER AuditComment
 Specifies a free text that indicates the reason for the current intervention, e.g. "business requirement", "maintenance window" etc.
@@ -30,16 +30,16 @@ This information is visible with the Audit Log view of JOC Cockpit.
 It can be useful when integrated with a ticket system that logs interventions with JobScheduler.
 
 .INPUTS
-This cmdlet accepts a custom object with a list of job streams as provided by the Export-JobSchedulerJobStream cmdlet.
+This cmdlet accepts a custom object with a list of calendars as provided by the Export-JobSchedulerCalendar cmdlet.
 
 .OUTPUTS
 This cmdlet returns no output.
 
 .EXAMPLE
-$jsExport = Export-JobSchedulerJobStream -JobStream some_job_stream
-Import-JobSchedulerJobStream -JobStreams $jsExport
+$calExport = Export-JobSchedulerCalendar -Calendar some_job_stream
+Import-JobSchedulerCalendar -Calendars $calExport
 
-Imports a previously exported list of job streams.
+Imports a previously exported list of calendars.
 
 .LINK
 about_jobscheduler
@@ -49,7 +49,7 @@ about_jobscheduler
 param
 (
     [Parameter(Mandatory=$True,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
-    [PSCustomObject] $JobStreams,
+    [PSCustomObject] $Calendars,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
     [string] $AuditComment,
     [Parameter(Mandatory=$False,ValueFromPipeline=$False,ValueFromPipelinebyPropertyName=$True)]
@@ -72,7 +72,7 @@ param
     {
         $body = New-Object PSObject
         Add-Member -Membertype NoteProperty -Name 'jobschedulerId' -value $script:jsWebService.JobSchedulerId -InputObject $body
-        Add-Member -Membertype NoteProperty -Name 'jobstreams' -value @( $JobStreams.jobstreams ) -InputObject $body
+        Add-Member -Membertype NoteProperty -Name 'calendars' -value @( $Calendars.calendars ) -InputObject $body
 
         if ( $AuditComment -or $AuditTimeSpent -or $AuditTicketLink )
         {
@@ -92,10 +92,10 @@ param
             Add-Member -Membertype NoteProperty -Name 'auditLog' -value $objAuditLog -InputObject $body
         }
 
-        if ( $PSCmdlet.ShouldProcess( $Service, '/jobstreams/import' ) )
+        if ( $PSCmdlet.ShouldProcess( $Service, '/calendars/import' ) )
         {
             [string] $requestBody = $body | ConvertTo-Json -Depth 100
-            $response = Invoke-JobSchedulerWebRequest -Path '/jobstreams/import' -Body $requestBody
+            $response = Invoke-JobSchedulerWebRequest -Path '/calendars/import' -Body $requestBody
 
             if ( $response.StatusCode -eq 200 )
             {
@@ -113,7 +113,7 @@ param
 
     End
     {
-        Write-Verbose ".. $($MyInvocation.MyCommand.Name): job streams imported"
+        Write-Verbose ".. $($MyInvocation.MyCommand.Name): calendars imported"
         Trace-JobSchedulerStopWatch $MyInvocation.MyCommand.Name $stopWatch
     }
 }

@@ -4,7 +4,7 @@
 RootModule = 'JobScheduler.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.2.5'
+ModuleVersion = '1.2.6'
 
 # ID used to uniquely identify this module
 GUID = 'fcc31359-6e84-425a-9338-49ed7a807bf9'
@@ -31,6 +31,7 @@ FunctionsToExport = @(
 	'Connect-JobScheduler',
 	'ConvertFrom-JobSchedulerXml',
     'Disconnect-JobScheduler',
+    'Export-JobSchedulerCalendar',
     'Export-JobSchedulerJobStream',
     'Export-JobSchedulerObject',
     'Get-JobSchedulerAgentCluster',
@@ -55,6 +56,7 @@ FunctionsToExport = @(
     'Get-JobSchedulerTaskHistory',
     'Get-JobSchedulerTaskLog',
     'Get-JobSchedulerVersion',
+    'Import-JobSchedulerCalendar',
     'Import-JobSchedulerJobStream',
     'Import-JobSchedulerObject',
     'Install-JobSchedulerService',
